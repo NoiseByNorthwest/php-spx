@@ -1,0 +1,4 @@
+*
+!.gitignore
+!*.phpt
+!*.inc
