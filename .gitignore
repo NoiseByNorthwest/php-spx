@@ -27,5 +27,6 @@ modules
 *.la
 *.lo
 *~
+tmp-php.ini
 
 *.sublime-*
