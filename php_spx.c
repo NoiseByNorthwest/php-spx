@@ -552,7 +552,7 @@ static void generate_output_file_name(char * str, size_t max, spx_config_output_
             break;
 
         case SPX_CONFIG_OUTPUT_TRACE:
-            prefix = "spx.google_trace_event";
+            prefix = "spx.trace";
             extension = "txt";
             compressed = 1;
             
