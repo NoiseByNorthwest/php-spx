@@ -141,6 +141,8 @@ See more complex examples [here](#examples).
 
 #### Setting parameters for CLI script
 
+Well, as you might already noticed in corresponding [basic usage example](#cli-script), setting a SPX parameter for a CLI script simply means setting an environment variable with the same name.
+
 #### Setting parameters for HTTP request
 
 When profiling an HTTP request, there are 2 ways to set SPX parameters:
