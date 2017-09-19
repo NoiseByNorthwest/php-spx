@@ -129,7 +129,7 @@ See more complex examples [here](#examples).
 | SPX_ENABLED | 0 | Whether to enable SPX profiler (i.e. triggering profiling). When disabled there is no performance impact on your application. |
 | SPX_BUILTINS | 0 | Whether to instrument internal functions. |
 | SPX_DEPTH | 0 | The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls). 0 (default value) means unlimited. |
-| SPX_METRICS | wt,zm | Comma separated list of [available metric keys](#available-metrics) |
+| SPX_METRICS | wt,zm | Comma separated list of [available metric keys](#available-metrics) to monitor. All output types, except Google's Trace Event Format, take advantage of multi-metric profiling. |
 | SPX_OUTPUT | fp | Selected [output key](#available-outputs). |
 | SPX_OUTPUT_FILE |  | CLI only. Custom output file. If not specified it will be generated in `/tmp` and displayed on STDERR at the end of the script. |
 | SPX_FP_FOCUS | wt | [Metric key](#available-metrics) for flat profile sort. |
