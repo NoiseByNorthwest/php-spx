@@ -231,7 +231,7 @@ And then trigger profiling by appending `?SPX_KEY=dev&SPX_ENABLED=1` to your app
 Just run the following command:
 
 ```shell
-curl 'localhost?SPX_KEY=dev&SPX_ENABLED=1&SPX_METRICS=wt,zm,zo&SPX_OUTPUT=cg' | gunzip > callgrind.out
+curl --compressed 'localhost?SPX_KEY=dev&SPX_ENABLED=1&SPX_METRICS=wt,zm,zo&SPX_OUTPUT=cg' > callgrind.out
 ```
 
 And then open _callgrind.out_ with KCachegrind. You will be able to explore the call-graph in many ways, over the 3 specified metrics (wt, ze & zo).
@@ -244,7 +244,7 @@ And then open _callgrind.out_ with KCachegrind. You will be able to explore the 
 Just run:
 
 ```shell
-curl 'localhost?SPX_KEY=dev&SPX_ENABLED=1&SPX_OUTPUT=gte' | gunzip > trace.json
+curl --compressed 'localhost?SPX_KEY=dev&SPX_ENABLED=1&SPX_OUTPUT=gte' > trace.json
 ```
 
 And then open _trace.json_ with Chromium's / Chrome's about:tracing application to get this timeline visualization:
