@@ -17,7 +17,7 @@ It differentiates itself from other similar extensions as being:
 This extension was primarily developed for my own usage and currently only fit my personal requirements:
 
 * x86-64
-* GNU/Linux (2.6+ I guess)
+* GNU/Linux
 * zlib dev package (e.g. zlib1g-dev on Debian based distro)
 * PHP 5.6 & 7+
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
@@ -30,7 +30,7 @@ Feel free to make a PR or open an issue if your platform is not supported.
 
 * PHP development package (corresponding to your installed PHP version).
 * zlib development package:
-  * For Debian based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`
+  * For Debian based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`.
 
 ### Install the extension
 
