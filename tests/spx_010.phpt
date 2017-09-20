@@ -1,0 +1,54 @@
+--TEST--
+Flat profile
+--ENV--
+return <<<END
+SPX_ENABLED=1
+SPX_METRICS=zo,ze
+END;
+--FILE--
+<?php
+
+function foo() {
+    global $objects;
+    $o = new stdClass;
+    $objects[] = $o;
+    trigger_error('');
+}
+
+function bar() {
+    global $objects;
+    $o = new stdClass;
+    $objects[] = $o;
+    for ($i = 0; $i < 30; $i++) {
+        foo();
+    }
+}
+
+error_reporting(0);
+$objects = [];
+for ($i = 0; $i < 10; $i++) {
+    bar();
+}
+
+$objects = [];
+
+?>
+--EXPECT--
+*** SPX Report ***
+
+Global stats:
+
+  Called functions    :      311
+  Distinct functions  :        3
+
+  ZE object count     :      310
+  ZE error count      :      300
+
+Flat profile:
+
+ ZE object count     | ZE error count      |
+ Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
+----------+----------+----------+----------+----------+----------
+      300 |      300 |      300 |      300 |      300 | foo
+      310 |       10 |      300 |        0 |       10 | bar
+        0 |     -310 |      300 |        0 |        1 | main

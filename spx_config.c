@@ -126,12 +126,20 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
             config->enabled_metrics[i] = 0;
         });
 
+        spx_metric_t first_metric = SPX_METRIC_NONE;
         SPX_UTILS_TOKENIZE_STRING(source_data->metrics_str, ',', token, 32, {
             spx_metric_t metric = spx_metric_get_by_short_name(token);
             if (metric != SPX_METRIC_NONE) {
                 config->enabled_metrics[metric] = 1;
+                if (first_metric == SPX_METRIC_NONE) {
+                    first_metric = metric;
+                }
             }
         });
+
+        if (!config->enabled_metrics[config->fp_focus]) {
+            config->fp_focus = first_metric;
+        }
     }
 
     if (source_data->output_str) {
