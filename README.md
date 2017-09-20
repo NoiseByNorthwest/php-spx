@@ -26,6 +26,14 @@ Feel free to make a PR or open an issue if your platform is not supported.
 
 ## Installation
 
+### Prerequisites
+
+* PHP development package (corresponding to your installed PHP version).
+* zlib development package:
+  * For Debian based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`
+
+### Install the extension
+
 ```shell
 phpize
 ./configure
