@@ -19,8 +19,8 @@ Global stats:
   Called functions    :        1
   Distinct functions  :        1
 
-  Wall Time           :    %s
-  ZE memory           :    %s
+  Wall Time           : %s
+  ZE memory           : %s
 
 Flat profile:
 

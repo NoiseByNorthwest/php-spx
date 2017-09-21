@@ -18,13 +18,13 @@ Global stats:
   Called functions    :        1
   Distinct functions  :        1
 
-  Wall Time           :    %s
-  CPU Time            :    %s
-  Idle Time           :    %s
-  ZE root buffer      :    %s
-  ZE object count     :    %s
-  I/O Bytes           :    %s
-  I/O Read Bytes      :    %s
+  Wall Time           : %s
+  CPU Time            : %s
+  Idle Time           : %s
+  ZE root buffer      : %s
+  ZE object count     : %s
+  I/O Bytes           : %s
+  I/O Read Bytes      : %s
 
 Flat profile:
 

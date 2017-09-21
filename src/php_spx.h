@@ -14,8 +14,8 @@
 #   error "Only x86-64 architecture is supported"
 #endif
 
-#if ZEND_EXTENSION_API_NO < 220131226 || ZEND_EXTENSION_API_NO > 320160303
-#   error "Only the following PHP versions are supported: 5.6 to 7.1"
+#if ZEND_EXTENSION_API_NO < 220131226 || ZEND_EXTENSION_API_NO > 320170718
+#   error "Only the following PHP versions are supported: 5.6 to 7.2"
 #endif
 
 #ifdef ZTS
