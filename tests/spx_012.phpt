@@ -37,7 +37,7 @@ for ($i = 0; $i < 10; $i++) {
 $objects = [];
 
 ?>
---EXPECT--
+--EXPECTF--
 *** SPX Report ***
 
 Global stats:
@@ -53,6 +53,6 @@ Flat profile:
  ZE object count     | ZE error count      |
  Inc.     | Exc.     | *Inc.    | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
-        0 |     -310 |      311 |        1 |        1 | main
+        0 |     -310 |      311 |        1 |        1 | %s/spx_012.php
       310 |       10 |      310 |       10 |       10 | bar
       300 |      300 |      300 |      300 |      300 | foo

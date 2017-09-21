@@ -103,18 +103,25 @@ void spx_php_current_function(spx_php_function_t * function)
     function->func_name = get_active_function_name(TSRMLS_C);
 
 #if ZEND_EXTENSION_API_NO >= 320151012
+    const zend_function * func = EG(current_execute_data)->func;
+    /*
+     *  Required for PHP 7+ to avoid function name default'd to "main" in this case
+     *  (including file level code).
+     *  See get_active_function_name() implementation in php-src.
+     */
+    if (func->type == ZEND_USER_FUNCTION && !func->common.function_name) {
+        function->func_name = NULL;
+    }
     /*
      *  This hack is required for PHP 7.1 to prevent a segfault while dereferencing function->func_name
      *  TODO: open an issue if not yet tracked
      */
-    const zend_function * func = EG(current_execute_data)->func;
     if (func->type == ZEND_INTERNAL_FUNCTION && !func->common.function_name) {
         function->func_name = NULL;
     }
 #endif
 
     if (!function->func_name) {
-        /* approximation of include* / require* & eval */
         function->func_name = function->file_name;
     }
 
