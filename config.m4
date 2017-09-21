@@ -20,19 +20,19 @@ if test "$PHP_SPX" = "yes"; then
     PHP_SUBST(CFLAGS)
 
     PHP_NEW_EXTENSION(spx,
-        php_spx.c            \
-        spx_profiler.c       \
-        spx_reporter_fp.c    \
-        spx_reporter_trace.c \
-        spx_reporter_cg.c    \
-        spx_reporter_gte.c   \
-        spx_metric.c         \
-        spx_resource_stats.c \
-        spx_hset.c           \
-        spx_output_stream.c  \
-        spx_php.c            \
-        spx_stdio.c          \
-        spx_config.c         \
-        spx_fmt.c,
+        src/php_spx.c            \
+        src/spx_profiler.c       \
+        src/spx_reporter_fp.c    \
+        src/spx_reporter_trace.c \
+        src/spx_reporter_cg.c    \
+        src/spx_reporter_gte.c   \
+        src/spx_metric.c         \
+        src/spx_resource_stats.c \
+        src/spx_hset.c           \
+        src/spx_output_stream.c  \
+        src/spx_php.c            \
+        src/spx_stdio.c          \
+        src/spx_config.c         \
+        src/spx_fmt.c,
         $ext_shared)
 fi
