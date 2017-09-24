@@ -393,6 +393,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     spx_fmt_row_destroy(fmt_row);
 
     spx_output_stream_print(reporter->base.output, "\n");
+    spx_output_stream_flush(reporter->base.output);
 
     line_count++;
 

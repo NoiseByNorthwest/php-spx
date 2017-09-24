@@ -1,5 +1,7 @@
 # SPX
 
+![Showcase](docs/fp1.gif)
+
 SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.  
 It differentiates itself from other similar extensions as being:
 * totally free and confined to your infrastructure (i.e. no data leaks to a SaaS).
