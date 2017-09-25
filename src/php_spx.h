@@ -18,7 +18,7 @@
 #   error "Only the following PHP versions are supported: 5.6 to 7.2"
 #endif
 
-#ifdef ZTS
+#if defined(ZTS) && !defined(CONTINUOUS_INTEGRATION)
 #   error "ZTS is not yet supported"
 #endif
 

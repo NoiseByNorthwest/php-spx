@@ -13,11 +13,11 @@ typedef uint zend_write_len_t;
 
 static struct {
     zend_write_func_t zend_write;
-    int  (*send_headers) (sapi_headers_struct * sapi_headers);
-    void (*send_header)  (sapi_header_struct * sapi_header, void * server_context);
+    int  (*send_headers) (sapi_headers_struct * sapi_headers TSRMLS_DC);
+    void (*send_header)  (sapi_header_struct * sapi_header, void * server_context TSRMLS_DC);
     void (*flush)        (void * server_context);
 
-    void (*execute_ex) (zend_execute_data * execute_data);
+    void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
     void (*execute_internal) (
         zend_execute_data * execute_data,
 #if ZEND_EXTENSION_API_NO >= 320151012
@@ -26,6 +26,7 @@ static struct {
         struct _zend_fcall_info * fci,
         int ret
 #endif
+        TSRMLS_DC
     );
 
     void (*zend_error_cb) (
@@ -65,8 +66,8 @@ static SPX_THREAD_TLS struct {
 } context;
 
 static int hook_zend_write(const char * str, zend_write_len_t len);
-static int hook_send_headers(sapi_headers_struct * sapi_headers);
-static void hook_send_header(sapi_header_struct * sapi_header, void * server_context);
+static int hook_send_headers(sapi_headers_struct * sapi_headers TSRMLS_DC);
+static void hook_send_header(sapi_header_struct * sapi_header, void * server_context TSRMLS_DC);
 static void hook_flush(void * server_context);
 
 static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
@@ -380,7 +381,9 @@ void spx_php_output_restore(void)
 
 size_t spx_php_output_direct_write(const void * ptr, size_t len)
 {
-    return sapi_module.ub_write(ptr, len);
+    TSRMLS_FETCH();
+
+    return sapi_module.ub_write(ptr, len TSRMLS_CC);
 }
 
 size_t spx_php_output_direct_print(const char * str)
@@ -409,22 +412,22 @@ static int hook_zend_write(const char * str, zend_write_len_t len)
     return ze_hook.zend_write(str, len);
 }
 
-static int hook_send_headers(sapi_headers_struct * sapi_headers)
+static int hook_send_headers(sapi_headers_struct * sapi_headers TSRMLS_DC)
 {
     if (context.output_disabled) {
         return SAPI_HEADER_SENT_SUCCESSFULLY;
     }
 
-    return ze_hook.send_headers(sapi_headers);
+    return ze_hook.send_headers(sapi_headers TSRMLS_CC);
 }
 
-static void hook_send_header(sapi_header_struct * sapi_header, void * server_context)
+static void hook_send_header(sapi_header_struct * sapi_header, void * server_context TSRMLS_DC)
 {
     if (context.output_disabled) {
         return;
     }
 
-    ze_hook.send_header(sapi_header, server_context);
+    ze_hook.send_header(sapi_header, server_context TSRMLS_CC);
 }
 
 static void hook_flush(void * server_context)

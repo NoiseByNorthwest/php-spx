@@ -1,5 +1,7 @@
 # SPX
 
+[![Build Status](https://travis-ci.org/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.org/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 7.x](https://img.shields.io/badge/php-5.6,%207.x-blue.svg)
+
 ![Showcase](docs/fp1.gif)
 
 SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.  
@@ -37,10 +39,12 @@ Feel free to make a PR or open an issue if your platform is not supported.
 ### Install the extension
 
 ```shell
+git clone git@github.com:NoiseByNorthwest/php-spx.git
+cd php-spx
 phpize
 ./configure
 make
-make install
+sudo make install
 ```
 
 Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.  

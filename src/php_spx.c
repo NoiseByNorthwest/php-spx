@@ -4,7 +4,9 @@
 #include <time.h>
 
 #include <unistd.h>
-#include <signal.h>
+#ifndef ZTS
+#   include <signal.h>
+#endif
 
 #include "main/SAPI.h"
 #include "ext/standard/info.h"
@@ -76,9 +78,13 @@ PHP_MINFO_FUNCTION(spx);
 
 static void ex_hook_before(void);
 static void ex_hook_after(void);
-static void terminate_handler(int signo);
 static void terminate(void);
+
+#ifndef ZTS
+static void terminate_handler(int signo);
 static void setup_terminate_handler(void);
+#endif
+
 static int check_access(void);
 static void init(void);
 static void finish(void);
@@ -182,6 +188,14 @@ static void ex_hook_after(void)
     }
 }
 
+static void terminate(void)
+{
+    finish();
+
+    exit(context.sig_handling.signo < 0 ? EXIT_SUCCESS : 128 + context.sig_handling.signo);
+}
+
+#ifndef ZTS
 static void terminate_handler(int signo)
 {
     if (context.sig_handling.finish_called > 0) {
@@ -199,13 +213,6 @@ static void terminate_handler(int signo)
     terminate();
 }
 
-static void terminate(void)
-{
-    finish();
-
-    exit(context.sig_handling.signo < 0 ? EXIT_SUCCESS : 128 + context.sig_handling.signo);
-}
-
 static void setup_terminate_handler(void)
 {
     struct sigaction act;
@@ -216,9 +223,12 @@ static void setup_terminate_handler(void)
     sigaction(SIGINT, &act, NULL);
     sigaction(SIGTERM, &act, NULL);
 }
+#endif
 
 static int check_access(void)
 {
+    TSRMLS_FETCH();
+
     if (context.cli_sapi) {
         /* CLI SAPI -> granted */
         return 1;
