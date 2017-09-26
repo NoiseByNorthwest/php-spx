@@ -31,4 +31,4 @@ Flat profile:
  Wall Time           | ZE memory           |
  Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
-     %s |     %s |     %s |     %s |        1 | %s/spx_001.php
+ %s | %s | %s | %s |        1 | %s/spx_001.php

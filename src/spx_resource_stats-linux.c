@@ -13,28 +13,12 @@
 #include "spx_thread.h"
 
 static SPX_THREAD_TLS struct {
-    cpu_set_t affinity_prev_mask;
     int io_fd;
     size_t io_noise;
 } context;
 
 void spx_resource_stats_init(void)
 {
-    if (sched_getaffinity(0, sizeof(context.affinity_prev_mask), &context.affinity_prev_mask) != 0) {
-        perror("sched_getaffinity");
-    }
-
-    /* FIXME get cpu count & randomize ? */
-    const int cpu_id = 0;
-    cpu_set_t mask;
-
-    CPU_ZERO(&mask);
-    CPU_SET(cpu_id, &mask);
-
-    if (sched_setaffinity(0, sizeof(mask), &mask) != 0) {
-        perror("sched_setaffinity");
-    }
-
     char io_file[64];
     snprintf(
         io_file,
@@ -49,10 +33,6 @@ void spx_resource_stats_init(void)
 
 void spx_resource_stats_shutdown(void)
 {
-    if (sched_setaffinity(0, sizeof(context.affinity_prev_mask), &context.affinity_prev_mask) != 0) {
-        perror("sched_setaffinity");
-    }
-
     if (context.io_fd != -1) {
         close(context.io_fd);
     }
@@ -78,6 +58,10 @@ size_t spx_resource_stats_wall_time(void)
 size_t spx_resource_stats_cpu_time(void)
 {
     struct timespec ts;
+    /*
+     *  Linux implementation of CLOCK_PROCESS_CPUTIME_ID does not require to stick
+     *  the current thread to the same CPU.
+     */
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
 
     return TIMESPEC_TO_US(ts);
