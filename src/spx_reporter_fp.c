@@ -1,10 +1,9 @@
+#define _GNU_SOURCE /* qsort_r */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "spx_reporter_fp.h"
-
-typedef int (*sort_func_t)(const void * a, const void * b);
 
 typedef struct {
     spx_profiler_reporter_t base;
@@ -17,14 +16,13 @@ typedef struct {
 
     size_t last_ts_ms;
     size_t last_line_count;
-    sort_func_t sort_func;
     const spx_profiler_func_table_entry_t ** top_entries;
 } fp_reporter_t;
 
 static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter, const spx_profiler_event_t * event);
 static void fp_destroy(spx_profiler_reporter_t * reporter);
 
-static sort_func_t get_sort_func(spx_metric_t focus, int inc);
+static int entry_cmp(const void * a, const void * b, void * data);
 static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t * event);
 
 spx_profiler_reporter_t * spx_reporter_fp_create(
@@ -54,7 +52,6 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
 
     reporter->last_ts_ms = 0;
     reporter->last_line_count = 0;
-    reporter->sort_func = get_sort_func(focus, inc);
     
     reporter->top_entries = malloc(limit * sizeof(*reporter->top_entries));
     if (!reporter->top_entries) {
@@ -110,125 +107,33 @@ static void fp_destroy(spx_profiler_reporter_t * reporter)
     free(fp_reporter->top_entries);
 }
 
-#define STATS_CMP_FUNC_NAME(metric, dim) stats_cmp_##metric##_##dim
-#define STATS_CMP_FUNC(metric, dim) \
-static int STATS_CMP_FUNC_NAME(metric, dim)(const void * a, const void * b)              \
-{                                                                                        \
-    return                                                                               \
-        (*((const spx_profiler_func_table_entry_t **) b))->stats.dim.values[metric] -    \
-        (*((const spx_profiler_func_table_entry_t **) a))->stats.dim.values[metric]      \
-    ;                                                                                    \
-}
-
-STATS_CMP_FUNC(SPX_METRIC_WALL_TIME, inc);
-STATS_CMP_FUNC(SPX_METRIC_WALL_TIME, exc);
-STATS_CMP_FUNC(SPX_METRIC_CPU_TIME, inc);
-STATS_CMP_FUNC(SPX_METRIC_CPU_TIME, exc);
-STATS_CMP_FUNC(SPX_METRIC_IDLE_TIME, inc);
-STATS_CMP_FUNC(SPX_METRIC_IDLE_TIME, exc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_MEMORY, inc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_MEMORY, exc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_ROOT_BUFFER, inc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_ROOT_BUFFER, exc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_OBJECT_COUNT, inc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_OBJECT_COUNT, exc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_ERROR_COUNT, inc);
-STATS_CMP_FUNC(SPX_METRIC_ZE_ERROR_COUNT, exc);
-STATS_CMP_FUNC(SPX_METRIC_IO_BYTES, inc);
-STATS_CMP_FUNC(SPX_METRIC_IO_BYTES, exc);
-STATS_CMP_FUNC(SPX_METRIC_IO_RBYTES, inc);
-STATS_CMP_FUNC(SPX_METRIC_IO_RBYTES, exc);
-STATS_CMP_FUNC(SPX_METRIC_IO_WBYTES, inc);
-STATS_CMP_FUNC(SPX_METRIC_IO_WBYTES, exc);
-
-static sort_func_t get_sort_func(spx_metric_t focus, int inc)
+static int entry_cmp(const void * a, const void * b, void * data)
 {
-    sort_func_t sort_func;
+    const fp_reporter_t * reporter = data;
 
-    switch (focus) {
-        default:
-        case SPX_METRIC_WALL_TIME:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_WALL_TIME, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_WALL_TIME, exc)
-            ;
+    const spx_profiler_func_table_entry_t * entry_a = (*((const spx_profiler_func_table_entry_t **) a));
+    const spx_profiler_func_table_entry_t * entry_b = (*((const spx_profiler_func_table_entry_t **) b));
 
-            break;
+    double high_a, low_a;
+    double high_b, low_b;
 
-        case SPX_METRIC_CPU_TIME:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_CPU_TIME, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_CPU_TIME, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_IDLE_TIME:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IDLE_TIME, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IDLE_TIME, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_ZE_MEMORY:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_MEMORY, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_MEMORY, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_ZE_ROOT_BUFFER:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_ROOT_BUFFER, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_ROOT_BUFFER, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_ZE_OBJECT_COUNT:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_OBJECT_COUNT, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_OBJECT_COUNT, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_ZE_ERROR_COUNT:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_ERROR_COUNT, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_ZE_ERROR_COUNT, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_IO_BYTES:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IO_BYTES, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IO_BYTES, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_IO_RBYTES:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IO_RBYTES, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IO_RBYTES, exc)
-            ;
-
-            break;
-
-        case SPX_METRIC_IO_WBYTES:
-            sort_func = inc ?
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IO_WBYTES, inc) :
-                STATS_CMP_FUNC_NAME(SPX_METRIC_IO_WBYTES, exc)
-            ;
-
-            break;
+    if (reporter->inc) {
+        high_a = entry_a->stats.inc.values[reporter->focus];
+        high_b = entry_b->stats.inc.values[reporter->focus];
+        low_a  = entry_a->stats.exc.values[reporter->focus];
+        low_b  = entry_b->stats.exc.values[reporter->focus];
+    } else {
+        high_a = entry_a->stats.exc.values[reporter->focus];
+        high_b = entry_b->stats.exc.values[reporter->focus];
+        low_a  = entry_a->stats.inc.values[reporter->focus];
+        low_b  = entry_b->stats.inc.values[reporter->focus];
     }
 
-    return sort_func;
+    if (high_a != high_b) {
+        return high_b - high_a;
+    }
+
+    return low_b - low_a;
 }
 
 static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t * event)
@@ -251,7 +156,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
         const spx_profiler_func_table_entry_t * current = &event->func_table.entries[i];
         size_t j;
         for (j = 0; j < limit; j++) {
-            if (reporter->sort_func(&reporter->top_entries[j], &current) > 0) {
+            if (entry_cmp(&reporter->top_entries[j], &current, reporter) > 0) {
                 reporter->top_entries[j] = current;
 
                 break;
@@ -259,7 +164,13 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
         }
     }
 
-    qsort(reporter->top_entries, limit, sizeof(*reporter->top_entries), reporter->sort_func);
+    qsort_r(
+        reporter->top_entries,
+        limit,
+        sizeof(*reporter->top_entries),
+        entry_cmp,
+        reporter
+    );
 
     spx_output_stream_print(reporter->base.output, "\n*** SPX Report ***\n\nGlobal stats:\n\n");
     size_t line_count = 5;
