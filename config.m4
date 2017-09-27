@@ -9,21 +9,35 @@ if test "$PHP_SPX" = "yes"; then
 
     AC_DEFINE(HAVE_SPX, 1, [spx])
 
-    CFLAGS="-Werror -Wfatal-errors -Wall -O2 -g"
+    CFLAGS="$CFLAGS -Werror -Wfatal-errors -Wall"
     if test "$CONTINUOUS_INTEGRATION" = "true"
     then
         CFLAGS="$CFLAGS -DCONTINUOUS_INTEGRATION"
     fi
 
     AC_MSG_CHECKING([for zlib header])
-    if test -f "/usr/include/zlib.h"
+
+    for dir in /usr/local /usr
+    do
+        if test -f "$dir/include/zlib/zlib.h"
+        then
+            SPX_ZLIB_DIR="$dir"
+            SPX_ZLIB_INCDIR="$dir/include/zlib"
+        elif test -f "$dir/include/zlib.h"
+        then
+            SPX_ZLIB_DIR="$dir"
+            SPX_ZLIB_INCDIR="$dir/include"
+        fi
+    done
+
+    if test "$SPX_ZLIB_INCDIR" != ""
     then
         AC_MSG_RESULT([yes])
+        PHP_ADD_INCLUDE($SPX_ZLIB_INCDIR)
+        PHP_ADD_LIBRARY_WITH_PATH(z, $SPX_ZLIB_DIR/$PHP_LIBDIR, SPX_SHARED_LIBADD)
     else
         AC_MSG_ERROR([Cannot find zlib.h])
     fi
-
-    PHP_SUBST(CFLAGS)
 
     PHP_NEW_EXTENSION(spx,
         src/php_spx.c            \
