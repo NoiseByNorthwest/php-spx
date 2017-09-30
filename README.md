@@ -283,13 +283,10 @@ $ SPX_ENABLED=1 SPX_OUTPUT=trace SPX_OUTPUT_FILE=trace.txt ./bin/console > /dev/
     1.3ms |      0us |      0us |   10.9KB |       0B |       0B |        3 |   +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::getLoader
     1.3ms |      0us |      0us |   11.9KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::loadClassLoader
     2.3ms |      0us |      0us |   51.6KB |       0B |       0B |        5 |     +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/ClassLoader.php
-    2.3ms |      1us |      1us |   51.6KB |       0B |       0B |        5 |     -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/ClassL
-oader.php
+    2.3ms |      1us |      1us |   51.6KB |       0B |       0B |        5 |     -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/ClassLoader.php
     2.3ms |    1.0ms |    1.0ms |   51.3KB |   39.4KB |   39.4KB |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::loadClassLoader
-    2.7ms |      0us |      0us |   91.5KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/autoloa
-d_static.php
-    2.7ms |      1us |      1us |   91.5KB |       0B |       0B |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/autoloa
-d_static.php
+    2.7ms |      0us |      0us |   91.5KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/autoload_static.php
+    2.7ms |      1us |      1us |   91.5KB |       0B |       0B |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/autoload_static.php
     2.7ms |      0us |      0us |   91.2KB |       0B |       0B |        4 |    +Composer\Autoload\ComposerStaticInita657e2f64bf98eb70db4e96bba0d4058::getInitializer
     2.7ms |      5us |      5us |   92.0KB |     856B |     856B |        4 |    -Composer\Autoload\ComposerStaticInita657e2f64bf98eb70db4e96bba0d4058::getInitializer
     2.7ms |      0us |      0us |   92.0KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
