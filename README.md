@@ -272,48 +272,51 @@ And then open _trace.json_ with Chromium's / Chrome's about:tracing application 
 The following command will trace all (user land) function calls of _./bin/console_ script in _trace.txt_ file.
 
 ```shell
-$ SPX_ENABLED=1 SPX_OUTPUT=trace SPX_OUTPUT_FILE=trace.txt ./bin/console > /dev/null && head -20 trace.txt && echo ... && tail -20 trace.txt                                       
+$ SPX_ENABLED=1 SPX_OUTPUT=trace SPX_OUTPUT_FILE=trace.txt ./bin/console > /dev/null && head -20 trace.txt && echo ... && tail -20 trace.txt
  Wall Time                      | ZE memory                      |
  Cum.     | Inc.     | Exc.     | Cum.     | Inc.     | Exc.     | Depth    | Function
 ----------+----------+----------+----------+----------+----------+----------+----------
-      0us |      0us |      0us |       0B |       0B |       0B |        1 | +main
-     67us |      0us |      0us |    1.3KB |       0B |       0B |        2 |  +main
-    166us |      0us |      0us |   11.3KB |       0B |       0B |        3 |   +main
-    171us |      5us |      5us |   11.3KB |       0B |       0B |        3 |   -main
-    174us |      0us |      0us |   10.9KB |       0B |       0B |        3 |   +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::getLoader
-    184us |      0us |      0us |   11.9KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::loadClassLoader
-    432us |      0us |      0us |   51.6KB |       0B |       0B |        5 |     +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::main
-    433us |      1us |      1us |   51.6KB |       0B |       0B |        5 |     -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::main
-    434us |    250us |    249us |   51.3KB |   39.4KB |   39.4KB |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::loadClassLoader
-    602us |      0us |      0us |   91.5KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::main
-    603us |      1us |      1us |   91.5KB |       0B |       0B |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::main
-    605us |      0us |      0us |   91.2KB |       0B |       0B |        4 |    +Composer\Autoload\ComposerStaticInita657e2f64bf98eb70db4e96bba0d4058::getInitializer
-    611us |      6us |      6us |   92.0KB |     856B |     856B |        4 |    -Composer\Autoload\ComposerStaticInita657e2f64bf98eb70db4e96bba0d4058::getInitializer
-    612us |      0us |      0us |   92.0KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
-    616us |      4us |      4us |   91.2KB |    -856B |    -856B |        4 |    -Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
-    618us |      0us |      0us |   91.2KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::register
-    624us |      6us |      6us |   91.3KB |     128B |     128B |        4 |    -Composer\Autoload\ClassLoader::register
+      0us |      0us |      0us |       0B |       0B |       0B |        1 | +/home/sylvain/dev/sf_app/bin/console
+    994us |      0us |      0us |    1.3KB |       0B |       0B |        2 |  +/home/sylvain/dev/sf_app/vendor/autoload.php
+    1.3ms |      0us |      0us |   11.3KB |       0B |       0B |        3 |   +/home/sylvain/dev/sf_app/vendor/composer/autoload_real.php
+    1.3ms |      3us |      3us |   11.3KB |       0B |       0B |        3 |   -/home/sylvain/dev/sf_app/vendor/composer/autoload_real.php
+    1.3ms |      0us |      0us |   10.9KB |       0B |       0B |        3 |   +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::getLoader
+    1.3ms |      0us |      0us |   11.9KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::loadClassLoader
+    2.3ms |      0us |      0us |   51.6KB |       0B |       0B |        5 |     +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/ClassLoader.php
+    2.3ms |      1us |      1us |   51.6KB |       0B |       0B |        5 |     -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/ClassL
+oader.php
+    2.3ms |    1.0ms |    1.0ms |   51.3KB |   39.4KB |   39.4KB |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::loadClassLoader
+    2.7ms |      0us |      0us |   91.5KB |       0B |       0B |        4 |    +ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/autoloa
+d_static.php
+    2.7ms |      1us |      1us |   91.5KB |       0B |       0B |        4 |    -ComposerAutoloaderInita657e2f64bf98eb70db4e96bba0d4058::/home/sylvain/dev/sf_app/vendor/composer/autoloa
+d_static.php
+    2.7ms |      0us |      0us |   91.2KB |       0B |       0B |        4 |    +Composer\Autoload\ComposerStaticInita657e2f64bf98eb70db4e96bba0d4058::getInitializer
+    2.7ms |      5us |      5us |   92.0KB |     856B |     856B |        4 |    -Composer\Autoload\ComposerStaticInita657e2f64bf98eb70db4e96bba0d4058::getInitializer
+    2.7ms |      0us |      0us |   92.0KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
+    2.7ms |      5us |      5us |   91.2KB |    -856B |    -856B |        4 |    -Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
+    2.7ms |      0us |      0us |   91.2KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::register
+    2.7ms |      6us |      6us |   91.3KB |     128B |     128B |        4 |    -Composer\Autoload\ClassLoader::register
 ...
-   67.1ms |   14.9ms |     12us |    6.1MB |  874.8KB |     488B |        4 |    -Symfony\Component\Console\Application::doRun
-   67.1ms |   51.0ms |     26us |    6.1MB |    4.9MB |       0B |        3 |   -Symfony\Bundle\FrameworkBundle\Console\Application::doRun
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Symfony\Component\Debug\ErrorHandler::handleFatalError
-   67.1ms |      5us |      5us |    6.1MB |  -12.0KB |  -12.0KB |        3 |   -Symfony\Component\Debug\ErrorHandler::handleFatalError
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Monolog\Handler\AbstractHandler::__destruct
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    +Symfony\Bridge\Monolog\Handler\ConsoleHandler::close
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        5 |     +Monolog\Handler\AbstractHandler::close
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        5 |     -Monolog\Handler\AbstractHandler::close
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    -Symfony\Bridge\Monolog\Handler\ConsoleHandler::close
-   67.1ms |      3us |      3us |    6.1MB |       0B |       0B |        3 |   -Monolog\Handler\AbstractHandler::__destruct
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Monolog\Handler\AbstractHandler::__destruct
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    +Monolog\Handler\AbstractHandler::close
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    -Monolog\Handler\AbstractHandler::close
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   -Monolog\Handler\AbstractHandler::__destruct
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Monolog\Handler\AbstractHandler::__destruct
-   67.1ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    +Monolog\Handler\StreamHandler::close
-   67.1ms |      1us |      1us |    6.1MB |       0B |       0B |        4 |    -Monolog\Handler\StreamHandler::close
-   67.1ms |      2us |      1us |    6.1MB |       0B |       0B |        3 |   -Monolog\Handler\AbstractHandler::__destruct
-   67.2ms |   60.7ms |     43us |    6.1MB |    5.2MB |     624B |        2 |  -Symfony\Component\Console\Application::run
-   67.2ms |   67.2ms |    307us |    6.1MB |    6.1MB |   20.4KB |        1 | -main
+  126.6ms |   24.6ms |     10us |    6.1MB |  874.8KB |     488B |        4 |    -Symfony\Component\Console\Application::doRun
+  126.6ms |   97.2ms |     27us |    6.1MB |    4.9MB |       0B |        3 |   -Symfony\Bundle\FrameworkBundle\Console\Application::doRun
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Symfony\Component\Debug\ErrorHandler::handleFatalError
+  126.6ms |      4us |      4us |    6.1MB |  -12.0KB |  -12.0KB |        3 |   -Symfony\Component\Debug\ErrorHandler::handleFatalError
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Monolog\Handler\AbstractHandler::__destruct
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    +Symfony\Bridge\Monolog\Handler\ConsoleHandler::close
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        5 |     +Monolog\Handler\AbstractHandler::close
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        5 |     -Monolog\Handler\AbstractHandler::close
+  126.6ms |      1us |      1us |    6.1MB |       0B |       0B |        4 |    -Symfony\Bridge\Monolog\Handler\ConsoleHandler::close
+  126.6ms |      3us |      2us |    6.1MB |       0B |       0B |        3 |   -Monolog\Handler\AbstractHandler::__destruct
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Monolog\Handler\AbstractHandler::__destruct
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    +Monolog\Handler\AbstractHandler::close
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    -Monolog\Handler\AbstractHandler::close
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   -Monolog\Handler\AbstractHandler::__destruct
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        3 |   +Monolog\Handler\AbstractHandler::__destruct
+  126.6ms |      0us |      0us |    6.1MB |       0B |       0B |        4 |    +Monolog\Handler\StreamHandler::close
+  126.6ms |      2us |      2us |    6.1MB |       0B |       0B |        4 |    -Monolog\Handler\StreamHandler::close
+  126.6ms |      2us |      0us |    6.1MB |       0B |       0B |        3 |   -Monolog\Handler\AbstractHandler::__destruct
+  126.6ms |  105.6ms |     38us |    6.1MB |    5.2MB |     624B |        2 |  -Symfony\Component\Console\Application::run
+  126.6ms |  126.6ms |    1.0ms |    6.1MB |    6.1MB |    1.6KB |        1 | -/home/sylvain/dev/sf_app/bin/console
 ```
 
 
