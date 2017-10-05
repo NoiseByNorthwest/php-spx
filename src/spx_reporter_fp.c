@@ -1,9 +1,9 @@
-#define _GNU_SOURCE /* qsort_r */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "spx_reporter_fp.h"
+#include "spx_thread.h"
 
 typedef struct {
     spx_profiler_reporter_t base;
@@ -19,10 +19,13 @@ typedef struct {
     const spx_profiler_func_table_entry_t ** top_entries;
 } fp_reporter_t;
 
+static const SPX_THREAD_TLS fp_reporter_t * entry_cmp_reporter;
+
 static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter, const spx_profiler_event_t * event);
 static void fp_destroy(spx_profiler_reporter_t * reporter);
 
-static int entry_cmp(const void * a, const void * b, void * data);
+static int entry_cmp(const void * a, const void * b);
+static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * reporter);
 static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t * event);
 
 spx_profiler_reporter_t * spx_reporter_fp_create(
@@ -107,10 +110,25 @@ static void fp_destroy(spx_profiler_reporter_t * reporter)
     free(fp_reporter->top_entries);
 }
 
-static int entry_cmp(const void * a, const void * b, void * data)
+static int entry_cmp(const void * a, const void * b)
 {
-    const fp_reporter_t * reporter = data;
+    /*
+     *  The use of entry_cmp_reporter TLS variable is required as a workaround for the
+     *  absence of qsort_r in some platform.
+     *
+     *  N.B.: This workaround is not reentrant since reentrancy is not required, it
+     *        only have to be thread-safe.
+     */
+    if (!entry_cmp_reporter) {
+        fprintf(stderr, "entry_cmp_reporter is not set\n");
+        exit(1);
+    }
 
+    return entry_cmp_r(a, b, entry_cmp_reporter);
+}
+
+static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * reporter)
+{
     const spx_profiler_func_table_entry_t * entry_a = (*((const spx_profiler_func_table_entry_t **) a));
     const spx_profiler_func_table_entry_t * entry_b = (*((const spx_profiler_func_table_entry_t **) b));
 
@@ -156,7 +174,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
         const spx_profiler_func_table_entry_t * current = &event->func_table.entries[i];
         size_t j;
         for (j = 0; j < limit; j++) {
-            if (entry_cmp(&reporter->top_entries[j], &current, reporter) > 0) {
+            if (entry_cmp_r(&reporter->top_entries[j], &current, reporter) > 0) {
                 reporter->top_entries[j] = current;
 
                 break;
@@ -164,12 +182,18 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
         }
     }
 
-    qsort_r(
+    /*
+     *  This side effect is required as a workaround for the absence of qsort_r
+     *  in some platform.
+     *  See related comment in entry_cmp implementation.
+     */
+    entry_cmp_reporter = reporter;
+
+    qsort(
         reporter->top_entries,
         limit,
         sizeof(*reporter->top_entries),
-        entry_cmp,
-        reporter
+        entry_cmp
     );
 
     spx_output_stream_print(reporter->base.output, "\n*** SPX Report ***\n\nGlobal stats:\n\n");
