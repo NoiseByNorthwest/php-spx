@@ -35,8 +35,8 @@ static SPX_THREAD_TLS struct {
     int cli_sapi;
 
     struct {
-        int stdout;
-        int stderr;
+        int stdout_fd;
+        int stderr_fd;
     } fd_backup;
 
     spx_config_t config;
@@ -291,8 +291,8 @@ static void init(void)
 
     context.cli_sapi = 0 == strcmp(sapi_module.name, "cli");
 
-    context.fd_backup.stdout = -1;
-    context.fd_backup.stderr = -1;
+    context.fd_backup.stdout_fd = -1;
+    context.fd_backup.stderr_fd = -1;
     
     context.profiler = NULL;
     context.output_file[0] = 0;
@@ -334,9 +334,9 @@ static void init(void)
     ) {
         fp_live = context.config.fp_live && isatty(STDOUT_FILENO);
         if (fp_live) {
-            context.fd_backup.stdout = spx_stdio_disable(STDOUT_FILENO);
-            context.fd_backup.stderr = spx_stdio_disable(STDERR_FILENO);
-            output = spx_output_stream_dopen(context.fd_backup.stdout, 0);
+            context.fd_backup.stdout_fd = spx_stdio_disable(STDOUT_FILENO);
+            context.fd_backup.stderr_fd = spx_stdio_disable(STDERR_FILENO);
+            output = spx_output_stream_dopen(context.fd_backup.stdout_fd, 0);
         } else {
             output = spx_output_stream_dopen(STDOUT_FILENO, 0);
         }
@@ -439,12 +439,12 @@ static void finish(void)
     spx_profiler_destroy(context.profiler);
     context.profiler = NULL;
 
-    if (context.fd_backup.stdout != -1) {
-        spx_stdio_restore(STDOUT_FILENO, context.fd_backup.stdout);
+    if (context.fd_backup.stdout_fd != -1) {
+        spx_stdio_restore(STDOUT_FILENO, context.fd_backup.stdout_fd);
     }
 
-    if (context.fd_backup.stderr != -1) {
-        spx_stdio_restore(STDERR_FILENO, context.fd_backup.stderr);
+    if (context.fd_backup.stderr_fd != -1) {
+        spx_stdio_restore(STDERR_FILENO, context.fd_backup.stderr_fd);
     }
 
     spx_resource_stats_shutdown();
