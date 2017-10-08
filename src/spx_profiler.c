@@ -48,8 +48,6 @@ typedef struct {
 } func_table_t;
 
 typedef struct {
-    int cyclic;
-    int cycle_depth;
     spx_profiler_func_table_entry_t * func_table_entry;
     spx_profiler_metric_values_t start_metric_values;
     spx_profiler_metric_values_t children_metric_values;
@@ -270,8 +268,6 @@ void spx_profiler_call_start(
         goto end;
     }
 
-    frame->cyclic = 0;
-    frame->cycle_depth = 0;
     frame->start_metric_values = cur_metric_values;
     METRIC_VALUES_ZERO(frame->children_metric_values);
 
@@ -325,6 +321,8 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
         return;
     }
 
+    spx_profiler_func_table_entry_t * entry = frame->func_table_entry;
+
     spx_profiler_metric_values_t inc_metric_values = cur_metric_values;
     METRIC_VALUES_SUB(inc_metric_values, frame->start_metric_values);
 
@@ -338,7 +336,7 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
             continue;
         }
 
-        if (parent_frame->func_table_entry == frame->func_table_entry) {
+        if (parent_frame->func_table_entry == entry) {
             cyclic = 1;
 
             break;
@@ -347,10 +345,19 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
         METRIC_VALUES_ADD(parent_frame->children_metric_values, exc_metric_values);
     }
 
-    spx_profiler_func_table_entry_t * entry = frame->func_table_entry;
-
     entry->stats.called++;
-    if (!cyclic) {
+    if (cyclic) {
+        size_t cycle_depth = 0;
+        for (i = 0; i < profiler->stack.depth; i++) {
+            if (profiler->stack.frames[i].func_table_entry == entry) {
+                cycle_depth++;
+            }
+        }
+
+        if (entry->stats.max_cycle_depth < cycle_depth) {
+            entry->stats.max_cycle_depth = cycle_depth;
+        }
+    } else {
         METRIC_VALUES_ADD(entry->stats.inc, inc_metric_values);
         METRIC_VALUES_ADD(entry->stats.exc, exc_metric_values);
     }
@@ -473,6 +480,7 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
     }
     
     entry->stats.called = 0;
+    entry->stats.max_cycle_depth = 0;
     METRIC_VALUES_ZERO(entry->stats.inc);
     METRIC_VALUES_ZERO(entry->stats.exc);
 

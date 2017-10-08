@@ -306,12 +306,23 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
         spx_fmt_row_add_ncell(fmt_row, 1, SPX_FMT_QUANTITY, entry->stats.called);
 
+        char cycle_depth_str[32] = {0};
+        if (entry->stats.max_cycle_depth > 0) {
+            snprintf(
+                cycle_depth_str,
+                sizeof(cycle_depth_str),
+                "%lu@",
+                entry->stats.max_cycle_depth
+            );
+        }
+
         char func_name[256];
 
         snprintf(
             func_name,
             sizeof(func_name),
-            "%s%s%s",
+            "%s%s%s%s",
+            cycle_depth_str,
             entry->function.class_name,
             entry->function.call_type,
             entry->function.func_name

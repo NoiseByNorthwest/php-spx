@@ -13,6 +13,7 @@ typedef struct {
 
 typedef struct {
     size_t called;
+    size_t max_cycle_depth;
     spx_profiler_metric_values_t inc;
     spx_profiler_metric_values_t exc;
 } spx_profiler_func_stats_t;
