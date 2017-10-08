@@ -37,7 +37,6 @@ typedef enum {
     SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
 } spx_config_source_t;
 
-void spx_config_init(spx_config_t * config);
-void spx_config_read(spx_config_t * config, spx_config_source_t source);
+void spx_config_read(spx_config_t * config, ...);
 
 #endif /* SPX_CONFIG_H_DEFINED */

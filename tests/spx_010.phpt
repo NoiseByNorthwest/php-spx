@@ -13,6 +13,8 @@ function foo() {
     $o = new stdClass;
     $objects[] = $o;
     trigger_error('');
+
+    usleep(100);
 }
 
 function bar() {
@@ -22,6 +24,8 @@ function bar() {
     for ($i = 0; $i < 30; $i++) {
         foo();
     }
+
+    usleep(100);
 }
 
 error_reporting(0);
@@ -41,14 +45,15 @@ Global stats:
   Called functions    :      311
   Distinct functions  :        3
 
+  Wall Time           : %s
   ZE object count     :      310
   ZE error count      :      300
 
 Flat profile:
 
- ZE object count     | ZE error count      |
- Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
-----------+----------+----------+----------+----------+----------
-      300 |      300 |      300 |      300 |      300 | foo
-      310 |       10 |      300 |        0 |       10 | bar
-        0 |     -310 |      300 |        0 |        1 | %s/spx_010.php
+ Wall Time           | ZE object count     | ZE error count      |
+ Inc.     | *Exc.    | Inc.     | Exc.     | Inc.     | Exc.     | Called   | Function
+----------+----------+----------+----------+----------+----------+----------+----------
+ %s | %s |      300 |      300 |      300 |      300 |      300 | foo
+ %s | %s |      310 |       10 |      300 |        0 |       10 | bar
+ %s | %s |        0 |     -310 |      300 |        0 |        1 | %s/spx_010.php

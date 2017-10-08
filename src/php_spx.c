@@ -297,12 +297,15 @@ static void init(void)
     context.profiler = NULL;
     context.output_file[0] = 0;
 
-    spx_config_init(&context.config);
     if (context.cli_sapi) {
-        spx_config_read(&context.config, SPX_CONFIG_SOURCE_ENV);
+        spx_config_read(&context.config, SPX_CONFIG_SOURCE_ENV, -1);
     } else {
-        spx_config_read(&context.config, SPX_CONFIG_SOURCE_HTTP_HEADER);
-        spx_config_read(&context.config, SPX_CONFIG_SOURCE_HTTP_QUERY_STRING);
+        spx_config_read(
+            &context.config,
+            SPX_CONFIG_SOURCE_HTTP_HEADER,
+            SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
+            -1
+        );
     }
 
     if (!context.config.enabled) {

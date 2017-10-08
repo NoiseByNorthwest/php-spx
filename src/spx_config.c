@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "spx_config.h"
@@ -27,13 +28,57 @@ typedef struct {
 
 typedef const char * (*source_handler_t) (const char * parameter);
 
+static void init_config(spx_config_t * config);
+static void fix_config(spx_config_t * config);
 static void source_data_get(source_data_t * source_data, source_handler_t handler);
 static void source_data_to_config(const source_data_t * source_data, spx_config_t * config);
 static const char * source_handler_env(const char * parameter);
 static const char * source_handler_http_header(const char * parameter);
 static const char * source_handler_http_query_string(const char * parameter);
 
-void spx_config_init(spx_config_t * config)
+void spx_config_read(spx_config_t * config, ...)
+{
+    init_config(config);
+
+    source_data_t source_data;
+
+    va_list ap;
+    va_start(ap, config);
+
+    while (1) {
+        spx_config_source_t source = va_arg(ap, spx_config_source_t);
+        source_handler_t source_handler = NULL;
+        switch (source) {
+            case SPX_CONFIG_SOURCE_ENV:
+                source_handler = source_handler_env;
+                break;
+
+            case SPX_CONFIG_SOURCE_HTTP_HEADER:
+                source_handler = source_handler_http_header;
+                break;
+
+            case SPX_CONFIG_SOURCE_HTTP_QUERY_STRING:
+                source_handler = source_handler_http_query_string;
+                break;
+
+            default:
+                ;
+        }
+
+        if (!source_handler) {
+            break;
+        }
+
+        source_data_get(&source_data, source_handler);
+        source_data_to_config(&source_data, config);
+    }
+
+    va_end(ap);
+
+    fix_config(config);
+}
+
+static void init_config(spx_config_t * config)
 {
     config->enabled = 0;
     config->key = NULL;
@@ -60,30 +105,11 @@ void spx_config_init(spx_config_t * config)
     config->trace_safe = 0;
 }
 
-void spx_config_read(spx_config_t * config, spx_config_source_t source)
+static void fix_config(spx_config_t * config)
 {
-    source_handler_t handler;
-    switch (source) {
-        default:
-        case SPX_CONFIG_SOURCE_ENV:
-            handler = source_handler_env;
-
-            break;
-
-        case SPX_CONFIG_SOURCE_HTTP_HEADER:
-            handler = source_handler_http_header;
-
-            break;
-
-        case SPX_CONFIG_SOURCE_HTTP_QUERY_STRING:
-            handler = source_handler_http_query_string;
-
-            break;
+    if (config->output == SPX_CONFIG_OUTPUT_FLAT_PROFILE) {
+        config->enabled_metrics[config->fp_focus] = 1;
     }
-
-    source_data_t source_data;
-    source_data_get(&source_data, handler);
-    source_data_to_config(&source_data, config);
 }
 
 static void source_data_get(source_data_t * source_data, source_handler_t handler)
@@ -126,20 +152,12 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
             config->enabled_metrics[i] = 0;
         });
 
-        spx_metric_t first_metric = SPX_METRIC_NONE;
         SPX_UTILS_TOKENIZE_STRING(source_data->metrics_str, ',', token, 32, {
             spx_metric_t metric = spx_metric_get_by_short_name(token);
             if (metric != SPX_METRIC_NONE) {
                 config->enabled_metrics[metric] = 1;
-                if (first_metric == SPX_METRIC_NONE) {
-                    first_metric = metric;
-                }
             }
         });
-
-        if (!config->enabled_metrics[config->fp_focus]) {
-            config->fp_focus = first_metric;
-        }
     }
 
     if (source_data->output_str) {
@@ -162,7 +180,6 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
         spx_metric_t focus = spx_metric_get_by_short_name(source_data->fp_focus_str);
         if (focus != SPX_METRIC_NONE) {
             config->fp_focus = focus;
-            config->enabled_metrics[focus] = 1;
         }
     }
 
