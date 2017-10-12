@@ -1,3 +1,4 @@
+#define _GNU_SOURCE /* vasprintf */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -176,5 +177,14 @@ static int gz_file_handler_print(void * file, const char * str)
 
 static int gz_file_handler_vprintf(void * file, const char * fmt, va_list ap)
 {
-    return gzvprintf(file, fmt, ap);
+    char * buf;
+    int printed = vasprintf(&buf, fmt, ap);
+    if (printed < 0) {
+        return printed;
+    }
+
+    printed = gzputs(file, buf);
+    free(buf);
+
+    return printed;
 }
