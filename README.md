@@ -26,7 +26,7 @@ This extension was primarily developed for my own usage and currently only fit m
 * PHP 5.6 & 7+
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
 
-Feel free to make a PR or open an issue if your platform is not supported.
+Feel free to open an issue if your platform is not supported.
 
 ## Installation
 
@@ -53,7 +53,11 @@ You may also want to override [default SPX configuration](#configuration) to be 
 ## Development status
 
 This is still **experimental**. API might change, features might be added or dropped, or development could be frozen.  
-You can still safely use it in a **non-production** environment.
+
+You can still safely use it in a **non-production** environment.  
+
+Contributions are welcome but be aware of the experimental status of this project and **please follow the contribution rules** described here: [CONTRIBUTING.md](CONTRIBUTING.md)  
+
 
 ## Basic usage
 
