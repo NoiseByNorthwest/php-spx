@@ -22,7 +22,7 @@
 #   error "ZTS is not yet supported"
 #endif
 
-#define PHP_SPX_VERSION "0.1"
+#define PHP_SPX_VERSION "0.1.1"
 #define PHP_SPX_EXTNAME "SPX"
 
 extern zend_module_entry spx_module_entry;
