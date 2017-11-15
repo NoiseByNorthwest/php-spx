@@ -1,4 +1,4 @@
-#ifndef __unix__
+#if !defined(__unix__) && !(defined(__APPLE__) && defined(__MACH__))
 #   error "Your platform is not supported"
 #endif
 

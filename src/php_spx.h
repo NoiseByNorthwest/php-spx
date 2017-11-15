@@ -5,9 +5,9 @@
 #include "main/php.h"
 #include "Zend/zend_extensions.h"
 
-/* linux 2.6+ */
-#ifndef linux
-#   error "Only Linux based OS are supported"
+/* linux 2.6+ or OSX */
+#if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__))
+#   error "Only Linux-based OS or Apple MacOS are supported"
 #endif
 
 #ifndef __x86_64__
