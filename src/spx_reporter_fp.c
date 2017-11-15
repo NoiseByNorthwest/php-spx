@@ -4,6 +4,7 @@
 
 #include "spx_reporter_fp.h"
 #include "spx_thread.h"
+#include "spx_utils.h"
 
 typedef struct {
     spx_profiler_reporter_t base;

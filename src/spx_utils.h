@@ -1,6 +1,8 @@
 #ifndef SPX_UTILS_H_DEFINED
 #define SPX_UTILS_H_DEFINED
 
+#include <time.h>
+
 #define SPX_UTILS_TOKENIZE_STRING(str, delim, token, size, block) \
 do {                                                              \
     const char * c_ = str;                                        \
@@ -26,5 +28,13 @@ do {                                                              \
         c_++;                                                     \
     }                                                             \
 } while (0)
+
+
+#if defined(__APPLE__) && defined(__MACH__) && (__MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+#define CLOCK_REALTIME 1
+#define CLOCK_REALTIME_COARSE 2
+typedef int clockid_t;
+int clock_gettime(clockid_t clk_id, struct timespec *res);
+#endif
 
 #endif /* SPX_UTILS_H_DEFINED */
