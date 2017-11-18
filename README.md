@@ -21,7 +21,7 @@ It differentiates itself from other similar extensions as being:
 This extension was primarily developed for my own usage and currently only fit my personal requirements:
 
 * x86-64
-* GNU/Linux
+* GNU/Linux or macOS
 * zlib dev package (e.g. zlib1g-dev on Debian based distro)
 * PHP 5.6 & 7+
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
@@ -232,6 +232,8 @@ And then trigger profiling by appending `?SPX_KEY=dev&SPX_ENABLED=1` to your app
 | _ior_ | I/O (reads) | Bytes read while performing I/O. |
 | _iow_ | I/O (writes) | Bytes written while performing I/O. |
 
+
+_N.B.: I/O metrics are not supported on macOS._
 
 ### Outputs
 
