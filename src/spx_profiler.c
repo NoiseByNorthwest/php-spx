@@ -56,7 +56,7 @@ typedef struct {
 typedef struct {
     size_t depth;
     stack_frame_t frames[STACK_CAPACITY];
-} stack_t;
+} spx_stack_t;
 
 struct spx_profiler_t {
     int finalized;
@@ -75,7 +75,7 @@ struct spx_profiler_t {
     spx_profiler_metric_values_t cum_metric_values;
     spx_profiler_metric_values_t max_metric_values;
 
-    stack_t stack;
+    spx_stack_t stack;
     func_table_t func_table;
 };
 
