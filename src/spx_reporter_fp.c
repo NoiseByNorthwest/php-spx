@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "spx_reporter_fp.h"
+#include "spx_resource_stats.h"
 #include "spx_thread.h"
-#include "spx_utils.h"
 
 typedef struct {
     spx_profiler_reporter_t base;
@@ -79,11 +78,7 @@ static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter
             return SPX_PROFILER_REPORTER_COST_LIGHT;
         }
 
-        struct timespec ts;
-        clock_gettime(CLOCK_REALTIME_COARSE, &ts);
-
-        size_t ts_ms = ts.tv_sec * 1000 + ts.tv_nsec / (1000 * 1000);
-
+        size_t ts_ms = spx_resource_stats_wall_time() / 1000;
         if (ts_ms - fp_reporter->last_ts_ms < 70) {
             return SPX_PROFILER_REPORTER_COST_LIGHT;
         }

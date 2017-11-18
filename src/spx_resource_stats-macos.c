@@ -3,7 +3,6 @@
 #include <sys/resource.h>
 
 #include "spx_resource_stats.h"
-#include "spx_thread.h"
 
 void spx_resource_stats_init(void)
 {

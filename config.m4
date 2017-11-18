@@ -53,7 +53,6 @@ if test "$PHP_SPX" = "yes"; then
         src/spx_php.c            \
         src/spx_stdio.c          \
         src/spx_config.c         \
-        src/spx_fmt.c            \
-        src/spx_utils.c,
+        src/spx_fmt.c,
         $ext_shared)
 fi
