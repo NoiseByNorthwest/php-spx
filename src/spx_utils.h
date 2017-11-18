@@ -1,8 +1,6 @@
 #ifndef SPX_UTILS_H_DEFINED
 #define SPX_UTILS_H_DEFINED
 
-#include <time.h>
-
 #define SPX_UTILS_TOKENIZE_STRING(str, delim, token, size, block) \
 do {                                                              \
     const char * c_ = str;                                        \
