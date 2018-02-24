@@ -1,58 +1,66 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
-#include <unistd.h>
 #ifndef ZTS
+#   define USE_SIGNAL
+#endif
+
+#ifdef USE_SIGNAL
 #   include <signal.h>
 #endif
 
-#include "main/SAPI.h"
+#include "php_spx.h"
 #include "ext/standard/info.h"
 
-#include "php_spx.h"
 #include "spx_thread.h"
 #include "spx_config.h"
-#include "spx_stdio.h"
 #include "spx_php.h"
 #include "spx_utils.h"
+#include "spx_metric.h"
 #include "spx_resource_stats.h"
 #include "spx_profiler.h"
 #include "spx_reporter_fp.h"
-#include "spx_reporter_cg.h"
-#include "spx_reporter_gte.h"
+#include "spx_reporter_full.h"
 #include "spx_reporter_trace.h"
 
+typedef struct {
+    void (*init) (void);
+    void (*shutdown) (void);
+} execution_handler_t;
+
 static SPX_THREAD_TLS struct {
-    struct {
-        volatile sig_atomic_t probing;
-        volatile sig_atomic_t stop;
-        volatile sig_atomic_t finish_called;
-        int signo;
-    } sig_handling;
-
     int cli_sapi;
+    spx_config_t config;
+
+    execution_handler_t * execution_handler;
 
     struct {
-        int stdout_fd;
-        int stderr_fd;
-    } fd_backup;
+#ifdef USE_SIGNAL
+        struct {
+            int handler_set;
+            struct {
+                struct sigaction sigint;
+                struct sigaction sigterm;
+            } prev_handler;
 
-    spx_config_t config;
-    spx_profiler_t * profiler;
+            volatile sig_atomic_t probing;
+            volatile sig_atomic_t stop;
+            volatile sig_atomic_t finish_called;
+            int signo;
+        } sig_handling;
+#endif
 
-    char output_file[512];
+        spx_profiler_t * profiler;
+    } profiling_handler;
 } context;
 
-/*
- *  PHP way of managing global state: currently only used for INI entries.
- */
 ZEND_BEGIN_MODULE_GLOBALS(spx)
+    const char * data_dir;
     zend_bool http_enabled;
     const char * http_key;
     const char * http_ip_var;
     const char * http_ip_whitelist;
+    const char * http_ui_assets_dir;
+    const char * http_ui_uri_prefix;
 ZEND_END_MODULE_GLOBALS(spx)
 
 ZEND_DECLARE_MODULE_GLOBALS(spx)
@@ -64,32 +72,74 @@ ZEND_DECLARE_MODULE_GLOBALS(spx)
 #endif
 
 PHP_INI_BEGIN()
-    STD_PHP_INI_ENTRY("spx.http_enabled", "0", PHP_INI_SYSTEM, OnUpdateBool, http_enabled, zend_spx_globals, spx_globals)
-    STD_PHP_INI_ENTRY("spx.http_key", "", PHP_INI_SYSTEM, OnUpdateString, http_key, zend_spx_globals, spx_globals)
-    STD_PHP_INI_ENTRY("spx.http_ip_var", "REMOTE_ADDR", PHP_INI_SYSTEM, OnUpdateString, http_ip_var, zend_spx_globals, spx_globals)
-    STD_PHP_INI_ENTRY("spx.http_ip_whitelist", "", PHP_INI_SYSTEM, OnUpdateString, http_ip_whitelist, zend_spx_globals, spx_globals)
+    STD_PHP_INI_ENTRY(
+        "spx.data_dir", "/tmp/spx", PHP_INI_SYSTEM,
+        OnUpdateString, data_dir, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_enabled", "0", PHP_INI_SYSTEM,
+        OnUpdateBool, http_enabled, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_key", "", PHP_INI_SYSTEM,
+        OnUpdateString, http_key, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_ip_var", "REMOTE_ADDR", PHP_INI_SYSTEM,
+        OnUpdateString, http_ip_var, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_ip_whitelist", "", PHP_INI_SYSTEM,
+        OnUpdateString, http_ip_whitelist, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_ui_assets_dir", SPX_HTTP_UI_ASSETS_DIR, PHP_INI_SYSTEM,
+        OnUpdateString, http_ui_assets_dir, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_ui_uri_prefix", "/_spx", PHP_INI_SYSTEM,
+        OnUpdateString, http_ui_uri_prefix, zend_spx_globals, spx_globals
+    )
 PHP_INI_END()
 
-PHP_MINIT_FUNCTION(spx);
-PHP_MSHUTDOWN_FUNCTION(spx);
-PHP_RINIT_FUNCTION(spx);
-PHP_RSHUTDOWN_FUNCTION(spx);
-PHP_MINFO_FUNCTION(spx);
-
-static void ex_hook_before(void);
-static void ex_hook_after(void);
-static void terminate(void);
-
-#ifndef ZTS
-static void terminate_handler(int signo);
-static void setup_terminate_handler(void);
-#endif
+static PHP_MINIT_FUNCTION(spx);
+static PHP_MSHUTDOWN_FUNCTION(spx);
+static PHP_RINIT_FUNCTION(spx);
+static PHP_RSHUTDOWN_FUNCTION(spx);
+static PHP_MINFO_FUNCTION(spx);
 
 static int check_access(void);
-static void init(void);
-static void finish(void);
-static void read_file_content(const char * file, size_t (*reader) (const void * ptr, size_t len));
-static void generate_output_file_name(char * str, size_t max, spx_config_output_t output_type);
+
+static void profiling_handler_init(void);
+static void profiling_handler_shutdown(void);
+static void profiling_handler_ex_set_context(void);
+static void profiling_handler_ex_unset_context(void);
+static void profiling_handler_ex_hook_before(void);
+static void profiling_handler_ex_hook_after(void);
+#ifdef USE_SIGNAL
+static void profiling_handler_sig_terminate(void);
+static void profiling_handler_sig_handler(int signo);
+static void profiling_handler_sig_set_handler(void);
+static void profiling_handler_sig_unset_handler(void);
+#endif
+
+static void http_ui_handler_init(void);
+static void http_ui_handler_shutdown(void);
+static int  http_ui_handler_data(const char * data_dir, const char *relative_path);
+static void http_ui_handler_list_metadata_files_callback(const char * file_name, size_t count);
+static int  http_ui_handler_output_file(const char * file_name);
+
+static void read_stream_content(FILE * stream, size_t (*callback) (const void * ptr, size_t len));
+
+static execution_handler_t profiling_handler = {
+    profiling_handler_init,
+    profiling_handler_shutdown
+};
+
+static execution_handler_t http_ui_handler = {
+    http_ui_handler_init,
+    http_ui_handler_shutdown
+};
 
 static zend_function_entry spx_functions[] = {
     /* empty */
@@ -117,7 +167,7 @@ zend_module_entry spx_module_entry = {
 ZEND_GET_MODULE(spx)
 #endif
 
-PHP_MINIT_FUNCTION(spx)
+static PHP_MINIT_FUNCTION(spx)
 {
 #ifdef ZTS
     spx_php_hooks_init();
@@ -128,7 +178,7 @@ PHP_MINIT_FUNCTION(spx)
     return SUCCESS;
 }
 
-PHP_MSHUTDOWN_FUNCTION(spx)
+static PHP_MSHUTDOWN_FUNCTION(spx)
 {
 #ifdef ZTS
     spx_php_hooks_shutdown();
@@ -139,91 +189,73 @@ PHP_MSHUTDOWN_FUNCTION(spx)
     return SUCCESS;
 }
 
-PHP_RINIT_FUNCTION(spx)
+static PHP_RINIT_FUNCTION(spx)
 {
-    init();
+    context.execution_handler = NULL;
+    context.cli_sapi = spx_php_is_cli_sapi();
+
+    if (context.cli_sapi) {
+        spx_config_get(&context.config, context.cli_sapi, SPX_CONFIG_SOURCE_ENV, -1);
+    } else {
+        spx_config_get(
+            &context.config,
+            context.cli_sapi,
+            SPX_CONFIG_SOURCE_HTTP_COOKIE,
+            SPX_CONFIG_SOURCE_HTTP_HEADER,
+            SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
+            -1
+        );
+    }
+
+    if (!check_access()) {
+        return SUCCESS;
+    }
+
+    if (!context.cli_sapi) {
+        const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
+        if (
+            request_uri
+            && 0 == strncmp(
+                request_uri,
+                SPX_G(http_ui_uri_prefix),
+                strlen(SPX_G(http_ui_uri_prefix))
+            )
+        ) {
+            context.execution_handler = &http_ui_handler;
+        }
+    }
+
+    if (!context.execution_handler && context.config.enabled) {
+        context.execution_handler = &profiling_handler;
+    }
+
+    if (context.execution_handler) {
+        context.execution_handler->init();
+    }
 
     return SUCCESS;
 }
 
-PHP_RSHUTDOWN_FUNCTION(spx)
+static PHP_RSHUTDOWN_FUNCTION(spx)
 {
-    finish();
+    if (context.execution_handler) {
+        context.execution_handler->shutdown();
+    }
 
     return SUCCESS;
 }
 
-PHP_MINFO_FUNCTION(spx)
+static PHP_MINFO_FUNCTION(spx)
 {
     php_info_print_table_start();
 
-    php_info_print_table_row(2, "SPX Support", "enabled");
-    php_info_print_table_row(2, "SPX Version", PHP_SPX_VERSION);
+    php_info_print_table_row(2, PHP_SPX_EXTNAME " Support", "enabled");
+    php_info_print_table_row(2, PHP_SPX_EXTNAME " Version", PHP_SPX_VERSION);
 
     php_info_print_table_end();
 
     DISPLAY_INI_ENTRIES();
 }
-
-static void ex_hook_before(void)
-{
-    context.sig_handling.probing = 1;
-    spx_php_function_t function;
-    spx_php_current_function(&function);
-
-    spx_profiler_call_start(context.profiler, &function);
-    context.sig_handling.probing = 0;
-    if (context.sig_handling.stop) {
-        terminate();
-    }
-}
-
-static void ex_hook_after(void)
-{
-    context.sig_handling.probing = 1;
-    spx_profiler_call_end(context.profiler);
-    context.sig_handling.probing = 0;
-    if (context.sig_handling.stop) {
-        terminate();
-    }
-}
-
-static void terminate(void)
-{
-    finish();
-
-    exit(context.sig_handling.signo < 0 ? EXIT_SUCCESS : 128 + context.sig_handling.signo);
-}
-
-#ifndef ZTS
-static void terminate_handler(int signo)
-{
-    if (context.sig_handling.finish_called > 0) {
-        return;
-    }
-
-    context.sig_handling.signo = signo;
-
-    if (context.sig_handling.probing) {
-        context.sig_handling.stop = 1;
-
-        return;
-    }
-
-    terminate();
-}
-
-static void setup_terminate_handler(void)
-{
-    struct sigaction act;
-
-    act.sa_handler = terminate_handler;
-    act.sa_flags = 0;
-
-    sigaction(SIGINT, &act, NULL);
-    sigaction(SIGTERM, &act, NULL);
-}
-#endif
 
 static int check_access(void)
 {
@@ -282,315 +314,449 @@ static int check_access(void)
     return 0;
 }
 
-static void init(void)
+static void profiling_handler_init(void)
 {
-    context.sig_handling.probing = 0;
-    context.sig_handling.stop = 0;
-    context.sig_handling.finish_called = 0;
-    context.sig_handling.signo = -1;
+#ifdef USE_SIGNAL
+    context.profiling_handler.sig_handling.handler_set = 0;
+    context.profiling_handler.sig_handling.probing = 0;
+    context.profiling_handler.sig_handling.stop = 0;
+    context.profiling_handler.sig_handling.finish_called = 0;
+    context.profiling_handler.sig_handling.signo = -1;
+#endif
 
-    context.cli_sapi = 0 == strcmp(sapi_module.name, "cli");
+    profiling_handler_ex_set_context();
 
-    context.fd_backup.stdout_fd = -1;
-    context.fd_backup.stderr_fd = -1;
-    
-    context.profiler = NULL;
-    context.output_file[0] = 0;
-
-    if (context.cli_sapi) {
-        spx_config_read(&context.config, SPX_CONFIG_SOURCE_ENV, -1);
-    } else {
-        spx_config_read(
-            &context.config,
-            SPX_CONFIG_SOURCE_HTTP_HEADER,
-            SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
-            -1
-        );
-    }
-
-    if (!context.config.enabled) {
-        return;
-    }
-
-    if (!check_access()) {
-        return;
-    }
-
-    if (context.config.output_file) {
-        strcpy(context.output_file, context.config.output_file);
-    }
-
-    if (!context.output_file[0]) {
-        generate_output_file_name(
-            context.output_file,
-            sizeof(context.output_file),
-            context.config.output
-        );
-    }
-
-    spx_output_stream_t * output = NULL;
-    int fp_live = 0;
-    if (
-        context.cli_sapi &&
-        context.config.output == SPX_CONFIG_OUTPUT_FLAT_PROFILE &&
-        !context.config.output_file
-    ) {
-        fp_live = context.config.fp_live && isatty(STDOUT_FILENO);
-        if (fp_live) {
-            context.fd_backup.stdout_fd = spx_stdio_disable(STDOUT_FILENO);
-            context.fd_backup.stderr_fd = spx_stdio_disable(STDERR_FILENO);
-            output = spx_output_stream_dopen(context.fd_backup.stdout_fd, 0);
-        } else {
-            output = spx_output_stream_dopen(STDOUT_FILENO, 0);
-        }
-    } else {
-        int compressed = 0;
-        size_t name_len = strlen(context.output_file);
-        if (name_len > 3 && strcmp(context.output_file + name_len - 3, ".gz") == 0) {
-            compressed = 1;
-        }
-
-        output = spx_output_stream_open(context.output_file, compressed);
-    }
-
-    if (!output) {
-        return;
-    }
-
+    context.profiling_handler.profiler = NULL;
     spx_profiler_reporter_t * reporter = NULL;
-    switch (context.config.output) {
+
+    switch (context.config.report) {
         default:
-        case SPX_CONFIG_OUTPUT_FLAT_PROFILE:
+        case SPX_CONFIG_REPORT_FULL:
+            reporter = spx_reporter_full_create(SPX_G(data_dir), context.config.full_res);
+
+            break;
+
+        case SPX_CONFIG_REPORT_FLAT_PROFILE:
             reporter = spx_reporter_fp_create(
-                output,
                 context.config.fp_focus,
                 context.config.fp_inc,
                 context.config.fp_rel,
                 context.config.fp_limit,
-                fp_live
+                context.config.fp_live
             );
 
             break;
 
-        case SPX_CONFIG_OUTPUT_CALLGRIND:
-            reporter = spx_reporter_cg_create(output);
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_GOOGLE_TRACE_EVENT:
-            reporter = spx_reporter_gte_create(output);
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_TRACE:
-            reporter = spx_reporter_trace_create(output, context.config.trace_safe);
+        case SPX_CONFIG_REPORT_TRACE:
+            reporter = spx_reporter_trace_create(context.config.trace_file, context.config.trace_safe);
 
             break;
     }
 
     if (!reporter) {
-        return;
+        goto error;
     }
 
-    spx_resource_stats_init();
-
-    context.profiler = spx_profiler_create(
+    context.profiling_handler.profiler = spx_profiler_create(
         context.config.max_depth,
         context.config.enabled_metrics,
         reporter
     );
 
-    if (!context.profiler) {
-        spx_resource_stats_shutdown();
+    if (!context.profiling_handler.profiler) {
+        goto error;
+    }
 
+    return;
+
+error:
+    profiling_handler_ex_unset_context();
+}
+
+static void profiling_handler_shutdown(void)
+{
+    context.profiling_handler.sig_handling.finish_called++;
+
+    if (context.profiling_handler.sig_handling.finish_called != 1) {
         return;
     }
 
+    if (!context.profiling_handler.profiler) {
+        return;
+    }
+
+    profiling_handler_ex_unset_context();
+
+    spx_profiler_finalize(context.profiling_handler.profiler);
+    spx_profiler_destroy(context.profiling_handler.profiler);
+    context.profiling_handler.profiler = NULL;
+}
+
+static void profiling_handler_ex_set_context(void)
+{
 #ifndef ZTS
     spx_php_hooks_init();
 #endif
 
-    spx_php_context_init();
+    spx_php_execution_init();
+    spx_resource_stats_init();
 
-    spx_php_execution_hook(ex_hook_before, ex_hook_after, 0);
+    spx_php_execution_hook(profiling_handler_ex_hook_before, profiling_handler_ex_hook_after, 0);
     if (context.config.builtins) {
-        spx_php_execution_hook(ex_hook_before, ex_hook_after, 1);
+        spx_php_execution_hook(profiling_handler_ex_hook_before, profiling_handler_ex_hook_after, 1);
     }
 
+#ifdef USE_SIGNAL
     if (context.cli_sapi) {
-#ifndef ZTS
-        setup_terminate_handler();
-#endif
-    } else {
-        spx_php_output_disable();
+        profiling_handler_sig_set_handler();
     }
+#endif
 }
 
-static void finish(void)
+static void profiling_handler_ex_unset_context(void)
 {
-    context.sig_handling.finish_called++;
-
-    if (context.sig_handling.finish_called != 1) {
-        return;
+#ifdef USE_SIGNAL
+    if (context.cli_sapi) {
+        profiling_handler_sig_unset_handler();
     }
-
-    if (!context.profiler) {
-        return;
-    }
-
-    spx_profiler_finalize(context.profiler);
-    spx_profiler_destroy(context.profiler);
-    context.profiler = NULL;
-
-    if (context.fd_backup.stdout_fd != -1) {
-        spx_stdio_restore(STDOUT_FILENO, context.fd_backup.stdout_fd);
-    }
-
-    if (context.fd_backup.stderr_fd != -1) {
-        spx_stdio_restore(STDERR_FILENO, context.fd_backup.stderr_fd);
-    }
+#endif
 
     spx_resource_stats_shutdown();
+    spx_php_execution_shutdown();
 
-    spx_php_output_restore();
+#ifndef ZTS
+    spx_php_hooks_shutdown();
+#endif
+}
 
-    spx_php_execution_hook(NULL, NULL, 0);
-    spx_php_execution_hook(NULL, NULL, 1);
+static void profiling_handler_ex_hook_before(void)
+{
+#ifdef USE_SIGNAL
+    context.profiling_handler.sig_handling.probing = 1;
+#endif
+
+    spx_php_function_t function;
+    spx_php_current_function(&function);
+
+    spx_profiler_call_start(context.profiling_handler.profiler, &function);
+
+#ifdef USE_SIGNAL
+    context.profiling_handler.sig_handling.probing = 0;
+    if (context.profiling_handler.sig_handling.stop) {
+        profiling_handler_sig_terminate();
+    }
+#endif
+}
+
+static void profiling_handler_ex_hook_after(void)
+{
+#ifdef USE_SIGNAL
+    context.profiling_handler.sig_handling.probing = 1;
+#endif
+
+    spx_profiler_call_end(context.profiling_handler.profiler);
+
+#ifdef USE_SIGNAL
+    context.profiling_handler.sig_handling.probing = 0;
+    if (context.profiling_handler.sig_handling.stop) {
+        profiling_handler_sig_terminate();
+    }
+#endif
+}
+
+#ifdef USE_SIGNAL
+static void profiling_handler_sig_terminate(void)
+{
+    profiling_handler_shutdown();
+
+    exit(
+        context.profiling_handler.sig_handling.signo < 0 ?
+            EXIT_SUCCESS : 128 + context.profiling_handler.sig_handling.signo
+    );
+}
+
+static void profiling_handler_sig_handler(int signo)
+{
+    if (context.profiling_handler.sig_handling.finish_called > 0) {
+        return;
+    }
+
+    context.profiling_handler.sig_handling.signo = signo;
+
+    if (context.profiling_handler.sig_handling.probing) {
+        context.profiling_handler.sig_handling.stop = 1;
+
+        return;
+    }
+
+    profiling_handler_sig_terminate();
+}
+
+static void profiling_handler_sig_set_handler(void)
+{
+    struct sigaction act;
+
+    act.sa_handler = profiling_handler_sig_handler;
+    act.sa_flags = 0;
+
+    sigaction(SIGINT, &act, &context.profiling_handler.sig_handling.prev_handler.sigint);
+    sigaction(SIGTERM, &act, &context.profiling_handler.sig_handling.prev_handler.sigterm);
+
+    context.profiling_handler.sig_handling.handler_set = 1;
+}
+
+static void profiling_handler_sig_unset_handler(void)
+{
+    if (!context.profiling_handler.sig_handling.handler_set) {
+        return;
+    }
+
+    sigaction(SIGINT, &context.profiling_handler.sig_handling.prev_handler.sigint, NULL);
+    sigaction(SIGTERM, &context.profiling_handler.sig_handling.prev_handler.sigterm, NULL);
+
+    context.profiling_handler.sig_handling.handler_set = 0;
+}
+#endif /* defined(USE_SIGNAL) */
+
+static void http_ui_handler_init(void)
+{
+#ifndef ZTS
+    spx_php_hooks_init();
+#endif
+
+    spx_php_execution_init();
+    spx_php_execution_disable();
+    spx_php_execution_output_disable();
+}
+
+static void http_ui_handler_shutdown(void)
+{
+    spx_php_execution_shutdown();
 
 #ifndef ZTS
     spx_php_hooks_shutdown();
 #endif
 
-    if (
-        context.cli_sapi &&
-        !context.config.output_file &&
-        context.config.output != SPX_CONFIG_OUTPUT_FLAT_PROFILE
-    ) {
-        fprintf(stderr, "\nSPX output file: %s\n", context.output_file);
+    const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
+    if (!request_uri) {
+        goto error_404;
     }
 
-    if (context.cli_sapi) {
-        return;
+    const char * prefix_pos = strstr(request_uri, SPX_G(http_ui_uri_prefix));
+    if (prefix_pos != request_uri) {
+        goto error_404;
     }
 
-    spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
+    char relative_path[512];
+    strncpy(relative_path, request_uri + strlen(SPX_G(http_ui_uri_prefix)), sizeof(relative_path));
 
-    switch (context.config.output) {
-        default:
-        case SPX_CONFIG_OUTPUT_FLAT_PROFILE:
-        case SPX_CONFIG_OUTPUT_TRACE:
-            spx_php_output_direct_print("Content-Type: text/plain\r\n");
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_CALLGRIND:
-            spx_php_output_direct_print("Content-Type: application/octet-stream\r\n");
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_GOOGLE_TRACE_EVENT:
-            spx_php_output_direct_print("Content-Type: application/json\r\n");
-
-            break;
+    char * query_string = strchr(relative_path, '?');
+    if (query_string) {
+        *query_string = 0;
     }
 
-
-    if (context.config.output != SPX_CONFIG_OUTPUT_FLAT_PROFILE) {
-        spx_php_output_direct_print("Content-Encoding: gzip\r\n");
-        
-        spx_php_output_direct_print("Content-Disposition: attachment; filename=\"");
-
-        const char * basename = strrchr(context.output_file, '/') + 1;
-        spx_php_output_direct_write(basename, strrchr(basename, '.') - basename);
-
-        spx_php_output_direct_print("\"\r\n");
+    if (0 == strcmp(relative_path, "/")) {
+        strncpy(relative_path, "/index.html", sizeof(relative_path));
     }
 
+    if (0 == http_ui_handler_data(SPX_G(data_dir), relative_path)) {
+        goto finish;
+    }
+
+    char local_file_name[512];
+    snprintf(
+        local_file_name,
+        sizeof(local_file_name),
+        "%s%s",
+        SPX_G(http_ui_assets_dir),
+        relative_path
+    );
+
+    if (0 == http_ui_handler_output_file(local_file_name)) {
+        goto finish;
+    }
+
+error_404:
+    /* FIXME: 404 status does not work (response status is still 200) */
+    spx_php_output_direct_print("HTTP/1.1 404 Not Found\r\n");
+    spx_php_output_direct_print("Content-Type: text/plain\r\n");
     spx_php_output_direct_print("\r\n");
+    spx_php_output_direct_print("File not found.\n");
 
-    read_file_content(context.output_file, spx_php_output_direct_write);
-
-    remove(context.output_file);
-
+finish:
     spx_php_ouput_finalize();
 }
 
-static void read_file_content(const char * file, size_t (*reader) (const void * ptr, size_t len))
+static int http_ui_handler_data(const char * data_dir, const char *relative_path)
 {
-    FILE * fp = fopen(file, "rb");
+    if (0 == strcmp(relative_path, "/data/metrics")) {
+        spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
+        spx_php_output_direct_print("Content-Type: application/json\r\n");
+        spx_php_output_direct_print("\r\n");
+        spx_php_output_direct_print("{\"results\": [\n");
+
+        SPX_METRIC_FOREACH(i, {
+            if (i > 0) {
+                spx_php_output_direct_print(",");
+            }
+
+            spx_php_output_direct_print("{");
+            spx_php_output_direct_print("\"key\": \"");
+            spx_php_output_direct_print(spx_metrics_info[i].short_name);
+            spx_php_output_direct_print("\",");
+
+            spx_php_output_direct_print("\"name\": \"");
+            spx_php_output_direct_print(spx_metrics_info[i].name);
+            spx_php_output_direct_print("\",");
+
+            spx_php_output_direct_print("\"type\": \"");
+            switch (spx_metrics_info[i].type) {
+                case SPX_FMT_TIME:
+                    spx_php_output_direct_print("time");
+                    break;
+
+                case SPX_FMT_MEMORY:
+                    spx_php_output_direct_print("memory");
+                    break;
+
+                case SPX_FMT_QUANTITY:
+                    spx_php_output_direct_print("quantity");
+                    break;
+
+                default:
+                    ;
+            }
+
+            spx_php_output_direct_print("\"");
+
+            spx_php_output_direct_print("}\n");
+        });
+
+        spx_php_output_direct_print("]}\n");
+
+        return 0;
+    }
+
+    if (0 == strcmp(relative_path, "/data/reports/metadata")) {
+        spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
+        spx_php_output_direct_print("Content-Type: application/json\r\n");
+        spx_php_output_direct_print("\r\n");
+        spx_php_output_direct_print("{\"results\": [\n");
+
+        spx_reporter_full_metadata_list_files(
+            data_dir,
+            http_ui_handler_list_metadata_files_callback
+        );
+
+        spx_php_output_direct_print("]}\n");
+
+        return 0;
+    }
+
+    const char * get_report_metadata_uri = "/data/reports/metadata/";
+    if (spx_utils_str_starts_with(relative_path, get_report_metadata_uri)) {
+        char file_name[512];
+        spx_reporter_full_metadata_get_file_name(
+            data_dir,
+            relative_path + strlen(get_report_metadata_uri),
+            file_name,
+            sizeof(file_name)
+        );
+
+        return http_ui_handler_output_file(file_name);
+    }
+
+    const char * get_report_uri = "/data/reports/get/";
+    if (spx_utils_str_starts_with(relative_path, get_report_uri)) {
+        char file_name[512];
+        spx_reporter_full_get_file_name(
+            data_dir,
+            relative_path + strlen(get_report_uri),
+            file_name,
+            sizeof(file_name)
+        );
+
+        return http_ui_handler_output_file(file_name);
+    }
+
+    return -1;
+}
+
+static void http_ui_handler_list_metadata_files_callback(const char * file_name, size_t count)
+{
+    if (count > 0) {
+        spx_php_output_direct_print(",");
+    }
+
+    FILE * fp = fopen(file_name, "r");
     if (!fp) {
         return;
     }
 
-    char buf[512];
+    read_stream_content(fp, spx_php_output_direct_write);
+    fclose(fp);
+}
+
+static int http_ui_handler_output_file(const char * file_name)
+{
+    FILE * fp = fopen(file_name, "rb");
+    if (!fp) {
+        return -1;
+    }
+
+    char suffix[32];
+    int suffix_offset = strlen(file_name) - (sizeof(suffix) - 1);
+    strncpy(
+        suffix,
+        file_name + (suffix_offset < 0 ? 0 : suffix_offset),
+        sizeof(suffix)
+    );
+
+    suffix[sizeof(suffix) - 1] = 0;
+
+    const int compressed = spx_utils_str_ends_with(suffix, ".gz");
+    if (compressed) {
+        *strrchr(suffix, '.') = 0;
+    }
+
+    const char * content_type = "application/octet-stream";
+    if (spx_utils_str_ends_with(suffix, ".html")) {
+        content_type = "text/html; charset=utf-8";
+    } else if (spx_utils_str_ends_with(suffix, ".css")) {
+        content_type = "text/css";
+    } else if (spx_utils_str_ends_with(suffix, ".js")) {
+        content_type = "application/javascript";
+    } else if (spx_utils_str_ends_with(suffix, ".json")) {
+        content_type = "application/json";
+    }
+
+    spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
+    spx_php_output_direct_printf("Content-Type: %s\r\n", content_type);
+    if (compressed) {
+        spx_php_output_direct_print("Content-Encoding: gzip\r\n");
+    }
+
+    fseek(fp, 0L, SEEK_END);
+    spx_php_output_direct_printf("Content-Length: %ld\r\n", ftell(fp));
+    rewind(fp);
+
+    spx_php_output_direct_print("\r\n");
+
+    read_stream_content(fp, spx_php_output_direct_write);
+    fclose(fp);
+
+    return 0;
+}
+
+static void read_stream_content(FILE * stream, size_t (*callback) (const void * ptr, size_t len))
+{
+    char buf[8 * 1024];
     while (1) {
-        size_t read = fread(buf, 1, sizeof(buf), fp);
-        reader(buf, read);
+        size_t read = fread(buf, 1, sizeof(buf), stream);
+        callback(buf, read);
 
         if (read < sizeof(buf)) {
             break;
         }
     }
-
-    fclose(fp);
-}
-
-static void generate_output_file_name(char * str, size_t max, spx_config_output_t output_type)
-{
-    const char * prefix;
-    const char * extension;
-    int compressed;
-
-    switch (output_type) {
-        default:
-        case SPX_CONFIG_OUTPUT_FLAT_PROFILE:
-            prefix = "spx.flat_profile";
-            extension = "txt";
-            compressed = 0;
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_CALLGRIND:
-            prefix = "callgrind.out";
-            extension = "dat";
-            compressed = 1;
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_GOOGLE_TRACE_EVENT:
-            prefix = "spx.google_trace_event";
-            extension = "json";
-            compressed = 1;
-
-            break;
-
-        case SPX_CONFIG_OUTPUT_TRACE:
-            prefix = "spx.trace";
-            extension = "txt";
-            compressed = 1;
-            
-            break;
-    }
-
-    time_t timer;
-    time(&timer);
-
-    char date[64];
-    strftime(
-        date,
-        sizeof(date),
-        "%Y-%m-%d_%H:%M:%S",
-        localtime(&timer)
-    );
-
-    snprintf(
-        str,
-        max,
-        "/tmp/%s.%s.%d.%s%s",
-        prefix,
-        date,
-        rand(),
-        extension,
-        compressed ? ".gz" : ""
-    );
 }

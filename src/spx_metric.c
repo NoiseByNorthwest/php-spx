@@ -107,9 +107,29 @@ void spx_metric_collector_destroy(spx_metric_collector_t * collector)
 
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values)
 {
-    collect_raw_values(collector->enabled_metrics, collector->last_values);
+    double current_values[SPX_METRIC_COUNT];
+    collect_raw_values(collector->enabled_metrics, current_values);
+
+    /*
+     *  This branch is required to fix cpu / wall time inconsistency (cpu > wall time within a single thread).
+     */
+    if (
+        collector->enabled_metrics[SPX_METRIC_WALL_TIME] &&
+        collector->enabled_metrics[SPX_METRIC_CPU_TIME]
+    ) {
+        const double ct_surplus =
+            (current_values[SPX_METRIC_CPU_TIME] - collector->last_values[SPX_METRIC_CPU_TIME])
+            - (current_values[SPX_METRIC_WALL_TIME] - collector->last_values[SPX_METRIC_WALL_TIME])
+        ;
+
+        if (ct_surplus > 0) {
+            collector->ref_values[SPX_METRIC_CPU_TIME] += ct_surplus;
+            collector->ref_values[SPX_METRIC_IDLE_TIME] -= ct_surplus;
+        }
+    }
 
     SPX_METRIC_FOREACH(i, {
+        collector->last_values[i] = current_values[i];
         values[i] = collector->last_values[i] - collector->ref_values[i];
     });
 }

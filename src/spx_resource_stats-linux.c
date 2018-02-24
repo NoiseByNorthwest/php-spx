@@ -13,12 +13,14 @@
 #include "spx_thread.h"
 
 static SPX_THREAD_TLS struct {
+    int init;
     int io_fd;
     size_t io_noise;
 } context;
 
 void spx_resource_stats_init(void)
 {
+    context.init = 1;
     char io_file[64];
     snprintf(
         io_file,
@@ -33,8 +35,13 @@ void spx_resource_stats_init(void)
 
 void spx_resource_stats_shutdown(void)
 {
+    if (!context.init) {
+        return;
+    }
+
     if (context.io_fd != -1) {
         close(context.io_fd);
+        context.io_fd = -1;
     }
 }
 
@@ -58,6 +65,7 @@ size_t spx_resource_stats_wall_time(void)
 size_t spx_resource_stats_cpu_time(void)
 {
     struct timespec ts;
+
     /*
      *  Linux implementation of CLOCK_PROCESS_CPUTIME_ID does not require to stick
      *  the current thread to the same CPU.

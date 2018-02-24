@@ -19,6 +19,7 @@ typedef struct {
 } spx_profiler_func_stats_t;
 
 typedef struct {
+    size_t idx;
     spx_php_function_t function;
     spx_profiler_func_stats_t stats;
 } spx_profiler_func_table_entry_t;
@@ -46,8 +47,8 @@ typedef struct {
 
     size_t depth;
 
-    const spx_php_function_t * caller;
-    const spx_php_function_t * callee;
+    const spx_profiler_func_table_entry_t * caller;
+    const spx_profiler_func_table_entry_t * callee;
     
     const spx_profiler_metric_values_t * inc;
     const spx_profiler_metric_values_t * exc;
@@ -69,14 +70,12 @@ typedef spx_profiler_reporter_cost_t (*spx_profiler_reporter_notify_func_t) (
 typedef void (*spx_profiler_reporter_destroy_func_t) (struct spx_profiler_reporter_t * reporter);
 
 typedef struct spx_profiler_reporter_t {
-    spx_output_stream_t * output;
     spx_profiler_reporter_notify_func_t notify;
     spx_profiler_reporter_destroy_func_t destroy;
 } spx_profiler_reporter_t;
 
 spx_profiler_reporter_t * spx_profiler_reporter_create(
     size_t size,
-    spx_output_stream_t * output,
     spx_profiler_reporter_notify_func_t notify,
     spx_profiler_reporter_destroy_func_t destroy
 );

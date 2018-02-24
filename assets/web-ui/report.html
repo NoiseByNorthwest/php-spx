@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>SPX Report</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <div id="init-report">
+        <div>
+            <h2>Initializing...</h2>
+            <p></p>
+            <div class="progress">
+                <div style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="control-bar" class="widget" style="width: 100%; height: 24px">
+        <select>
+        </select>
+    </div>
+    <div id="overview" class="widget visualization" style="width: 100%; height: 120px"></div>
+    <div id="timeline" class="widget visualization" style="width: 100%; height: 400px"></div>
+    <table width="100%"><tr>
+        <td style="width: 60%; min-width: 600px;">
+            <div id="flatprofile" class="widget" style="height: 500px"></div>
+        </td><td>
+            <div id="flamegraph" class="widget visualization" style="width: 100%; height: 500px"></div>
+        </td>
+    </tr></table>
+
+    <script
+        src="https://code.jquery.com/jquery-3.2.1.min.js"
+        integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous"
+    ></script>
+
+    <!-- Required workaround for Firefox to fix a "no credentials" issue -->
+    <script type="module" crossorigin src="./js/utils.js"></script>
+    <script type="module" crossorigin src="./js/fmt.js"></script>
+    <script type="module" crossorigin src="./js/profileData.js"></script>
+    <script type="module" crossorigin src="./js/widget.js"></script>
+
+    <script type="module" crossorigin>
+        import * as fmt from './js/fmt.js';
+        import {processCallChain} from './js/utils.js';
+        import {ProfileDataBuilder} from './js/profileData.js';
+        import * as widget from './js/widget.js';
+
+        $(() => {
+            const m = window.location.href.match(/\bkey=([^&]+)/);
+            if (!m) {
+                return;
+            }
+
+            const key = m[1];
+            let profileDataBuilder = null;
+
+            const initDialog = {
+                container: $('#init-report'),
+                text: $('#init-report p'),
+                progress: $('#init-report .progress'),
+                progressBar: $('#init-report .progress > div'),
+            };
+
+            function setProgress(text, current, total) {
+                initDialog.text.text(text);
+
+                if (!total) {
+                    initDialog.progress.hide();
+
+                    return;
+                }
+
+                initDialog.progress.show();
+                initDialog.progressBar.width(
+                    Math.round(100 * current / total) + '%'
+                );
+            }
+
+            fetch('data/reports/metadata/' + key, {credentials: "same-origin"})
+                .then(response => response.json())
+                .then(response => {
+                    profileDataBuilder = new ProfileDataBuilder(response);
+
+                    return fetch('data/reports/get/' + key, {credentials: "same-origin"});
+                })
+                .then(response => {
+                    let type = null;
+                    let currentFunctionIdx = 0;
+                    let currentLine = '';
+
+                    function readBuffer(buffer) {
+                        const lines = [];
+                        for (const byte of buffer) {
+                            // ascii only
+                            const c = String.fromCharCode(byte);
+                            if (c == "\n") {
+                                lines.push(currentLine);
+                                currentLine = '';
+
+                                continue;
+                            }
+
+                            currentLine += c;
+                        }
+
+                        for (const line of lines) {
+                            if (line == '[events]') {
+                                type = 'event';
+
+                                continue;
+                            }
+
+                            if (line == '[functions]') {
+                                type = 'function';
+
+                                continue;
+                            }
+
+                            if (type == 'event') {
+                                profileDataBuilder.addEvent(
+                                    line.split(' ').map(e => parseFloat(e))
+                                );
+
+                                continue;
+                            }
+
+                            if (type == 'function') {
+                                profileDataBuilder.setFunctionName(
+                                    currentFunctionIdx++,
+                                    line
+                                );
+
+                                continue;
+                            }
+                        }
+
+                        setProgress(
+                            'Building call list... ' + fmt.quantity(profileDataBuilder.getCurrentCallCount()),
+                            profileDataBuilder.getCurrentCallCount(),
+                            profileDataBuilder.getTotalCallCount()
+                        );
+                    }
+
+                    if (!response.body) {
+                        return response.arrayBuffer().then(buffer => {
+                            readBuffer(new Uint8Array(buffer));
+
+                            return new Promise(resolve => resolve());
+                        });
+                    }
+
+                    const reader = response.body.getReader();
+                    const streamHandler = status => {
+                        if (status.value) {
+                            readBuffer(status.value);
+                        }
+
+                        if (!status.done) {
+                            return reader.read().then(streamHandler);
+                        }
+
+                        return new Promise(resolve => resolve());
+                    }
+
+                    return reader.read().then(streamHandler);
+                })
+                .then(() => profileDataBuilder.buildCallRangeTree(
+                    (current, total) => setProgress(
+                        'Building call range tree... ' + fmt.quantity(current),
+                        current,
+                        total
+                    )
+                ))
+                .then(() => {
+                    initDialog.text.text('Initializing widgets...');
+
+                    return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
+                })
+                .then(profileData => {
+                    const widgets = [
+                        new widget.OverView($('#overview'), profileData),
+                        new widget.TimeLine($('#timeline'), profileData),
+                        new widget.FlatProfile($('#flatprofile'), profileData),
+                        new widget.FlameGraph($('#flamegraph'), profileData),
+                    ];
+
+                    widgets.forEach(widget => widget.render());
+
+                    const metricSelector = $('#control-bar select');
+                    const metricsInfo = {
+                        'wt': {label: 'Wall Time'},
+                        'ct': {label: 'CPU Time'},
+                        'it': {label: 'Idle Time'},
+                        'zm': {label: 'Zend Engine memory'},
+                        'zr': {label: 'Zend Engine root buffer length'},
+                        'zo': {label: 'Zend Engine object count'},
+                        'ze': {label: 'Zend Engine error count'},
+                        'io': {label: 'I/O (reads + writes)'},
+                        'ior': {label: 'I/O (reads)'},
+                        'iow': {label: 'I/O (writes)'},
+                    };
+
+                    for (const metric of profileData.getMetadata().enabled_metrics) {
+                        metricSelector.append(`<option value="${metric}">${metricsInfo[metric].label}</option>`);
+                    }
+
+                    metricSelector.on('change', () => {
+                        widgets.forEach(widget => widget.setCurrentMetric(metricSelector.val()));
+                        widgets.forEach(widget => widget.repaint());
+                    });
+
+                    return new Promise(resolve => resolve());
+                })
+                .then(() => initDialog.container.fadeOut(500))
+            ;
+        });
+    </script>
+</body>
+</html>

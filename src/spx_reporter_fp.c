@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <unistd.h>
+
 #include "spx_reporter_fp.h"
 #include "spx_resource_stats.h"
+#include "spx_output_stream.h"
+#include "spx_stdio.h"
 #include "spx_thread.h"
 
 typedef struct {
@@ -13,6 +17,12 @@ typedef struct {
     int rel;
     size_t limit;
     int live;
+
+    spx_output_stream_t * output;
+    struct {
+        int stdout_fd;
+        int stderr_fd;
+    } fd_backup;
 
     size_t last_ts_ms;
     size_t last_line_count;
@@ -29,7 +39,6 @@ static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * rep
 static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t * event);
 
 spx_profiler_reporter_t * spx_reporter_fp_create(
-    spx_output_stream_t * output,
     spx_metric_t focus,
     int inc,
     int rel,
@@ -38,7 +47,6 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
 ) {
     fp_reporter_t * reporter = (fp_reporter_t *) spx_profiler_reporter_create(
         sizeof(*reporter),
-        output,
         fp_notify,
         fp_destroy
     );
@@ -51,19 +59,47 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
     reporter->inc = inc;
     reporter->rel = rel;
     reporter->limit = limit;
-    reporter->live = live;
+    reporter->live = live && isatty(STDOUT_FILENO);
+
+    reporter->fd_backup.stdout_fd = -1;
+    reporter->fd_backup.stderr_fd = -1;
+    reporter->output = NULL;
+    reporter->top_entries = NULL;
+
+    if (reporter->live) {
+        reporter->fd_backup.stdout_fd = spx_stdio_disable(STDOUT_FILENO);
+        if (reporter->fd_backup.stdout_fd == -1) {
+            goto error;
+        }
+
+        reporter->fd_backup.stderr_fd = spx_stdio_disable(STDERR_FILENO);
+        if (reporter->fd_backup.stderr_fd == -1) {
+            goto error;
+        }
+
+        reporter->output = spx_output_stream_dopen(reporter->fd_backup.stdout_fd, 0);
+    } else {
+        reporter->output = spx_output_stream_dopen(STDERR_FILENO, 0);
+    }
+
+    if (!reporter->output) {
+        goto error;
+    }
 
     reporter->last_ts_ms = 0;
     reporter->last_line_count = 0;
     
     reporter->top_entries = malloc(limit * sizeof(*reporter->top_entries));
     if (!reporter->top_entries) {
-        free(reporter);
-
-        return NULL;
+        goto error;
     }
 
     return (spx_profiler_reporter_t *) reporter;
+
+error:
+    spx_profiler_reporter_destroy((spx_profiler_reporter_t *)reporter);
+
+    return NULL;
 }
 
 static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter, const spx_profiler_event_t * event)
@@ -87,10 +123,10 @@ static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter
     }
 
     if (fp_reporter->last_line_count > 0) {
-        spx_output_stream_print(fp_reporter->base.output, "\x0D\x1B[2K");
+        spx_output_stream_print(fp_reporter->output, "\x0D\x1B[2K");
         size_t i;
         for (i = 0; i < fp_reporter->last_line_count; i++) {
-            spx_output_stream_print(fp_reporter->base.output, "\x1B[1A\x1B[2K");
+            spx_output_stream_print(fp_reporter->output, "\x1B[1A\x1B[2K");
         }
     }
 
@@ -103,7 +139,21 @@ static void fp_destroy(spx_profiler_reporter_t * reporter)
 {
     fp_reporter_t * fp_reporter = (fp_reporter_t *) reporter;
 
-    free(fp_reporter->top_entries);
+    if (fp_reporter->top_entries) {
+        free(fp_reporter->top_entries);
+    }
+
+    if (fp_reporter->output) {
+        spx_output_stream_close(fp_reporter->output);
+    }
+
+    if (fp_reporter->fd_backup.stdout_fd != -1) {
+        spx_stdio_restore(STDOUT_FILENO, fp_reporter->fd_backup.stdout_fd);
+    }
+
+    if (fp_reporter->fd_backup.stderr_fd != -1) {
+        spx_stdio_restore(STDERR_FILENO, fp_reporter->fd_backup.stderr_fd);
+    }
 }
 
 static int entry_cmp(const void * a, const void * b)
@@ -192,31 +242,31 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
         entry_cmp
     );
 
-    spx_output_stream_print(reporter->base.output, "\n*** SPX Report ***\n\nGlobal stats:\n\n");
+    spx_output_stream_print(reporter->output, "\n*** SPX Report ***\n\nGlobal stats:\n\n");
     size_t line_count = 5;
 
-    spx_output_stream_printf(reporter->base.output, "  %-20s: ", "Called functions");
+    spx_output_stream_printf(reporter->output, "  %-20s: ", "Called functions");
     spx_fmt_print_value(
-        reporter->base.output,
+        reporter->output,
         SPX_FMT_QUANTITY,
         event->called
     );
 
-    spx_output_stream_print(reporter->base.output, "\n");
+    spx_output_stream_print(reporter->output, "\n");
     line_count++;
 
-    spx_output_stream_printf(reporter->base.output, "  %-20s: ", "Distinct functions");
+    spx_output_stream_printf(reporter->output, "  %-20s: ", "Distinct functions");
     spx_fmt_print_value(
-        reporter->base.output,
+        reporter->output,
         SPX_FMT_QUANTITY,
         event->func_table.size
     );
 
     if (event->func_table.size == event->func_table.capacity) {
-        spx_output_stream_print(reporter->base.output, "+");
+        spx_output_stream_print(reporter->output, "+");
     }
 
-    spx_output_stream_print(reporter->base.output, "\n\n");
+    spx_output_stream_print(reporter->output, "\n\n");
     line_count += 2;
 
     SPX_METRIC_FOREACH(i, {
@@ -224,18 +274,18 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
             continue;
         }
 
-        spx_output_stream_printf(reporter->base.output, "  %-20s: ", spx_metrics_info[i].name);
+        spx_output_stream_printf(reporter->output, "  %-20s: ", spx_metrics_info[i].name);
         spx_fmt_print_value(
-            reporter->base.output,
+            reporter->output,
             spx_metrics_info[i].type,
             event->max->values[i]
         );
 
-        spx_output_stream_print(reporter->base.output, "\n");
+        spx_output_stream_print(reporter->output, "\n");
         line_count++;
     });
 
-    spx_output_stream_print(reporter->base.output, "\nFlat profile:\n\n");
+    spx_output_stream_print(reporter->output, "\nFlat profile:\n\n");
     line_count += 3;
 
     spx_fmt_row_t * fmt_row = spx_fmt_row_create();
@@ -248,7 +298,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
         spx_fmt_row_add_tcell(fmt_row, 2, spx_metrics_info[i].name);
     });
 
-    spx_fmt_row_print(fmt_row, reporter->base.output);
+    spx_fmt_row_print(fmt_row, reporter->output);
     spx_fmt_row_reset(fmt_row);
 
     SPX_METRIC_FOREACH(i, {
@@ -272,8 +322,8 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     spx_fmt_row_add_tcell(fmt_row, 1, "Called");
     spx_fmt_row_add_tcell(fmt_row, 0, "Function");
 
-    spx_fmt_row_print(fmt_row, reporter->base.output);
-    spx_fmt_row_print_sep(fmt_row, reporter->base.output);
+    spx_fmt_row_print(fmt_row, reporter->output);
+    spx_fmt_row_print_sep(fmt_row, reporter->output);
     spx_fmt_row_reset(fmt_row);
 
     line_count += 3;
@@ -326,7 +376,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
         spx_fmt_row_add_tcell(fmt_row, 0, func_name);
 
-        spx_fmt_row_print(fmt_row, reporter->base.output);
+        spx_fmt_row_print(fmt_row, reporter->output);
         spx_fmt_row_reset(fmt_row);
     }
 
@@ -334,8 +384,8 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
     spx_fmt_row_destroy(fmt_row);
 
-    spx_output_stream_print(reporter->base.output, "\n");
-    spx_output_stream_flush(reporter->base.output);
+    spx_output_stream_print(reporter->output, "\n");
+    spx_output_stream_flush(reporter->output);
 
     line_count++;
 

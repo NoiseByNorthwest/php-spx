@@ -53,11 +53,6 @@ typedef struct {
     spx_profiler_metric_values_t children_metric_values;
 } stack_frame_t;
 
-typedef struct {
-    size_t depth;
-    stack_frame_t frames[STACK_CAPACITY];
-} spx_stack_t;
-
 struct spx_profiler_t {
     int finalized;
     int active;
@@ -75,7 +70,11 @@ struct spx_profiler_t {
     spx_profiler_metric_values_t cum_metric_values;
     spx_profiler_metric_values_t max_metric_values;
 
-    spx_stack_t stack;
+    struct {
+        size_t depth;
+        stack_frame_t frames[STACK_CAPACITY];
+    } stack;
+
     func_table_t func_table;
 };
 
@@ -88,18 +87,17 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
 );
 
 static void fill_event(
+    spx_profiler_event_t * event,
     const spx_profiler_t * profiler,
     spx_profiler_event_type_t type,
-    const spx_php_function_t * caller,
-    const spx_php_function_t * callee,
+    const spx_profiler_func_table_entry_t * caller,
+    const spx_profiler_func_table_entry_t * callee,
     const spx_profiler_metric_values_t * inc,
-    const spx_profiler_metric_values_t * exc,
-    spx_profiler_event_t * event
+    const spx_profiler_metric_values_t * exc
 );
 
 spx_profiler_reporter_t * spx_profiler_reporter_create(
     size_t size,
-    spx_output_stream_t * output,
     spx_profiler_reporter_notify_func_t notify,
     spx_profiler_reporter_destroy_func_t destroy
 ) {
@@ -110,12 +108,9 @@ spx_profiler_reporter_t * spx_profiler_reporter_create(
 
     spx_profiler_reporter_t * reporter = malloc(size);
     if (!reporter) {
-        spx_output_stream_close(reporter->output);
-
         return NULL;
     }
 
-    reporter->output = output;
     reporter->notify = notify;
     reporter->destroy = destroy;
 
@@ -128,7 +123,6 @@ void spx_profiler_reporter_destroy(spx_profiler_reporter_t * reporter)
         reporter->destroy(reporter);
     }
 
-    spx_output_stream_close(reporter->output);
     free(reporter);
 }
 
@@ -153,7 +147,7 @@ spx_profiler_t * spx_profiler_create(
 
     profiler->metric_collector = NULL;
 
-    profiler->max_depth = max_depth;
+    profiler->max_depth = max_depth > 0 && max_depth < STACK_CAPACITY ? max_depth : STACK_CAPACITY;
     profiler->called = 0;
 
     profiler->stack.depth = 0;
@@ -223,6 +217,15 @@ void spx_profiler_call_start(
         return;
     }
 
+    profiler->active = profiler->stack.depth < profiler->max_depth;
+    if (!profiler->active) {
+        if (profiler->stack.depth == STACK_CAPACITY) {
+            fprintf(stderr, "SPX: STACK_CAPACITY (%d) exceeded\n", STACK_CAPACITY);
+        }
+
+        goto end;
+    }
+
     spx_profiler_metric_values_t cur_metric_values;
 
     spx_metric_collector_collect(
@@ -242,22 +245,6 @@ void spx_profiler_call_start(
 
     profiler->called++;
 
-    if (
-        profiler->stack.depth >= STACK_CAPACITY ||
-        (profiler->max_depth > 0 && profiler->stack.depth >= profiler->max_depth)
-    ) {
-        profiler->active = 0;
-        if (profiler->stack.depth == STACK_CAPACITY) {
-            fprintf(stderr, "SPX: STACK_CAPACITY (%d) exceeded\n", STACK_CAPACITY);
-        }
-    } else {
-        profiler->active = 1;
-    }
-
-    if (!profiler->active) {
-        goto end;
-    }
-
     stack_frame_t * frame = &profiler->stack.frames[profiler->stack.depth];
     frame->func_table_entry = func_table_get_entry(
         &profiler->func_table,
@@ -273,15 +260,15 @@ void spx_profiler_call_start(
 
     spx_profiler_event_t event;
     fill_event(
+        &event,
         profiler,
         SPX_PROFILER_EVENT_CALL_START,
         profiler->stack.depth > 0 ?
-            &profiler->stack.frames[profiler->stack.depth - 1].func_table_entry->function : NULL
+            profiler->stack.frames[profiler->stack.depth - 1].func_table_entry : NULL
         ,
-        &profiler->stack.frames[profiler->stack.depth].func_table_entry->function,
+        profiler->stack.frames[profiler->stack.depth].func_table_entry,
         NULL,
-        NULL,
-        &event
+        NULL
     );
 
     if (profiler->reporter->notify(profiler->reporter, &event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
@@ -300,6 +287,10 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
 
     profiler->stack.depth--;
 
+    if (!profiler->active) {
+        return;
+    }
+
     spx_profiler_metric_values_t cur_metric_values;
 
     spx_metric_collector_collect(
@@ -311,10 +302,6 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
     profiler->cum_metric_values = cur_metric_values;
     METRIC_VALUES_SUB(profiler->cum_metric_values, profiler->first_metric_values);
     METRIC_VALUES_MAX(profiler->max_metric_values, cur_metric_values);
-
-    if (!profiler->active) {
-        return;
-    }
 
     stack_frame_t * frame = &profiler->stack.frames[profiler->stack.depth];
     if (!frame->func_table_entry) {
@@ -329,50 +316,48 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
     spx_profiler_metric_values_t exc_metric_values = inc_metric_values;
     METRIC_VALUES_SUB(exc_metric_values, frame->children_metric_values);
 
-    int i, cyclic = 0;
+    size_t cycle_depth = 0;
+    int i;
     for (i = profiler->stack.depth - 1; i >= 0; i--) {
         stack_frame_t * parent_frame = &profiler->stack.frames[i];
         if (!parent_frame->func_table_entry) {
             continue;
         }
 
-        if (parent_frame->func_table_entry == entry) {
-            cyclic = 1;
-
-            break;
+        if (i == profiler->stack.depth - 1) {
+            METRIC_VALUES_ADD(parent_frame->children_metric_values, inc_metric_values);
         }
 
-        METRIC_VALUES_ADD(parent_frame->children_metric_values, exc_metric_values);
+        if (parent_frame->func_table_entry == entry) {
+            cycle_depth++;
+
+            if (cycle_depth == 1) {
+                METRIC_VALUES_SUB(parent_frame->children_metric_values, exc_metric_values);
+            }
+        }
     }
 
     entry->stats.called++;
-    if (cyclic) {
-        size_t cycle_depth = 0;
-        for (i = 0; i < profiler->stack.depth; i++) {
-            if (profiler->stack.frames[i].func_table_entry == entry) {
-                cycle_depth++;
-            }
-        }
+    if (entry->stats.max_cycle_depth < cycle_depth) {
+        entry->stats.max_cycle_depth = cycle_depth;
+    }
 
-        if (entry->stats.max_cycle_depth < cycle_depth) {
-            entry->stats.max_cycle_depth = cycle_depth;
-        }
-    } else {
+    if (cycle_depth == 0) {
         METRIC_VALUES_ADD(entry->stats.inc, inc_metric_values);
         METRIC_VALUES_ADD(entry->stats.exc, exc_metric_values);
     }
 
     spx_profiler_event_t event;
     fill_event(
+        &event,
         profiler,
         SPX_PROFILER_EVENT_CALL_END,
         profiler->stack.depth > 0 ?
-            &profiler->stack.frames[profiler->stack.depth - 1].func_table_entry->function : NULL
+            profiler->stack.frames[profiler->stack.depth - 1].func_table_entry : NULL
         ,
-        &profiler->stack.frames[profiler->stack.depth].func_table_entry->function,
+        profiler->stack.frames[profiler->stack.depth].func_table_entry,
         &inc_metric_values,
-        &exc_metric_values,
-        &event
+        &exc_metric_values
     );
 
     if (profiler->reporter->notify(profiler->reporter, &event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
@@ -393,7 +378,7 @@ void spx_profiler_finalize(spx_profiler_t * profiler)
     profiler->finalized = 1;
 
     spx_profiler_event_t event;
-    fill_event(profiler, SPX_PROFILER_EVENT_FINALIZE, NULL, NULL, NULL, NULL, &event);
+    fill_event(&event, profiler, SPX_PROFILER_EVENT_FINALIZE, NULL, NULL, NULL, NULL);
     profiler->reporter->notify(profiler->reporter, &event);
 }
 
@@ -464,11 +449,13 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
 
     func_table->size++;
     if (func_table->size == FUNC_TABLE_CAPACITY) {
-        fprintf(stderr, "SPX: FUNC_TABLE_CAPACITY (%d) exceeded\n", FUNC_TABLE_CAPACITY);
+        fprintf(stderr, "SPX: FUNC_TABLE_CAPACITY (%d) reached\n", FUNC_TABLE_CAPACITY);
     }
 
-    spx_profiler_func_table_entry_t * entry = &func_table->entries[func_table->size - 1];
+    const size_t idx = func_table->size - 1;
+    spx_profiler_func_table_entry_t * entry = &func_table->entries[idx];
 
+    entry->idx = idx;
     entry->function = *function;
 
     /*
@@ -494,13 +481,13 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
 }
 
 static void fill_event(
+    spx_profiler_event_t * event,
     const spx_profiler_t * profiler,
     spx_profiler_event_type_t type,
-    const spx_php_function_t * caller,
-    const spx_php_function_t * callee,
+    const spx_profiler_func_table_entry_t * caller,
+    const spx_profiler_func_table_entry_t * callee,
     const spx_profiler_metric_values_t * inc,
-    const spx_profiler_metric_values_t * exc,
-    spx_profiler_event_t * event
+    const spx_profiler_metric_values_t * exc
 ) {
     event->type = type;
 

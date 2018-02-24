@@ -14,8 +14,9 @@ typedef struct {
     const char * depth_str;
     const char * metrics_str;
 
-    const char * output_str;
-    const char * output_file;
+    const char * report_str;
+
+    const char * full_res_str;
 
     const char * fp_focus_str;
     const char * fp_inc_str;
@@ -23,27 +24,29 @@ typedef struct {
     const char * fp_limit_str;
     const char * fp_live_str;
 
+    const char * trace_file;
     const char * trace_safe_str;
 } source_data_t;
 
 typedef const char * (*source_handler_t) (const char * parameter);
 
-static void init_config(spx_config_t * config);
-static void fix_config(spx_config_t * config);
+static void init_config(spx_config_t * config, int cli);
+static void fix_config(spx_config_t * config, int cli);
 static void source_data_get(source_data_t * source_data, source_handler_t handler);
 static void source_data_to_config(const source_data_t * source_data, spx_config_t * config);
 static const char * source_handler_env(const char * parameter);
+static const char * source_handler_http_cookie(const char * parameter);
 static const char * source_handler_http_header(const char * parameter);
 static const char * source_handler_http_query_string(const char * parameter);
 
-void spx_config_read(spx_config_t * config, ...)
+void spx_config_get(spx_config_t * config, int cli, ...)
 {
-    init_config(config);
+    init_config(config, cli);
 
     source_data_t source_data;
 
     va_list ap;
-    va_start(ap, config);
+    va_start(ap, cli);
 
     while (1) {
         spx_config_source_t source = va_arg(ap, spx_config_source_t);
@@ -51,6 +54,10 @@ void spx_config_read(spx_config_t * config, ...)
         switch (source) {
             case SPX_CONFIG_SOURCE_ENV:
                 source_handler = source_handler_env;
+                break;
+
+            case SPX_CONFIG_SOURCE_HTTP_COOKIE:
+                source_handler = source_handler_http_cookie;
                 break;
 
             case SPX_CONFIG_SOURCE_HTTP_HEADER:
@@ -75,10 +82,10 @@ void spx_config_read(spx_config_t * config, ...)
 
     va_end(ap);
 
-    fix_config(config);
+    fix_config(config, cli);
 }
 
-static void init_config(spx_config_t * config)
+static void init_config(spx_config_t * config, int cli)
 {
     config->enabled = 0;
     config->key = NULL;
@@ -93,8 +100,9 @@ static void init_config(spx_config_t * config)
     config->enabled_metrics[SPX_METRIC_WALL_TIME] = 1;
     config->enabled_metrics[SPX_METRIC_ZE_MEMORY] = 1;
 
-    config->output = SPX_CONFIG_OUTPUT_FLAT_PROFILE;
-    config->output_file = NULL;
+    config->report = cli ? SPX_CONFIG_REPORT_FLAT_PROFILE : SPX_CONFIG_REPORT_FULL;
+
+    config->full_res = 0;
 
     config->fp_focus = SPX_METRIC_WALL_TIME;
     config->fp_inc = 0;
@@ -102,12 +110,22 @@ static void init_config(spx_config_t * config)
     config->fp_limit = 10;
     config->fp_live = 0;
 
+    config->trace_file = NULL;
     config->trace_safe = 0;
 }
 
-static void fix_config(spx_config_t * config)
+static void fix_config(spx_config_t * config, int cli)
 {
-    if (config->output == SPX_CONFIG_OUTPUT_FLAT_PROFILE) {
+    if (!cli) {
+        config->report = SPX_CONFIG_REPORT_FULL;
+    }
+
+    if (config->report == SPX_CONFIG_REPORT_FULL) {
+        config->enabled_metrics[SPX_METRIC_WALL_TIME] = 1;
+        config->enabled_metrics[SPX_METRIC_ZE_MEMORY] = 1;
+    }
+
+    if (config->report == SPX_CONFIG_REPORT_FLAT_PROFILE) {
         config->enabled_metrics[config->fp_focus] = 1;
     }
 }
@@ -119,13 +137,14 @@ static void source_data_get(source_data_t * source_data, source_handler_t handle
     source_data->builtins_str    = handler("SPX_BUILTINS");
     source_data->depth_str       = handler("SPX_DEPTH");
     source_data->metrics_str     = handler("SPX_METRICS");
-    source_data->output_str      = handler("SPX_OUTPUT");
-    source_data->output_file     = handler("SPX_OUTPUT_FILE");
+    source_data->report_str      = handler("SPX_REPORT");
+    source_data->full_res_str    = handler("SPX_FULL_RES");
     source_data->fp_focus_str    = handler("SPX_FP_FOCUS");
     source_data->fp_inc_str      = handler("SPX_FP_INC");
     source_data->fp_rel_str      = handler("SPX_FP_REL");
     source_data->fp_limit_str    = handler("SPX_FP_LIMIT");
     source_data->fp_live_str     = handler("SPX_FP_LIVE");
+    source_data->trace_file      = handler("SPX_TRACE_FILE");
     source_data->trace_safe_str  = handler("SPX_TRACE_SAFE");
 }
 
@@ -160,20 +179,18 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
         });
     }
 
-    if (source_data->output_str) {
-        if (0 == strcmp(source_data->output_str, "fp")) {
-            config->output = SPX_CONFIG_OUTPUT_FLAT_PROFILE;
-        } else if (0 == strcmp(source_data->output_str, "cg")) {
-            config->output = SPX_CONFIG_OUTPUT_CALLGRIND;
-        } else if (0 == strcmp(source_data->output_str, "gte")) {
-            config->output = SPX_CONFIG_OUTPUT_GOOGLE_TRACE_EVENT;
-        } else if (0 == strcmp(source_data->output_str, "trace")) {
-            config->output = SPX_CONFIG_OUTPUT_TRACE;
+    if (source_data->report_str) {
+        if (0 == strcmp(source_data->report_str, "full")) {
+            config->report = SPX_CONFIG_REPORT_FULL;
+        } else if (0 == strcmp(source_data->report_str, "fp")) {
+            config->report = SPX_CONFIG_REPORT_FLAT_PROFILE;
+        } else if (0 == strcmp(source_data->report_str, "trace")) {
+            config->report = SPX_CONFIG_REPORT_TRACE;
         }
     }
 
-    if (source_data->output_file) {
-        config->output_file = source_data->output_file;
+    if (source_data->full_res_str) {
+        config->full_res = atoi(source_data->full_res_str);
     }
 
     if (source_data->fp_focus_str) {
@@ -199,6 +216,10 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
         config->fp_live = *source_data->fp_live_str == '1' ? 1 : 0;
     }
 
+    if (source_data->trace_file) {
+        config->trace_file = source_data->trace_file;
+    }
+
     if (source_data->trace_safe_str) {
         config->trace_safe = *source_data->trace_safe_str == '1' ? 1 : 0;
     }
@@ -207,6 +228,11 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
 static const char * source_handler_env(const char * parameter)
 {
     return getenv(parameter);
+}
+
+static const char * source_handler_http_cookie(const char * parameter)
+{
+    return spx_php_global_array_get("_COOKIE", parameter);
 }
 
 static const char * source_handler_http_header(const char * parameter)
