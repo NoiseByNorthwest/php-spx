@@ -14,7 +14,7 @@ It differentiates itself from other similar extensions as being:
 * [multi metrics](#available-metrics) capable: 10 currently supported (various time metrics, memory, objects in use, I/O...).
 * shipped with its web UI for report analysis which allows you to:
   * list all previously profiled script reports
-  * select a report for in-depth analysis, featuring:
+  * select a report for in-depth analysis, featuring these interactive visualizations:
     * time line
     * flat profile
     * flame graph
@@ -50,7 +50,7 @@ sudo make install
 ```
 
 Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.  
-You may also want to override [default SPX configuration](#configuration) to be able to profile HTTP requests.
+You may also want to override [default SPX configuration](#configuration) to be able to profile a web page.
 
 ## Development status
 
@@ -62,9 +62,9 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 ## Notes on accuracy
 
-Being a tracing profiler, php-spx is subject to accuracy issues with low cost functions since their costs are of the same order of magnitude than php-spx probes overhead.  
+Being a tracing profiler, SPX is subject to accuracy issues with low cost functions since their costs are of the same order of magnitude than SPX probes overhead.  
 
-This problem only concerns time related metrics (wall time, cpu time & idle time) as php-spx probes do not consume other metrics.  
+This problem only concerns time related metrics (wall time, cpu time & idle time) as SPX probes do not consume other metrics.  
 
 If you want to maximize accuracy for finding a time bottleneck, you should:
 - avoid profiling internal functions.
@@ -109,12 +109,12 @@ Flat profile:
    69.3ms |   69.3ms |       0B |       0B |   470.1K | Composer\DependencyResolver\RuleSetIterator::current
 ```
 
-### HTTP request
+### Web page
 
 Assuming a development environment with the configuration [described here](#private-environment).  
-Just open with your browser the following URL: `http(s)://<your application host>/_spx?SPX_KEY=dev` to access to php-spx web UI control panel.  
-Then switch on "Enabled". At this point profiling is enabled for the current domain through a set of dedicated cookies.
-Then refresh your application page you want to profiling and refresh the control panel to see the generated report in the list below the control panel.  
+Just open with your browser the following URL: `http(s)://<your application host>/_spx?SPX_KEY=dev` to access to SPX web UI control panel.  
+Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
+Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.  
 
 ## Advanced usage
 
@@ -122,7 +122,7 @@ Then refresh your application page you want to profiling and refresh the control
 
 #### Available report types
 
-Contrary to HTTP request profiling which only support _full_ report type, command line script profiling supports several types of report.  
+Contrary to web page profiling which only support _full_ report type, command line script profiling supports several types of report.  
 Here is the list below:
 
 | Key  | Name  | Description  |
@@ -151,26 +151,69 @@ Here is the list below:
 
 #### Setting parameters
 
-Well, as you might already noticed in corresponding [basic usage example](#cli-script), setting a SPX parameter for a CLI script simply means setting an environment variable with the same name.
+Well, as you might already noticed in corresponding [basic usage example](#command-line-script), setting a SPX parameter for a command line script simply means setting an environment variable with the same name.
 
-### HTTP request
+### Web UI
+
+SPX is shipped with its web UI for managing profile reports and especially analyze a given profile report.  
+
+#### Supported browsers
+
+Since the web UI uses advanced JavaScript features, only the following browsers are supported:
+- most recent version of any Chromium-based browser.
+- most recent version of Firefox with `dom.moduleScripts.enabled` preference set to `true`.
+
+#### Control panel & report list
+
+This is the home page of the web UI, divided into 2 parts:
+- the control panel for setting the profiling setup for your current browser session.
+- the profile report list as a sortable table. A click on a row allows to go to the analyze screen for the corresponding report.
+
+#### Analyze screen
+
+This page allows to ma
+
+updated according to 2 dimensions (time and metric)
+
+##### Metric selector
+
+This is simply a combo box for selecting the metric
+
+##### Time line overview
+
+This visualization 
+
+##### Time line focus
+
+This visualization 
+
+##### Flat profile
+
+This visualization is the flat profile for the current time range and the current metric, displayed as a sortable table.
+
+##### Flame Graph
+
+This visualization, designed by [Brendan Gregg](http://www.brendangregg.com/flamegraphs.html), allows to quickly find the hot code path for the current time range and the current metric.  
+Metrics corresponding to releasable resources (memory, objects in use...) are not supported by this visualization.
+
+### Web page
 
 #### Security concern
 
 _The lack of review / feedback about this concern is the main reason **SPX cannot yet be considered as production ready**._
 
-SPX allows you to profile HTTP request as well as CLI scripts, and also to list and analyze profile reports through its embedded web UI.  
+SPX allows you to profile web page as well as command line scripts, and also to list and analyze profile reports through its embedded web UI.  
 This is why there is a huge security risk, since an attacker could:
  - steal SPX output and get sensible information about your application.
  - to a lesser extent, make a DoS attack against your application with a costly SPX profiling setup.
 
 So, unless access to your application is already restricted at lower layer (i.e. before your application is hit, not by the application / PHP framework itself), a client triggering SPX profiling or accessing to the web UI must be authenticated.
 
-SPX enforces authentication with 2 mandatory locks:
+SPX provides two-factor authentication with these 2 mandatory locks:
 * IP address white list (exact string representation matching).
 * Fixed secret random key (generated on your own) provided via a request header, cookie or query string parameter.
 
-Thus a client can profile your application via an HTTP request only if **its IP address is white listed and its provided key is valid**.
+Thus a client can profile your application via a web page only if **its IP address is white listed and its provided key is valid**.
 
 #### Configuration
 
@@ -222,32 +265,7 @@ _N.B.: I/O metrics are not supported on macOS._
 
 ## Examples
 
-### HTTP request / KCachegrind
-
-Just run the following command:
-
-```shell
-curl --compressed 'localhost?SPX_KEY=dev&SPX_ENABLED=1&SPX_METRICS=wt,zm,zo&SPX_OUTPUT=cg' > callgrind.out
-```
-
-And then open _callgrind.out_ with KCachegrind. You will be able to explore the call-graph in many ways, over the 3 specified metrics (wt, ze & zo).
-
-![KCachegrind](assets/docs/cg1.png)
-
-
-### HTTP request / about:tracing
-
-Just run:
-
-```shell
-curl --compressed 'localhost?SPX_KEY=dev&SPX_ENABLED=1&SPX_OUTPUT=gte' > trace.json
-```
-
-And then open _trace.json_ with Chromium's / Chrome's about:tracing application to get this timeline visualization:
-
-![about:tracing](assets/docs/gte1.png)
-
-### CLI script / trace file
+### Command line script / trace file
 
 The following command will trace all (user land) function calls of _./bin/console_ script in _trace.txt_ file.
 

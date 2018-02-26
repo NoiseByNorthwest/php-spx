@@ -15,6 +15,10 @@ export function lerp(a, b, dist) {
     return a * (1 - dist) + b * dist;
 }
 
+export function lerpDist(a, b, value) {
+    return (value - a) / (b - a);
+}
+
 export class Vec3 {
 
     constructor(x, y, z) {
@@ -50,7 +54,7 @@ export class Vec3 {
     }
 
     static createFromRGB888(r, g, b) {
-        let v = new Vec3(
+        const v = new Vec3(
             r / 255,
             g / 255,
             b / 255,
@@ -83,25 +87,33 @@ export class Vec3 {
 
 export class Range {
 
-    constructor(a, b) {
-        if (a > b) {
-            throw new Error('Invalid range: ' + a + ' ' + b);
+    constructor(begin, end) {
+        if (begin > end) {
+            throw new Error('Invalid range: ' + begin + ' ' + end);
         }
 
-        this.a = a;
-        this.b = b;
+        this.begin = begin;
+        this.end = end;
     }
 
     copy() {
-        return new Range(this.a, this.b);
+        return new Range(this.begin, this.end);
     }
 
     length() {
-        return this.b - this.a;
+        return this.end - this.begin;
     }
 
     center() {
-        return (this.a + this.b) / 2;
+        return (this.begin + this.end) / 2;
+    }
+
+    lerp(dist) {
+        return lerp(this.begin, this.end, dist);
+    }
+
+    lerpDist(value) {
+        return lerpDist(this.begin, this.end, value);
     }
 
     intersection(other) {
@@ -110,8 +122,8 @@ export class Range {
         }
 
         return new Range(
-            Math.max(this.a, other.a),
-            Math.min(this.b, other.b)
+            Math.max(this.begin, other.begin),
+            Math.min(this.end, other.end)
         );
     }
 
@@ -119,21 +131,21 @@ export class Range {
         let width = ratio * this.length();
 
         return new Range(
-            Math.max(this.a, this.a + width * num),
-            Math.min(this.b, this.a + width * (num + 1))
+            Math.max(this.begin, this.begin + width * num),
+            Math.min(this.end, this.begin + width * (num + 1))
         );
     }
 
     scale(factor) {
-        this.a *= factor;
-        this.b *= factor;
+        this.begin *= factor;
+        this.end *= factor;
 
         return this;
     }
 
     shift(dist) {
-        this.a += dist;
-        this.b += dist;
+        this.begin += dist;
+        this.end += dist;
 
         return this;
     }
@@ -142,19 +154,19 @@ export class Range {
         low = low || 0;
         up = up || 1;
 
-        this.a = bound(this.a, low, up);
-        this.b = bound(this.b, low, up);
+        this.begin = bound(this.begin, low, up);
+        this.end = bound(this.end, low, up);
 
-        if (this.a > this.b) {
-            this.a = low;
-            this.b = up;
+        if (this.begin > this.end) {
+            this.begin = low;
+            this.end = up;
         }
 
         return this;
     }
 
     contains(other) {
-        return this.a <= other.a && other.b <= this.b;
+        return this.begin <= other.begin && other.end <= this.end;
     }
 
     isContainedBy(other) {
@@ -162,6 +174,6 @@ export class Range {
     }
 
     overlaps(other) {
-        return !(this.b < other.a || other.b < this.a);
+        return !(this.end < other.begin || other.end < this.begin);
     }
 }

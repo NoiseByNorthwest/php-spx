@@ -14,6 +14,10 @@ class MetricValues {
     }
 
     static lerpByTime(a, b, time) {
+        if (a.values['wt'] == b.values['wt']) {
+            return a.copy();
+        }
+
         const dist = (time - a.values['wt']) / (b.values['wt'] - a.values['wt']);
 
         let values = {};
@@ -280,12 +284,26 @@ class Stats {
         return this.max.getValue(metric);
     }
 
+    getRange(metric) {
+        return new math.Range(
+            this.getMin(metric),
+            this.getMax(metric)
+        );
+    }
+
     getCallMin(metric) {
         return this.callMin.getValue(metric);
     }
 
     getCallMax(metric) {
         return this.callMax.getValue(metric);
+    }
+
+    getCallRange(metric) {
+        return new math.Range(
+            this.getCallMin(metric),
+            this.getCallMax(metric)
+        );
     }
 
     merge(other) {
@@ -613,13 +631,13 @@ class CallRangeTree {
         return maxDepth + 1;
     }
 
-    getMetricValues(time) {
+    getMetricValues(time, precision) {
         if (!this.range.contains(new math.Range(time, time))) {
             return null;
         }
 
-        const low = this.getNearestMetricValues(time, true);
-        const up = this.getNearestMetricValues(time, false);
+        const low = this.getNearestMetricValues(time, true, precision);
+        const up = this.getNearestMetricValues(time, false, precision);
 
         if (low == null) {
             return up;
@@ -632,7 +650,11 @@ class CallRangeTree {
         return MetricValues.lerpByTime(low, up, time);
     }
 
-    getNearestMetricValues(time, lower) {
+    getNearestMetricValues(time, lower, precision) {
+        if (this.range.length() < precision) {
+            return null;
+        }
+
         if (!this.range.contains(new math.Range(time, time))) {
             return null;
         }
@@ -655,7 +677,7 @@ class CallRangeTree {
         }
 
         for (let child of this.children) {
-            const metricValues = child.getNearestMetricValues(time, lower);
+            const metricValues = child.getNearestMetricValues(time, lower, precision);
             if (metricValues != null) {
                 metricValuesSet.push(metricValues);
             }
@@ -669,10 +691,12 @@ class CallRangeTree {
                 continue;
             }
 
-            if (lower) {
-                nearest.max(metricValues);
-            } else {
-                nearest.min(metricValues);
+            if (lower && nearest.getValue('wt') < metricValues.getValue('wt')) {
+                nearest = metricValues;
+            }
+
+            if (!lower && nearest.getValue('wt') > metricValues.getValue('wt')) {
+                nearest = metricValues;
             }
         }
 
@@ -696,12 +720,12 @@ class CallRangeTree {
             }
         }
 
-        if (lowerBound == null && this.range.a < range.a) {
-            lowerBound = this.getMetricValues(range.a);
+        if (lowerBound == null && this.range.begin < range.begin) {
+            lowerBound = this.getMetricValues(range.begin);
         }
 
-        if (upperBound == null && this.range.b > range.b) {
-            upperBound = this.getMetricValues(range.b);
+        if (upperBound == null && this.range.end > range.end) {
+            upperBound = this.getMetricValues(range.end);
         }
 
         let functionsStats = new FunctionsStats(
@@ -735,12 +759,12 @@ class CallRangeTree {
             }
         }
 
-        if (lowerBound == null && this.range.a < range.a) {
-            lowerBound = this.getMetricValues(range.a);
+        if (lowerBound == null && this.range.begin < range.begin) {
+            lowerBound = this.getMetricValues(range.begin);
         }
 
-        if (upperBound == null && this.range.b > range.b) {
-            upperBound = this.getMetricValues(range.b);
+        if (upperBound == null && this.range.end > range.end) {
+            upperBound = this.getMetricValues(range.end);
         }
 
         let callGraphStats = new CallGraphStats(
@@ -1013,6 +1037,10 @@ class ProfileData {
         console.timeEnd('getCallGraphStats');
 
         return callGraphStats;
+    }
+
+    getMetricValues(time, precision) {
+        return this.callRangeTree.getMetricValues(time, precision);
     }
 }
 

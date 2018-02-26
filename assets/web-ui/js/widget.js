@@ -3,17 +3,7 @@ import * as fmt from './fmt.js';
 import * as math from './math.js';
 import * as svg from './svg.js';
 
-function renderSVGTimeGrid(viewPort, width, height, timeRangeUs, detailed) {
-    if (detailed) {
-        viewPort.appendChild(svg.createNode('rect', {
-            x: 0,
-            y: height - 70,
-            width: width,
-            height: 70,
-            'fill-opacity': '0.5',
-        }));
-    }
-
+function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
     const timeRangeNs = timeRangeUs.copy().scale(1000);
     const delta = timeRangeNs.length();
     let step = Math.pow(10, parseInt(Math.log10(delta)));
@@ -25,15 +15,15 @@ function renderSVGTimeGrid(viewPort, width, height, timeRangeUs, detailed) {
 
     const minorStep = step / 5;
 
-    let tickTime = (parseInt(timeRangeNs.a / minorStep) + 1) * minorStep;
+    let tickTime = (parseInt(timeRangeNs.begin / minorStep) + 1) * minorStep;
     while (1) {
         const majorTick = tickTime % step == 0;
-        const x = width * (tickTime - timeRangeNs.a) / delta;
+        const x = viewPort.width * (tickTime - timeRangeNs.begin) / delta;
         viewPort.appendChild(svg.createNode('line', {
             x1: x,
             y1: 0,
             x2: x,
-            y2: height,
+            y2: viewPort.height,
             stroke: '#777',
             'stroke-width': majorTick ? 0.5 : 0.2
         }));
@@ -53,7 +43,7 @@ function renderSVGTimeGrid(viewPort, width, height, timeRangeUs, detailed) {
 
                     viewPort.appendChild(svg.createNode('text', {
                         x: x + 2,
-                        y: height - 10 - 20 * line++,
+                        y: viewPort.height - 10 - 20 * line++,
                         width: 100,
                         height: 15,
                         'font-size': 12,
@@ -65,7 +55,7 @@ function renderSVGTimeGrid(viewPort, width, height, timeRangeUs, detailed) {
             } else {
                 viewPort.appendChild(svg.createNode('text', {
                     x: x + 2,
-                    y: height - 10,
+                    y: viewPort.height - 10,
                     width: 100,
                     height: 15,
                     'font-size': 12,
@@ -77,9 +67,67 @@ function renderSVGTimeGrid(viewPort, width, height, timeRangeUs, detailed) {
         }
 
         tickTime += minorStep;
-        if (tickTime > timeRangeNs.b) {
+        if (tickTime > timeRangeNs.end) {
             break;
         }
+    }
+}
+
+function plotMetricValues(viewPort, profileData, metric, timeRange) {
+    const valueRange = profileData.getStats().getRange(metric);
+    let points = [];
+
+    for (let i = 0; i < viewPort.width; i += 4) {
+        points.push(i);
+
+        const currentValue = profileData
+            .getMetricValues(
+                timeRange.lerp(i / viewPort.width),
+                10 * timeRange.length() / viewPort.width // 10px time precision
+            )
+            .getValue(metric)
+        ;
+
+        points.push(parseInt(
+            viewPort.height * (
+                1 - valueRange.lerpDist(currentValue)
+            )
+        ));
+    }
+
+    viewPort.appendChild(svg.createNode('polyline', {
+        points: points.join(' '),
+        stroke: '#0af',
+        'stroke-width': 2,
+        fill: 'none',
+    }));
+
+    const tickStep = 25;
+    let y = tickStep;
+    while (y < viewPort.height) {
+        viewPort.appendChild(svg.createNode('line', {
+            x1: 0,
+            y1: y,
+            x2: viewPort.width,
+            y2: y,
+            stroke: '#777',
+            'stroke-width': 0.5
+        }));
+
+        const tickValue = valueRange.lerp(1 - y / viewPort.height);
+
+        viewPort.appendChild(svg.createNode('text', {
+            x: 10,
+            y: y - 5,
+            width: 100,
+            height: 15,
+            'font-size': 12,
+            fill: '#aaa',
+        }, node => {
+            node.textContent = profileData.getMetricFormater(metric)(tickValue);
+        }));
+
+        y += tickStep;
     }
 }
 
@@ -106,9 +154,9 @@ class ViewTimeRange {
             return this;
         }
 
-        this.timeRange.b = this.timeRange.a + minLength;
-        if (this.timeRange.b > this.wallTime) {
-            this.timeRange.shift(this.wallTime - this.timeRange.b);
+        this.timeRange.end = this.timeRange.begin + minLength;
+        if (this.timeRange.end > this.wallTime) {
+            this.timeRange.shift(this.wallTime - this.timeRange.end);
         }
 
         return this;
@@ -127,10 +175,10 @@ class ViewTimeRange {
     }
 
     zoomScaledViewRange(factor, center) {
-        center /= this.getScale();       // scaled
-        center += this.getViewRange().a; // translated
-        center /= this.viewWidth;        // view space -> norm space
-        center *= this.wallTime;         // norm space -> time space
+        center /= this.getScale();           // scaled
+        center += this.getViewRange().begin; // translated
+        center /= this.viewWidth;            // view space -> norm space
+        center *= this.wallTime;             // norm space -> time space
 
         this.timeRange.shift(-center);
         this.timeRange.scale(1 / factor);
@@ -200,32 +248,70 @@ class Widget {
     }
 }
 
+class ViewPort {
+
+    constructor(width, height, x, y) {
+        this.width = width;
+        this.height = height;
+        this.x = x || 0;
+        this.y = y || 0;
+
+        this.node = svg.createNode('svg', {
+            width: this.width,
+            height: this.height,
+            x: this.x,
+            y: this.y,
+        });
+    }
+
+    createSubViewPort(width, height, x, y) {
+        const viewPort = new ViewPort(width, height, x, y);
+        this.appendChild(viewPort.node);
+
+        return viewPort;
+    }
+
+    resize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.node.setAttribute('width', this.width);
+        this.node.setAttribute('height', this.height);
+    }
+
+    appendChild(child) {
+        this.node.appendChild(child);
+    }
+
+    clear() {
+        while (this.node.firstChild) {
+            this.node.removeChild(this.node.firstChild);
+        }
+    }
+}
+
 class SVGWidget extends Widget {
 
     constructor(container, profileData) {
         super(container, profileData);
 
-        this.w = this.container.width();
-        this.h = this.container.height();
-        this.viewPort = svg.createNode('svg', {
-            width: this.w,
-            height: this.h,
-        });
+        this.viewPort = new ViewPort(
+            this.container.width(),
+            this.container.height()
+        );
 
-        this.container.append(this.viewPort);
+        this.container.append(this.viewPort.node);
     }
 
     clear() {
-        while (this.viewPort.firstChild) {
-            this.viewPort.removeChild(this.viewPort.firstChild);
-        }
+        this.viewPort.clear();
     }
 
     _fitToContainerSize() {
-        this.w = this.container.width();
-        this.h = this.container.height();
-        this.viewPort.setAttribute('width', this.w);
-        this.viewPort.setAttribute('height', this.h);
+        this.viewPort.resize(
+            this.container.width(),
+            this.container.height()
+        );
+
         super._fitToContainerSize();
     }
 }
@@ -238,7 +324,7 @@ export class OverView extends SVGWidget {
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
-            this.w
+            this.viewPort.width
         );
 
         const updateTimeRangeRect = () => {
@@ -248,7 +334,7 @@ export class OverView extends SVGWidget {
 
             const viewRange = this.viewTimeRange.getViewRange();
 
-            this.timeRangeRect.setAttribute('x', viewRange.a);
+            this.timeRangeRect.setAttribute('x', viewRange.begin);
             this.timeRangeRect.setAttribute('width', viewRange.length());
         }
 
@@ -279,21 +365,21 @@ export class OverView extends SVGWidget {
         this.viewPort.appendChild(svg.createNode('rect', {
             x: 0,
             y: 0,
-            width: this.w,
-            height: this.h,
+            width: this.viewPort.width,
+            height: this.viewPort.height,
             'fill-opacity': '0.3',
         }));
 
         const calls = this.profileData.getCalls(
             this.profileData.getTimeRange(),
-            0.3 / this.w
+            0.3 / this.viewPort.width
         );
 
         for (let i = 0; i < calls.length; i++) {
             const call = calls[i];
 
-            const x = this.w * call.getStart('wt') / this.profileData.getWallTime();
-            const w = this.w * call.getInc('wt') / this.profileData.getWallTime() - 1;
+            const x = this.viewPort.width * call.getStart('wt') / this.profileData.getWallTime();
+            const w = this.viewPort.width * call.getInc('wt') / this.profileData.getWallTime() - 1;
 
             if (w < 0.3) {
                 continue;
@@ -320,8 +406,7 @@ export class OverView extends SVGWidget {
                             - this.profileData.getStats().getCallMin(this.currentMetric)
                     )
                         / Math.log10(
-                            this.profileData.getStats().getCallMax(this.currentMetric)
-                                - this.profileData.getStats().getCallMin(this.currentMetric)
+                            this.profileData.getStats().getCallRange(this.currentMetric).length()
                         )
                 ).toHTMLColor(),
             }));
@@ -329,24 +414,25 @@ export class OverView extends SVGWidget {
 
         renderSVGTimeGrid(
             this.viewPort,
-            this.w,
-            this.h,
             this.profileData.getTimeRange()
         );
 
-        (() => {
-            /*this.viewPort.appendChild(svg.createNode('polyline', {
-                points: points.join(' ')
-            }));*/
-        })()
+        if (this.currentMetric != 'wt') {
+            plotMetricValues(
+                this.viewPort,
+                this.profileData,
+                this.currentMetric,
+                this.profileData.getTimeRange()
+            );
+        }
 
         const viewRange = this.viewTimeRange.getViewRange();
 
         this.timeRangeRect = svg.createNode('rect', {
-            x: viewRange.a,
+            x: viewRange.begin,
             y: 0,
             width: viewRange.length(),
-            height: this.h,
+            height: this.viewPort.height,
             stroke: new math.Vec3(0, 0.7, 0).toHTMLColor(),
             'stroke-width': 2,
             fill: new math.Vec3(0, 1, 0).toHTMLColor(),
@@ -365,7 +451,7 @@ export class TimeLine extends SVGWidget {
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
-            this.w
+            this.viewPort.width
         );
 
         this.offsetY = 0;
@@ -442,8 +528,8 @@ export class TimeLine extends SVGWidget {
         this.viewPort.appendChild(svg.createNode('rect', {
             x: 0,
             y: 0,
-            width: this.w,
-            height: this.h,
+            width: this.viewPort.width,
+            height: this.viewPort.height,
             'fill-opacity': '0.1',
         }));
 
@@ -454,7 +540,7 @@ export class TimeLine extends SVGWidget {
         );
 
         const viewRange = this.viewTimeRange.getScaledViewRange();
-        const offsetX = -viewRange.a;
+        const offsetX = -viewRange.begin;
         
         this.svgRectPool.releaseAll();
         this.svgTextPool.releaseAll();
@@ -462,19 +548,19 @@ export class TimeLine extends SVGWidget {
         for (let i = 0; i < calls.length; i++) {
             const call = calls[i];
 
-            let x = offsetX + this.w * call.getStart('wt') / timeRange.length();
-            if (x > this.w) {
+            let x = offsetX + this.viewPort.width * call.getStart('wt') / timeRange.length();
+            if (x > this.viewPort.width) {
                 continue;
             }
 
-            let w = this.w * call.getInc('wt') / timeRange.length() - 1;
+            let w = this.viewPort.width * call.getInc('wt') / timeRange.length() - 1;
             if (w < 0.3 || x + w < 0) {
                 continue;
             }
 
             w = x < 0 ? w + x : w;
             x = x < 0 ? 0 : x;
-            w = Math.min(w, this.w - x);
+            w = Math.min(w, this.viewPort.width - x);
 
             const h = 12;
             const y = (h + 1) * call.getDepth() + this.offsetY;
@@ -497,8 +583,7 @@ export class TimeLine extends SVGWidget {
                             - this.profileData.getStats().getCallMin(this.currentMetric)
                     )
                         / Math.log10(
-                            this.profileData.getStats().getCallMax(this.currentMetric)
-                                - this.profileData.getStats().getCallMin(this.currentMetric)
+                            this.profileData.getStats().getCallRange(this.currentMetric).length()
                         )
                 ).toHTMLColor(),
             });
@@ -519,13 +604,36 @@ export class TimeLine extends SVGWidget {
             }
         }
 
+        const overlayHeight = 100;
+        const overlayViewPort = this.viewPort.createSubViewPort(
+            this.viewPort.width,
+            overlayHeight,
+            0,
+            this.viewPort.height - overlayHeight
+        );
+
+        overlayViewPort.appendChild(svg.createNode('rect', {
+            x: 0,
+            y: 0,
+            width: overlayViewPort.width,
+            height: overlayViewPort.height,
+            'fill-opacity': '0.5',
+        }));
+
         renderSVGTimeGrid(
             this.viewPort,
-            this.w,
-            this.h,
             timeRange,
             true
         );
+
+        if (this.currentMetric != 'wt') {
+            plotMetricValues(
+                overlayViewPort,
+                this.profileData,
+                this.currentMetric,
+                timeRange
+            );
+        }
     }
 }
 
@@ -548,20 +656,20 @@ export class FlameGraph extends SVGWidget {
         this.viewPort.appendChild(svg.createNode('rect', {
             x: 0,
             y: 0,
-            width: this.w,
-            height: this.h,
+            width: this.viewPort.width,
+            height: this.viewPort.height,
             'fill-opacity': '0.1',
         }));
 
         if (this.profileData.isReleasableMetric(this.currentMetric)) {
             this.viewPort.appendChild(svg.createNode('text', {
-                x: this.w / 3,
-                y: this.h / 2,
+                x: this.viewPort.width / 4,
+                y: this.viewPort.height / 2,
                 height: 20,
                 'font-size': 14,
                 fill: '#089',
             }, function(node) {
-                node.textContent = 'Not available for this metric';
+                node.textContent = 'This visualization is not available for this metric.';
             }));
 
             return;
@@ -572,9 +680,9 @@ export class FlameGraph extends SVGWidget {
 
         const renderNode = (node, minInc, maxCumInc, x, y) => {
             x = x || 0;
-            y = y || this.h;
+            y = y || this.viewPort.height;
 
-            const w = this.w
+            const w = this.viewPort.width
                 * (node.getInc().getValue(this.currentMetric) - minInc)
                 / (maxCumInc)
                 - 1
@@ -722,21 +830,19 @@ export class FlatProfile extends Widget {
         const limit = Math.min(100, functionsStats.length);
 
         for (let i = 0; i < limit; i++) {
-            var  stats = functionsStats[i];
+            const stats = functionsStats[i];
 
-            let inc = formatter(stats.inc.getValue(this.currentMetric));
-            let incRel = fmt.pct(
-                stats.inc.getValue(this.currentMetric) / (
-                    this.profileData.getStats().getMax(this.currentMetric)
-                        - this.profileData.getStats().getMin(this.currentMetric)
+            const inc = formatter(stats.inc.getValue(this.currentMetric));
+            const incRel = fmt.pct(
+                this.profileData.getStats().getRange(this.currentMetric).lerpDist(
+                    stats.inc.getValue(this.currentMetric)
                 )
             );
 
-            let exc = formatter(stats.exc.getValue(this.currentMetric));
-            let excRel = fmt.pct(
-                stats.exc.getValue(this.currentMetric) / (
-                    this.profileData.getStats().getMax(this.currentMetric)
-                        - this.profileData.getStats().getMin(this.currentMetric)
+            const exc = formatter(stats.exc.getValue(this.currentMetric));
+            const excRel = fmt.pct(
+                this.profileData.getStats().getRange(this.currentMetric).lerpDist(
+                    stats.exc.getValue(this.currentMetric)
                 )
             );
 
