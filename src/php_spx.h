@@ -3,7 +3,6 @@
 #endif
 
 #include "main/php.h"
-#include "Zend/zend_extensions.h"
 
 /* linux 2.6+ or OSX */
 #if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__))
@@ -14,7 +13,7 @@
 #   error "Only x86-64 architecture is supported"
 #endif
 
-#if ZEND_EXTENSION_API_NO < 220131226 || ZEND_EXTENSION_API_NO > 320170718
+#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20170718
 #   error "Only the following PHP versions are supported: 5.6 to 7.2"
 #endif
 
@@ -22,7 +21,7 @@
 #   error "ZTS is not yet supported"
 #endif
 
-#define PHP_SPX_VERSION "0.1.2"
 #define PHP_SPX_EXTNAME "SPX"
+#define PHP_SPX_VERSION "0.2.0"
 
 extern zend_module_entry spx_module_entry;

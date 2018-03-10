@@ -127,6 +127,15 @@ error:
     return NULL;
 }
 
+void spx_hset_reset(spx_hset_t * hset)
+{
+    size_t i;
+    for (i = 0; i < hset->size; i++) {
+        bucket_release_chain(&hset->buckets[i]);
+        bucket_init(&hset->buckets[i]);
+    }
+}
+
 void spx_hset_destroy(spx_hset_t * hset)
 {
     size_t i;

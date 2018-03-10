@@ -8,7 +8,7 @@
 #ifdef __GNUC__
 #   define ARRAY_INIT_INDEX(idx) [idx] = 
 #else
-#   define ARRAY_INIT_INDEX(idx)
+#   error "Please open an issue"
 #endif
 
 const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
@@ -16,58 +16,68 @@ const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
         "wt",
         "Wall Time",
         SPX_FMT_TIME,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_CPU_TIME) {
         "ct",
         "CPU Time",
         SPX_FMT_TIME,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IDLE_TIME) {
         "it",
         "Idle Time",
         SPX_FMT_TIME,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY) {
         "zm",
         "ZE memory",
         SPX_FMT_MEMORY,
+        1,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_ROOT_BUFFER) {
         "zr",
         "ZE root buffer",
         SPX_FMT_QUANTITY,
+        1,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_OBJECT_COUNT) {
         "zo",
         "ZE object count",
         SPX_FMT_QUANTITY,
+        1,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_ERROR_COUNT) {
         "ze",
         "ZE error count",
         SPX_FMT_QUANTITY,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_BYTES) {
         "io",
         "I/O Bytes",
         SPX_FMT_MEMORY,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_RBYTES) {
         "ior",
         "I/O Read Bytes",
         SPX_FMT_MEMORY,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_WBYTES) {
         "iow",
         "I/O Written Bytes",
         SPX_FMT_MEMORY,
+        0,
     },
 };
 
-spx_metric_t spx_metric_get_by_short_name(const char * short_name)
+spx_metric_t spx_metric_get_by_key(const char * key)
 {
     SPX_METRIC_FOREACH(i, {
-        if (0 == strcmp(spx_metrics_info[i].short_name, short_name)) {
+        if (0 == strcmp(spx_metrics_info[i].key, key)) {
             return i;
         }
     });
@@ -79,6 +89,7 @@ struct spx_metric_collector_t {
     int enabled_metrics[SPX_METRIC_COUNT];
     double ref_values[SPX_METRIC_COUNT];
     double last_values[SPX_METRIC_COUNT];
+    double current_fixed_noise[SPX_METRIC_COUNT];
 };
 
 static void collect_raw_values(const int * enabled_metrics, double * current_values);
@@ -95,6 +106,7 @@ spx_metric_collector_t * spx_metric_collector_create(const int * enabled_metrics
     SPX_METRIC_FOREACH(i, {
         collector->enabled_metrics[i] = enabled_metrics[i];
         collector->ref_values[i] = collector->last_values[i];
+        collector->current_fixed_noise[i] = 0;
     });
 
     return collector;
@@ -107,9 +119,40 @@ void spx_metric_collector_destroy(spx_metric_collector_t * collector)
 
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values)
 {
-    collect_raw_values(collector->enabled_metrics, collector->last_values);
+    double current_values[SPX_METRIC_COUNT];
+    collect_raw_values(collector->enabled_metrics, current_values);
+
+    /*
+     *  This branch is required to fix cpu / wall time inconsistency (cpu > wall time within a single thread).
+     */
+    if (
+        collector->enabled_metrics[SPX_METRIC_WALL_TIME] &&
+        collector->enabled_metrics[SPX_METRIC_CPU_TIME]
+    ) {
+        const double ct_surplus =
+            (current_values[SPX_METRIC_CPU_TIME] - collector->last_values[SPX_METRIC_CPU_TIME])
+            - (current_values[SPX_METRIC_WALL_TIME] - collector->last_values[SPX_METRIC_WALL_TIME])
+        ;
+
+        if (ct_surplus > 0) {
+            collector->ref_values[SPX_METRIC_CPU_TIME] += ct_surplus;
+            collector->ref_values[SPX_METRIC_IDLE_TIME] -= ct_surplus;
+        }
+    }
 
     SPX_METRIC_FOREACH(i, {
+        /* FIXME this branch should concern all non releasable metrics */
+        if (i == SPX_METRIC_WALL_TIME || i == SPX_METRIC_CPU_TIME) {
+            const double diff = current_values[i] - collector->last_values[i];
+            if (collector->current_fixed_noise[i] > diff) {
+                collector->current_fixed_noise[i] = diff;
+            }
+        }
+
+        collector->ref_values[i] += collector->current_fixed_noise[i];
+        collector->current_fixed_noise[i] = 0;
+
+        collector->last_values[i] = current_values[i];
         values[i] = collector->last_values[i] - collector->ref_values[i];
     });
 }
@@ -120,7 +163,14 @@ void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector)
     collect_raw_values(collector->enabled_metrics, current_values);
 
     SPX_METRIC_FOREACH(i, {
-        collector->ref_values[i] += current_values[i] - collector->last_values[i];
+        collector->current_fixed_noise[i] += current_values[i] - collector->last_values[i];
+    });
+}
+
+void spx_metric_collector_add_fixed_noise(spx_metric_collector_t * collector, const double * noise)
+{
+    SPX_METRIC_FOREACH(i, {
+        collector->current_fixed_noise[i] += noise[i];
     });
 }
 

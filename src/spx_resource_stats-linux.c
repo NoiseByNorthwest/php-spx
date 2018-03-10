@@ -13,12 +13,14 @@
 #include "spx_thread.h"
 
 static SPX_THREAD_TLS struct {
+    int init;
     int io_fd;
     size_t io_noise;
 } context;
 
 void spx_resource_stats_init(void)
 {
+    context.init = 1;
     char io_file[64];
     snprintf(
         io_file,
@@ -33,38 +35,38 @@ void spx_resource_stats_init(void)
 
 void spx_resource_stats_shutdown(void)
 {
+    if (!context.init) {
+        return;
+    }
+
     if (context.io_fd != -1) {
         close(context.io_fd);
+        context.io_fd = -1;
     }
 }
 
-#define TIMESPEC_TO_US(ts) ((ts).tv_sec * 1000 * 1000 + (ts).tv_nsec / 1000)
+#define TIMESPEC_TO_NS(ts) ((ts).tv_sec * 1000 * 1000 * 1000 + (ts).tv_nsec)
 
 size_t spx_resource_stats_wall_time(void)
 {
     struct timespec ts;
 
-    /*
-     *  CLOCK_REALTIME is used here for wall time because the performance drop (observed on 3.13.0 kernel)
-     *  with CLOCK_MONOTONIC_RAW or even CLOCK_MONOTONIC will cause more damages on accuracy than
-     *  potential concurrent system clock adjustments.
-     *  However it might be best to have optimal clock dispatching according to kernel version. 
-     */
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return TIMESPEC_TO_US(ts);
+    return TIMESPEC_TO_NS(ts);
 }
 
 size_t spx_resource_stats_cpu_time(void)
 {
     struct timespec ts;
+
     /*
      *  Linux implementation of CLOCK_PROCESS_CPUTIME_ID does not require to stick
      *  the current thread to the same CPU.
      */
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
 
-    return TIMESPEC_TO_US(ts);
+    return TIMESPEC_TO_NS(ts);
 }
 
 void spx_resource_stats_io(size_t * in, size_t * out)

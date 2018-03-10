@@ -19,14 +19,20 @@ if test "$PHP_SPX" = "yes"; then
 
     for dir in /usr/local /usr
     do
-        if test -f "$dir/include/zlib/zlib.h"
+        for incdir in $dir/include/zlib $dir/include
+        do
+            if test -f "$incdir/zlib.h"
+            then
+                SPX_ZLIB_DIR="$dir"
+                SPX_ZLIB_INCDIR="$incdir"
+
+                break
+            fi
+        done
+
+        if test "$SPX_ZLIB_INCDIR" != ""
         then
-            SPX_ZLIB_DIR="$dir"
-            SPX_ZLIB_INCDIR="$dir/include/zlib"
-        elif test -f "$dir/include/zlib.h"
-        then
-            SPX_ZLIB_DIR="$dir"
-            SPX_ZLIB_INCDIR="$dir/include"
+            break
         fi
     done
 
@@ -40,19 +46,22 @@ if test "$PHP_SPX" = "yes"; then
     fi
 
     PHP_NEW_EXTENSION(spx,
-        src/php_spx.c            \
-        src/spx_profiler.c       \
-        src/spx_reporter_fp.c    \
-        src/spx_reporter_trace.c \
-        src/spx_reporter_cg.c    \
-        src/spx_reporter_gte.c   \
-        src/spx_metric.c         \
-        src/spx_resource_stats.c \
-        src/spx_hset.c           \
-        src/spx_output_stream.c  \
-        src/spx_php.c            \
-        src/spx_stdio.c          \
-        src/spx_config.c         \
+        src/php_spx.c              \
+        src/spx_profiler.c         \
+        src/spx_reporter_full.c    \
+        src/spx_reporter_fp.c      \
+        src/spx_reporter_trace.c   \
+        src/spx_metric.c           \
+        src/spx_resource_stats.c   \
+        src/spx_hset.c             \
+        src/spx_str_builder.c      \
+        src/spx_output_stream.c    \
+        src/spx_php.c              \
+        src/spx_stdio.c            \
+        src/spx_config.c           \
+        src/spx_utils.c            \
         src/spx_fmt.c,
         $ext_shared)
+
+    PHP_ADD_MAKEFILE_FRAGMENT
 fi

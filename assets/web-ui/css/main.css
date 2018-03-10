@@ -1,0 +1,184 @@
+body {
+    background: #023;
+    background: -webkit-linear-gradient(#023, #000);
+    background: -o-linear-gradient(#023, #000);
+    background: -moz-linear-gradient(#023, #000);
+    background: linear-gradient(#023, #000);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+
+    font-family: monospace;
+    margin: 2px;
+    padding: 0;
+}
+
+* {
+    color: #089;
+}
+
+form#config label {
+    display: inline-block;
+    width: 300px;
+    margin-right: 20px;
+    margin-bottom: 30px;
+    text-align: right;
+    vertical-align: top;
+}
+
+form#config em {
+    display: inline-block;
+    vertical-align: top;
+    width: 300px;
+    margin-left: 10px; 
+    margin-bottom: 20px; 
+}
+
+form#config input {
+    vertical-align: top;
+}
+
+form#config select {
+    margin-bottom: 10px;
+    background-color: #000;
+    width: 200px;
+}
+
+table.data_table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: auto;
+    margin-top: 5px;
+}
+
+table.data_table tr {
+    cursor: pointer;
+}
+
+table.data_table th,
+table.data_table td {
+   border: 1px solid #044;
+   margin: 0;
+   padding: 3px;
+}
+
+table.data_table th.data_table-sort,
+table.data_table th:hover {
+    background-color: #023;
+}
+
+table.data_table tbody > tr:hover {
+    background-color: #033;
+}
+
+table.data_table td.breakable-text {
+    word-break: break-all;
+}
+
+table.data_table td > a {
+    display: block;
+    text-decoration: none;
+}
+
+#init-report {
+    position: absolute;
+    left: 50%;
+}
+
+#init-report > div {
+    position: relative;
+    left: -50%;
+    top: 200px;
+    border: solid 1px #0aa;
+    background-color: #023;
+    width: 400px;
+    height: 200px;
+    padding: 10px;
+    vertical-align: center;
+    text-align: center;
+}
+
+#init-report div.progress {
+    display: none;
+    width: 100%;
+    height: 20px;
+    border: solid 1px #099;
+    padding: 1px;
+}
+
+#init-report div.progress > div {
+    height: 100%;
+    background-color: #0d0;
+}
+
+#overview,
+#timeline {
+    cursor: -webkit-grab;
+    cursor:-moz-grab;
+}
+
+#overview:active,
+#timeline:active {
+    cursor: -webkit-grabbing;
+    cursor:-moz-grabbing;
+}
+
+table.layout {
+    border-spacing: 0;
+    width: 100%;
+}
+
+table.layout td {
+    padding: 0;
+}
+
+.widget {
+    border: solid 1px #022;
+}
+
+.widget:hover {
+    border: solid 1px #0aa;
+}
+
+.visualization {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#metric-selector select {
+    background-color: #000;
+}
+
+#flatprofile {
+    h: right;
+}
+
+#flatprofile table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 0;
+}
+
+#flatprofile table th,
+#flatprofile table td {
+   border: 1px solid #044;
+   margin: 0;
+   padding-left: 2px;
+   padding-right: 2px;
+}
+
+#flatprofile table th.sortable {
+    cursor: pointer;
+}
+
+#flatprofile table th.sort,
+#flatprofile table th.sortable:hover {
+    background-color: #023;
+}
+
+#flatprofile table td {
+    text-align: right;
+}
