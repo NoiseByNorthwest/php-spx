@@ -312,6 +312,8 @@ static int check_access(void)
 
 static void profiling_handler_init(void)
 {
+    TSRMLS_FETCH();
+
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.handler_set = 0;
     context.profiling_handler.sig_handling.probing = 0;
@@ -524,6 +526,8 @@ static void http_ui_handler_init(void)
 
 static void http_ui_handler_shutdown(void)
 {
+    TSRMLS_FETCH();
+
     spx_php_execution_shutdown();
 
 #ifndef ZTS
