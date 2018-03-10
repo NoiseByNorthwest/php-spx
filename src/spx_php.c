@@ -219,12 +219,12 @@ char * spx_php_build_command_line(void)
 
     zend_hash_internal_pointer_reset(argv_array);
     while ((entry = zend_hash_get_current_data(argv_array)) != NULL) {
-        if (Z_TYPE_PP(entry) == IS_STRING) {
+        if (Z_TYPE_P(entry) == IS_STRING) {
             if (i++ > 0) {
                 spx_str_builder_append_char(str_builder, ' ');
             }
 
-            if (0 == spx_str_builder_append_str(str_builder, Z_STRVAL_PP(entry))) {
+            if (0 == spx_str_builder_append_str(str_builder, Z_STRVAL_P(entry))) {
                 break;
             }
         }
