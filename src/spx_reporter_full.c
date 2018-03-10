@@ -362,6 +362,8 @@ static metadata_t * metadata_create()
     metadata->process_pid = getpid();
 #ifdef linux
     metadata->process_tid = syscall(SYS_gettid);
+#else
+    metadata->process_tid = 0;
 #endif
 
     time_t timer;
