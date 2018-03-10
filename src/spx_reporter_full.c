@@ -7,7 +7,9 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/syscall.h>
+#ifdef linux
+#   include <sys/syscall.h>
+#endif
 
 #include "spx_reporter_full.h"
 #include "spx_php.h"
@@ -358,7 +360,9 @@ static metadata_t * metadata_create()
     }
 
     metadata->process_pid = getpid();
+#ifdef linux
     metadata->process_tid = syscall(SYS_gettid);
+#endif
 
     time_t timer;
     time(&timer);
