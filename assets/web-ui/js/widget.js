@@ -30,7 +30,7 @@ function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
 
         if (majorTick) {
             if (detailed) {
-                const units = ['s', 'ms', 'us'];
+                const units = ['s', 'ms', 'us', 'ns'];
                 let t = tickTime / 1000;
                 let line = 0;
                 while (t > 0) {
@@ -47,22 +47,24 @@ function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
                         width: 100,
                         height: 15,
                         'font-size': 12,
-                        fill: '#ccc',
+                        fill: line > 1 ? '#777' : '#ccc',
                     }, node => {
                         node.textContent = m + unit;
                     }));
                 }
             } else {
-                viewPort.appendChild(svg.createNode('text', {
-                    x: x + 2,
-                    y: viewPort.height - 10,
-                    width: 100,
-                    height: 15,
-                    'font-size': 12,
-                    fill: '#aaa',
-                }, node => {
-                    node.textContent = fmt.time(tickTime / 1000);
-                }));
+                viewPort.appendChild(svg.createNode(
+                    'text',
+                    {
+                        x: x + 2,
+                        y: viewPort.height - 10,
+                        width: 100,
+                        height: 15,
+                        'font-size': 12,
+                        fill: '#aaa',
+                    },
+                    node => node.textContent = fmt.time(tickTime / 1000)
+                ));
             }
         }
 
@@ -73,27 +75,69 @@ function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
     }
 }
 
-function plotMetricValues(viewPort, profileData, metric, timeRange) {
-    const valueRange = profileData.getStats().getRange(metric);
+function renderSVGMultiLineText(viewPort, lines) {
+    let y = 15;
+
+    const text = svg.createNode('text', {
+        x: 0,
+        y: y,
+        'font-size': 12,
+        fill: '#fff',
+    });
+
+    viewPort.appendChild(text);
+
+    for (let line of lines) {
+        text.appendChild(svg.createNode(
+            'tspan',
+            {
+                x: 0,
+                y: y,
+            },
+            node => node.textContent = line
+        ));
+
+        y += 15;
+    }
+}
+
+function renderSVGMetricValuesPlot(viewPort, profileData, metric, timeRange) {
+    const timeComponentMetric = ['ct', 'it'].includes(metric);
+    const valueRange = timeComponentMetric ? new math.Range(0, 1) : profileData.getStats().getRange(metric);
+
+    const step = 4;
+    let previousMetricValues = null;
     let points = [];
+    console.time('renderSVGMetricValuesPlot')
+    for (let i = 0; i < viewPort.width; i += step) {
+        const currentMetricValues = profileData.getMetricValues(
+            timeRange.lerp(i / viewPort.width)
+        );
 
-    for (let i = 0; i < viewPort.width; i += 4) {
+        if (timeComponentMetric && previousMetricValues == null) {
+            previousMetricValues = currentMetricValues;
+
+            continue;
+        }
+
+        let currentValue = currentMetricValues.getValue(metric);
+        if (timeComponentMetric) {
+            currentValue = (currentMetricValues.getValue(metric) - previousMetricValues.getValue(metric))
+                / (currentMetricValues.getValue('wt') - previousMetricValues.getValue('wt'))
+            ;
+        }
+
         points.push(i);
-
-        const currentValue = profileData
-            .getMetricValues(
-                timeRange.lerp(i / viewPort.width),
-                10 * timeRange.length() / viewPort.width // 10px time precision
-            )
-            .getValue(metric)
-        ;
-
         points.push(parseInt(
             viewPort.height * (
                 1 - valueRange.lerpDist(currentValue)
             )
         ));
+
+        previousMetricValues = currentMetricValues;
     }
+
+    console.timeEnd('renderSVGMetricValuesPlot')
 
     viewPort.appendChild(svg.createNode('polyline', {
         points: points.join(' '),
@@ -102,9 +146,11 @@ function plotMetricValues(viewPort, profileData, metric, timeRange) {
         fill: 'none',
     }));
 
-    const tickStep = 25;
-    let y = tickStep;
-    while (y < viewPort.height) {
+    const tickValueStep = valueRange.lerp(0.25);
+    let tickValue = tickValueStep;
+    while (tickValue < valueRange.end) {
+        const y = parseInt(viewPort.height * (1 - valueRange.lerpDist(tickValue)));
+
         viewPort.appendChild(svg.createNode('line', {
             x1: 0,
             y1: y,
@@ -114,8 +160,6 @@ function plotMetricValues(viewPort, profileData, metric, timeRange) {
             'stroke-width': 0.5
         }));
 
-        const tickValue = valueRange.lerp(1 - y / viewPort.height);
-
         viewPort.appendChild(svg.createNode('text', {
             x: 10,
             y: y - 5,
@@ -124,12 +168,40 @@ function plotMetricValues(viewPort, profileData, metric, timeRange) {
             'font-size': 12,
             fill: '#aaa',
         }, node => {
-            node.textContent = profileData.getMetricFormater(metric)(tickValue);
+            const formatter = timeComponentMetric ? fmt.pct : profileData.getMetricFormatter(metric);
+            node.textContent = formatter(tickValue);
         }));
 
-        y += tickStep;
+        tickValue += tickValueStep;
     }
 }
+
+function getCallMetricValueColor(profileData, metric, value) {
+    const metricRange = profileData.getStats().getCallRange(metric);
+
+    let scaleValue = 0;
+
+    if (metricRange.length() > 100) {
+        scaleValue =
+            Math.log10(value - metricRange.begin)
+                / Math.log10(metricRange.length())
+        ;
+    } else {
+        scaleValue = metricRange.lerp(value);
+    }
+
+    return math.Vec3.lerpPath(
+        [
+            new math.Vec3(0, 0.3, 0.9),
+            new math.Vec3(0, 0.9, 0.9),
+            new math.Vec3(0, 0.9, 0),
+            new math.Vec3(0.9, 0.9, 0),
+            new math.Vec3(0.9, 0.2, 0),
+        ],
+        scaleValue
+    ).toHTMLColor();
+}
+
 
 class ViewTimeRange {
 
@@ -212,42 +284,6 @@ class ViewTimeRange {
     }
 }
 
-class Widget {
-
-    constructor(container, profileData) {
-        this.container = container;
-        this.profileData = profileData;
-        this.currentMetric = profileData.getMetadata().enabled_metrics[0];
-
-        $(window).on('resize', () => {
-            this._fitToContainerSize();
-        });
-    }
-
-    setCurrentMetric(metric) {
-        this.currentMetric = metric;
-    }
-
-    clear() {
-        this.container.empty();
-    }
-
-    render() {
-    }
-
-    repaint() {
-        const id = this.container.attr('id');
-        console.time('repaint ' + id);
-        this.clear();
-        this.render();
-        console.timeEnd('repaint ' + id);
-    }
-
-    _fitToContainerSize() {
-        this.repaint();
-    }
-}
-
 class ViewPort {
 
     constructor(width, height, x, y) {
@@ -289,6 +325,42 @@ class ViewPort {
     }
 }
 
+class Widget {
+
+    constructor(container, profileData) {
+        this.container = container;
+        this.profileData = profileData;
+        this.currentMetric = profileData.getMetadata().enabled_metrics[0];
+
+        $(window).on('resize', () => {
+            this._fitToContainerSize();
+        });
+    }
+
+    setCurrentMetric(metric) {
+        this.currentMetric = metric;
+    }
+
+    clear() {
+        this.container.empty();
+    }
+
+    render() {
+    }
+
+    repaint() {
+        const id = this.container.attr('id');
+        console.time('repaint ' + id);
+        this.clear();
+        this.render();
+        console.timeEnd('repaint ' + id);
+    }
+
+    _fitToContainerSize() {
+        this.repaint();
+    }
+}
+
 class SVGWidget extends Widget {
 
     constructor(container, profileData) {
@@ -300,6 +372,8 @@ class SVGWidget extends Widget {
         );
 
         this.container.append(this.viewPort.node);
+
+        setTimeout(() => this._fitToContainerSize(), 0);
     }
 
     clear() {
@@ -307,12 +381,65 @@ class SVGWidget extends Widget {
     }
 
     _fitToContainerSize() {
+        this.viewPort.resize(0, 0);
         this.viewPort.resize(
             this.container.width(),
             this.container.height()
         );
 
         super._fitToContainerSize();
+    }
+}
+
+export class ColorScale extends SVGWidget {
+
+    constructor(container, profileData) {
+        super(container, profileData);
+    }
+
+    render() {
+        const step = 8;
+        const exp = 5;
+
+        const getCurrentMetricValue = (x) => {
+            return this
+                .profileData
+                .getStats()
+                .getCallRange(this.currentMetric)
+                .lerp(
+                    Math.pow(x, exp) / Math.pow(this.viewPort.width, exp)
+                )
+            ;
+        }
+
+        for (let i = 0; i < this.viewPort.width; i += step) {
+            this.viewPort.appendChild(svg.createNode('rect', {
+                x: i,
+                y: 0,
+                width: step,
+                height: this.viewPort.height,
+                fill: getCallMetricValueColor(
+                    this.profileData,
+                    this.currentMetric,
+                    getCurrentMetricValue(i)
+                ),
+            }));
+        }
+
+        for (let i = 0; i < this.viewPort.width; i += step * 20) {
+            this.viewPort.appendChild(svg.createNode('text', {
+                x: i,
+                y: this.viewPort.height - 5,
+                width: 100,
+                height: 15,
+                'font-size': 12,
+                fill: '#777',
+            }, node => {
+                node.textContent = this.profileData.getMetricFormatter(this.currentMetric)(
+                    getCurrentMetricValue(i)
+                );
+            }));
+        }
     }
 }
 
@@ -343,7 +470,7 @@ export class OverView extends SVGWidget {
             updateTimeRangeRect();
         });
 
-        this.container.on('click mousemove', e => {
+        this.container.on('mousedown mousemove', e => {
             if (e.type == 'mousemove' && e.buttons != 1) {
                 return;
             }
@@ -393,22 +520,11 @@ export class OverView extends SVGWidget {
                 y1: y,
                 x2: x + w,
                 y2: y + h,
-                stroke: math.Vec3.lerpPath(
-                    [
-                        new math.Vec3(0, 0.3, 0.9),
-                        new math.Vec3(0, 0.9, 0.9),
-                        new math.Vec3(0, 0.9, 0),
-                        new math.Vec3(0.9, 0.9, 0),
-                        new math.Vec3(0.9, 0.2, 0),
-                    ],
-                    Math.log10(
-                        call.getInc(this.currentMetric)
-                            - this.profileData.getStats().getCallMin(this.currentMetric)
-                    )
-                        / Math.log10(
-                            this.profileData.getStats().getCallRange(this.currentMetric).length()
-                        )
-                ).toHTMLColor(),
+                stroke: getCallMetricValueColor(
+                    this.profileData,
+                    this.currentMetric,
+                    call.getInc(this.currentMetric)
+                ),
             }));
         }
 
@@ -418,7 +534,7 @@ export class OverView extends SVGWidget {
         );
 
         if (this.currentMetric != 'wt') {
-            plotMetricValues(
+            renderSVGMetricValuesPlot(
                 this.viewPort,
                 this.profileData,
                 this.currentMetric,
@@ -570,22 +686,14 @@ export class TimeLine extends SVGWidget {
                 y: y,
                 width: w,
                 height: h,
-                fill: math.Vec3.lerpPath(
-                    [
-                        new math.Vec3(0, 0.3, 0.9),
-                        new math.Vec3(0, 0.9, 0.9),
-                        new math.Vec3(0, 0.9, 0),
-                        new math.Vec3(0.9, 0.9, 0),
-                        new math.Vec3(0.9, 0.2, 0),
-                    ],
-                    Math.log10(
-                        call.getInc(this.currentMetric)
-                            - this.profileData.getStats().getCallMin(this.currentMetric)
-                    )
-                        / Math.log10(
-                            this.profileData.getStats().getCallRange(this.currentMetric).length()
-                        )
-                ).toHTMLColor(),
+                stroke: 'none',
+                'stroke-width': 2,
+                fill: getCallMetricValueColor(
+                    this.profileData,
+                    this.currentMetric,
+                    call.getInc(this.currentMetric)
+                ),
+                'data-call-idx': call.getIdx(),
             });
 
             this.viewPort.appendChild(rect);
@@ -627,13 +735,81 @@ export class TimeLine extends SVGWidget {
         );
 
         if (this.currentMetric != 'wt') {
-            plotMetricValues(
+            renderSVGMetricValuesPlot(
                 overlayViewPort,
                 this.profileData,
                 this.currentMetric,
                 timeRange
             );
         }
+
+        const infoViewPort = overlayViewPort.createSubViewPort(
+            overlayViewPort.width,
+            65,
+            0,
+            0
+        );
+
+        let pointedElement = null;
+
+        this.viewPort.node.addEventListener('mouseout', (e) => {
+            if (pointedElement != null) {
+                pointedElement.setAttribute('stroke', 'none');
+                pointedElement = null;
+            }
+
+            infoViewPort.clear();
+        });
+
+        this.viewPort.node.addEventListener('mousemove', (e) => {
+            if (pointedElement != null) {
+                pointedElement.setAttribute('stroke', 'none');
+                pointedElement = null;
+            }
+
+            infoViewPort.clear();
+
+            pointedElement = document.elementFromPoint(e.clientX, e.clientY);
+            if (pointedElement.nodeName == 'text') {
+                pointedElement = pointedElement.previousSibling;
+            }
+
+            const callIdx = pointedElement.dataset.callIdx;
+            if (callIdx === undefined) {
+                pointedElement = null;
+
+                return;
+            }
+
+            pointedElement.setAttribute('stroke', '#0ff');
+    
+            infoViewPort.appendChild(svg.createNode('rect', {
+                x: 0,
+                y: 0,
+                width: infoViewPort.width,
+                height: infoViewPort.height,
+                'fill-opacity': '0.5',
+            }));
+
+            const call = this.profileData.getCall(callIdx);
+            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
+            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
+
+            renderSVGMultiLineText(
+                infoViewPort.createSubViewPort(
+                    infoViewPort.width - 5,
+                    infoViewPort.height,
+                    5,
+                    0
+                ),
+                [
+                    'Function: ' + call.getFunctionName(),
+                    'Depth: ' + call.getDepth(),
+                    currentMetricName + ' inc.: ' + formatter(call.getInc(this.currentMetric)),
+                    currentMetricName + ' exc.: ' + formatter(call.getExc(this.currentMetric)),
+                ]
+            );
+        });
     }
 }
 
@@ -678,6 +854,8 @@ export class FlameGraph extends SVGWidget {
         this.svgRectPool.releaseAll();
         this.svgTextPool.releaseAll();
 
+        const renderedCgNodes = [];
+
         const renderNode = (node, minInc, maxCumInc, x, y) => {
             x = x || 0;
             y = y || this.viewPort.height;
@@ -700,11 +878,16 @@ export class FlameGraph extends SVGWidget {
                 childrenX = renderNode(child, minInc, maxCumInc, childrenX, y);
             }
 
+            renderedCgNodes.push(node);
+            const nodeIdx = renderedCgNodes.length - 1;
+
             this.viewPort.appendChild(this.svgRectPool.acquire({
                 x: x,
                 y: y,
                 width: w,
                 height: h,
+                stroke: 'none',
+                'stroke-width': 2,
                 fill: math.Vec3.lerp(
                     new math.Vec3(1, 0, 0),
                     new math.Vec3(1, 1, 0),
@@ -715,6 +898,7 @@ export class FlameGraph extends SVGWidget {
                         / (maxCumInc)
                 ).toHTMLColor(),
                 'fill-opacity': '1',
+                'data-cg-node-idx': nodeIdx,
             }));
 
             if (w > 20 && h > 5) {
@@ -746,6 +930,74 @@ export class FlameGraph extends SVGWidget {
         for (const child of cgRoot.getChildren()) {
             x = renderNode(child, minInc, maxCumInc, x);
         }
+
+        const infoViewPort = this.viewPort.createSubViewPort(
+            this.viewPort.width,
+            65,
+            0,
+            0
+        );
+
+        let pointedElement = null;
+
+        this.viewPort.node.addEventListener('mouseout', (e) => {
+            if (pointedElement != null) {
+                pointedElement.setAttribute('stroke', 'none');
+                pointedElement = null;
+            }
+
+            infoViewPort.clear();
+        });
+
+        this.viewPort.node.addEventListener('mousemove', (e) => {
+            if (pointedElement != null) {
+                pointedElement.setAttribute('stroke', 'none');
+                pointedElement = null;
+            }
+
+            infoViewPort.clear();
+
+            pointedElement = document.elementFromPoint(e.clientX, e.clientY);
+            if (pointedElement.nodeName == 'text') {
+                pointedElement = pointedElement.previousSibling;
+            }
+
+            const cgNodeIdx = pointedElement.dataset.cgNodeIdx;
+            if (cgNodeIdx === undefined) {
+                pointedElement = null;
+
+                return;
+            }
+
+            pointedElement.setAttribute('stroke', '#0ff');
+    
+            infoViewPort.appendChild(svg.createNode('rect', {
+                x: 0,
+                y: 0,
+                width: infoViewPort.width,
+                height: infoViewPort.height,
+                'fill-opacity': '0.5',
+            }));
+
+            const cgNode = renderedCgNodes[cgNodeIdx];
+            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
+            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
+
+            renderSVGMultiLineText(
+                infoViewPort.createSubViewPort(
+                    infoViewPort.width - 5,
+                    infoViewPort.height,
+                    5,
+                    0
+                ),
+                [
+                    'Function: ' + cgNode.getFunctionName(),
+                    'Depth: ' + cgNode.getDepth(),
+                    'Called: ' + cgNode.getCalled(),
+                    currentMetricName + ' inc.: ' + formatter(cgNode.getInc().getValue(this.currentMetric)),
+                ]
+            );
+        });
     };
 }
 
@@ -826,7 +1078,7 @@ export class FlatProfile extends Widget {
             return (a < b ? -1 : (a > b)) * this.sortDir;
         });
 
-        const formatter = this.profileData.getMetricFormater(this.currentMetric);
+        const formatter = this.profileData.getMetricFormatter(this.currentMetric);
         const limit = Math.min(100, functionsStats.length);
 
         for (let i = 0; i < limit; i++) {

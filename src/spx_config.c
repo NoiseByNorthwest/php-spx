@@ -172,7 +172,7 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
         });
 
         SPX_UTILS_TOKENIZE_STRING(source_data->metrics_str, ',', token, 32, {
-            spx_metric_t metric = spx_metric_get_by_short_name(token);
+            spx_metric_t metric = spx_metric_get_by_key(token);
             if (metric != SPX_METRIC_NONE) {
                 config->enabled_metrics[metric] = 1;
             }
@@ -194,7 +194,7 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
     }
 
     if (source_data->fp_focus_str) {
-        spx_metric_t focus = spx_metric_get_by_short_name(source_data->fp_focus_str);
+        spx_metric_t focus = spx_metric_get_by_key(source_data->fp_focus_str);
         if (focus != SPX_METRIC_NONE) {
             config->fp_focus = focus;
         }

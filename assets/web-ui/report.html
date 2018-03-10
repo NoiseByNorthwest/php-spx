@@ -16,13 +16,21 @@
         </div>
     </div>
 
-    <div id="control-bar" class="widget" style="width: 100%; height: 24px">
-        <select>
-        </select>
-    </div>
+    <table class="layout"><tr>
+        <td style="width: 10%; min-width: 100px;">
+            <div id="metric-selector" class="widget" style="width: 100%; height: 24px">
+                <select>
+                </select>
+            </div>
+        </td><td>
+            <div id="color-scale" class="widget" style="width: 100%; height: 24px"></div>
+        </td>
+    </tr></table>
+
     <div id="overview" class="widget visualization" style="width: 100%; height: 120px"></div>
     <div id="timeline" class="widget visualization" style="width: 100%; height: 400px"></div>
-    <table width="100%"><tr>
+
+    <table class="layout"><tr>
         <td style="width: 60%; min-width: 600px;">
             <div id="flatprofile" class="widget" style="height: 500px"></div>
         </td><td>
@@ -79,10 +87,16 @@
                 );
             }
 
-            fetch('data/reports/metadata/' + key, {credentials: "same-origin"})
+            fetch('data/metrics', {credentials: "same-origin"})
                 .then(response => response.json())
                 .then(response => {
-                    profileDataBuilder = new ProfileDataBuilder(response);
+                    profileDataBuilder = new ProfileDataBuilder(response.results);
+
+                    return fetch('data/reports/metadata/' + key, {credentials: "same-origin"});
+                })
+                .then(response => response.json())
+                .then(metadata => {
+                    profileDataBuilder.setMetadata(metadata);
 
                     return fetch('data/reports/get/' + key, {credentials: "same-origin"});
                 })
@@ -181,6 +195,7 @@
                 })
                 .then(profileData => {
                     const widgets = [
+                        new widget.ColorScale($('#color-scale'), profileData),
                         new widget.OverView($('#overview'), profileData),
                         new widget.TimeLine($('#timeline'), profileData),
                         new widget.FlatProfile($('#flatprofile'), profileData),
@@ -189,22 +204,11 @@
 
                     widgets.forEach(widget => widget.render());
 
-                    const metricSelector = $('#control-bar select');
-                    const metricsInfo = {
-                        'wt': {label: 'Wall Time'},
-                        'ct': {label: 'CPU Time'},
-                        'it': {label: 'Idle Time'},
-                        'zm': {label: 'Zend Engine memory'},
-                        'zr': {label: 'Zend Engine root buffer length'},
-                        'zo': {label: 'Zend Engine object count'},
-                        'ze': {label: 'Zend Engine error count'},
-                        'io': {label: 'I/O (reads + writes)'},
-                        'ior': {label: 'I/O (reads)'},
-                        'iow': {label: 'I/O (writes)'},
-                    };
-
+                    const metricSelector = $('#metric-selector select');
                     for (const metric of profileData.getMetadata().enabled_metrics) {
-                        metricSelector.append(`<option value="${metric}">${metricsInfo[metric].label}</option>`);
+                        metricSelector.append(
+                            `<option value="${metric}">${profileData.getMetricInfo(metric).name}</option>`
+                        );
                     }
 
                     metricSelector.on('change', () => {

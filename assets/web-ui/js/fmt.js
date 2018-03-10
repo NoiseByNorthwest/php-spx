@@ -13,7 +13,7 @@ function lpad(str, len, char) {
 
 export function date(d) {
     return d.getFullYear()
-        + '-' + lpad(d.getMonth(), 2, '0')
+        + '-' + lpad(d.getMonth() + 1, 2, '0')
         + '-' + lpad(d.getDate(), 2, '0')
         + ' ' + lpad(d.getHours(), 2, '0')
         + ':' + lpad(d.getMinutes(), 2, '0')
@@ -42,15 +42,19 @@ export function pct(n) {
 }
 
 export function time(n) {
+    if (n > 1000 * 1000 * 1000) {
+        return round(n / (1000 * 1000 * 1000), 2).toFixed(2) + 's';
+    }
+
     if (n > 1000 * 1000) {
-        return round(n / (1000 * 1000), 2).toFixed(2) + 's';
+        return round(n / (1000 * 1000), 2).toFixed(2) + 'ms';
     }
 
     if (n > 1000) {
-        return round(n / (1000), 2).toFixed(2) + 'ms';
+        return round(n / (1000), 2).toFixed(2) + 'us';
     }
 
-    return round(n, 0) + 'us';
+    return round(n, 0) + 'ns';
 }
 
 export function memory(n) {

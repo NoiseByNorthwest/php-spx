@@ -13,6 +13,7 @@ export function createNode(name, attributes, builder) {
 }
 
 export class NodePool {
+
     constructor(name) {
         this.name = name;
         this.nodes = [];

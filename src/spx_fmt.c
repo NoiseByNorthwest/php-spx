@@ -203,14 +203,17 @@ void spx_fmt_row_reset(spx_fmt_row_t * row)
 
 static void resolve_time_format(double * value, const char ** format)
 {
-    if (*value >= 1000 * 1000) {
+    if (*value >= 1000 * 1000 * 1000) {
         *format = "%7.2fs";
+        *value /= 1000 * 1000 * 1000;
+    } else if (*value >= 1000 * 1000) {
+        *format = "%6.1fms";
         *value /= 1000 * 1000;
     } else if (*value >= 1000) {
-        *format = "%6.1fms";
+        *format = "%6.1fus";
         *value /= 1000;
     } else {
-        *format = "%6.fus";
+        *format = "%6.fns";
     }
 }
 

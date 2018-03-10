@@ -30,14 +30,15 @@ do {                                             \
 } while (0)
 
 typedef struct {
-    const char * short_name;
+    const char * key;
     const char * name;
     spx_fmt_value_type_t type;
+    int releasable;
 } spx_metric_info_t;
 
 extern const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT];
 
-spx_metric_t spx_metric_get_by_short_name(const char * short_name);
+spx_metric_t spx_metric_get_by_key(const char * key);
 
 typedef struct spx_metric_collector_t spx_metric_collector_t;
 
@@ -46,5 +47,6 @@ void spx_metric_collector_destroy(spx_metric_collector_t * collector);
 
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values);
 void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector);
+void spx_metric_collector_add_fixed_noise(spx_metric_collector_t * collector, const double * noise);
 
 #endif /* SPX_METRIC_H_DEFINED */

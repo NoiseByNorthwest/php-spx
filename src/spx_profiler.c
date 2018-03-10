@@ -5,6 +5,7 @@
 #include "spx_hset.h"
 #include "spx_fmt.h"
 #include "spx_profiler.h"
+#include "spx_resource_stats.h"
 
 #define STACK_CAPACITY 2048
 #define FUNC_TABLE_CAPACITY 65536
@@ -60,6 +61,10 @@ struct spx_profiler_t {
     int enabled_metrics[SPX_METRIC_COUNT];
     spx_metric_collector_t * metric_collector;
 
+    int calibrated;
+    spx_profiler_metric_values_t call_start_noise;
+    spx_profiler_metric_values_t call_end_noise;
+
     spx_profiler_reporter_t * reporter;
 
     size_t max_depth;
@@ -77,6 +82,13 @@ struct spx_profiler_t {
 
     func_table_t func_table;
 };
+
+static spx_profiler_reporter_cost_t null_reporter_notify(
+    spx_profiler_reporter_t * reporter,
+    const spx_profiler_event_t * event
+);
+
+static void calibrate(spx_profiler_t * profiler);
 
 static unsigned long func_table_entry_hash(const void * v);
 static int func_table_entry_cmp(const void * va, const void * vb);
@@ -147,6 +159,10 @@ spx_profiler_t * spx_profiler_create(
 
     profiler->metric_collector = NULL;
 
+    profiler->calibrated = 0;
+    METRIC_VALUES_ZERO(profiler->call_start_noise);
+    METRIC_VALUES_ZERO(profiler->call_end_noise);
+
     profiler->max_depth = max_depth > 0 && max_depth < STACK_CAPACITY ? max_depth : STACK_CAPACITY;
     profiler->called = 0;
 
@@ -209,10 +225,8 @@ void spx_profiler_destroy(spx_profiler_t * profiler)
     free(profiler);
 }
 
-void spx_profiler_call_start(
-    spx_profiler_t * profiler,
-    const spx_php_function_t * function
-) {
+void spx_profiler_call_start(spx_profiler_t * profiler)
+{
     if (profiler->finalized) {
         return;
     }
@@ -224,6 +238,10 @@ void spx_profiler_call_start(
         }
 
         goto end;
+    }
+
+    if (profiler->called == 0 && !profiler->calibrated) {
+        calibrate(profiler);
     }
 
     spx_profiler_metric_values_t cur_metric_values;
@@ -245,10 +263,13 @@ void spx_profiler_call_start(
 
     profiler->called++;
 
+    spx_php_function_t function;
+    spx_php_current_function(&function);
+
     stack_frame_t * frame = &profiler->stack.frames[profiler->stack.depth];
     frame->func_table_entry = func_table_get_entry(
         &profiler->func_table,
-        function
+        &function
     );
 
     if (!frame->func_table_entry) {
@@ -274,6 +295,8 @@ void spx_profiler_call_start(
     if (profiler->reporter->notify(profiler->reporter, &event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
         spx_metric_collector_noise_barrier(profiler->metric_collector);
     }
+
+    spx_metric_collector_add_fixed_noise(profiler->metric_collector, profiler->call_start_noise.values);
 
 end:
     profiler->stack.depth++;
@@ -363,6 +386,8 @@ void spx_profiler_call_end(spx_profiler_t * profiler)
     if (profiler->reporter->notify(profiler->reporter, &event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
         spx_metric_collector_noise_barrier(profiler->metric_collector);
     }
+
+    spx_metric_collector_add_fixed_noise(profiler->metric_collector, profiler->call_end_noise.values);
 }
 
 void spx_profiler_finalize(spx_profiler_t * profiler)
@@ -380,6 +405,62 @@ void spx_profiler_finalize(spx_profiler_t * profiler)
     spx_profiler_event_t event;
     fill_event(&event, profiler, SPX_PROFILER_EVENT_FINALIZE, NULL, NULL, NULL, NULL);
     profiler->reporter->notify(profiler->reporter, &event);
+}
+
+static spx_profiler_reporter_cost_t null_reporter_notify(
+    spx_profiler_reporter_t * reporter,
+    const spx_profiler_event_t * event
+) {
+    return SPX_PROFILER_REPORTER_COST_LIGHT;
+}
+
+static void calibrate(spx_profiler_t * profiler)
+{
+    profiler->calibrated = 1;
+
+    spx_profiler_reporter_t null_reporter = {
+        null_reporter_notify,
+        NULL
+    };
+
+    spx_profiler_reporter_t * const orig_reporter = profiler->reporter;
+    profiler->reporter = &null_reporter;
+
+    const size_t iter_count = 1000000;
+    int i;
+    size_t start, avg_noise;
+
+    start = spx_resource_stats_cpu_time();
+
+    for (i = 0; i < iter_count; i++) {
+        spx_profiler_call_start(profiler);
+        if (profiler->stack.depth > 5) {
+            profiler->stack.depth = 5;
+        }
+    }
+
+    avg_noise = (spx_resource_stats_cpu_time() - start) / iter_count;
+
+    profiler->call_start_noise.values[SPX_METRIC_WALL_TIME] = avg_noise;
+    profiler->call_start_noise.values[SPX_METRIC_CPU_TIME] = avg_noise;
+
+    start = spx_resource_stats_cpu_time();
+
+    for (i = 0; i < iter_count; i++) {
+        spx_profiler_call_end(profiler);
+        profiler->stack.depth++;
+    }
+
+    avg_noise = (spx_resource_stats_cpu_time() - start) / iter_count;
+
+    profiler->call_end_noise.values[SPX_METRIC_WALL_TIME] = avg_noise;
+    profiler->call_end_noise.values[SPX_METRIC_CPU_TIME] = avg_noise;
+
+    profiler->reporter = orig_reporter;
+    profiler->called = 0;
+    profiler->stack.depth = 0;
+    profiler->func_table.size = 0;
+    spx_hset_reset(profiler->func_table.hset);
 }
 
 static unsigned long func_table_entry_hash(const void * v)

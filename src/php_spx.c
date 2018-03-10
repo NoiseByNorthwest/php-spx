@@ -215,11 +215,7 @@ static PHP_RINIT_FUNCTION(spx)
         const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
         if (
             request_uri
-            && 0 == strncmp(
-                request_uri,
-                SPX_G(http_ui_uri_prefix),
-                strlen(SPX_G(http_ui_uri_prefix))
-            )
+            && spx_utils_str_starts_with(request_uri, SPX_G(http_ui_uri_prefix))
         ) {
             context.execution_handler = &http_ui_handler;
         }
@@ -385,11 +381,11 @@ static void profiling_handler_shutdown(void)
         return;
     }
 
-    profiling_handler_ex_unset_context();
-
     spx_profiler_finalize(context.profiling_handler.profiler);
     spx_profiler_destroy(context.profiling_handler.profiler);
     context.profiling_handler.profiler = NULL;
+
+    profiling_handler_ex_unset_context();
 }
 
 static void profiling_handler_ex_set_context(void)
@@ -435,10 +431,7 @@ static void profiling_handler_ex_hook_before(void)
     context.profiling_handler.sig_handling.probing = 1;
 #endif
 
-    spx_php_function_t function;
-    spx_php_current_function(&function);
-
-    spx_profiler_call_start(context.profiling_handler.profiler, &function);
+    spx_profiler_call_start(context.profiling_handler.profiler);
 
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.probing = 0;
@@ -602,7 +595,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
 
             spx_php_output_direct_print("{");
             spx_php_output_direct_print("\"key\": \"");
-            spx_php_output_direct_print(spx_metrics_info[i].short_name);
+            spx_php_output_direct_print(spx_metrics_info[i].key);
             spx_php_output_direct_print("\",");
 
             spx_php_output_direct_print("\"name\": \"");
@@ -627,7 +620,9 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
                     ;
             }
 
-            spx_php_output_direct_print("\"");
+            spx_php_output_direct_print("\",");
+
+            spx_php_output_direct_printf("\"releasable\": %d", spx_metrics_info[i].releasable);
 
             spx_php_output_direct_print("}\n");
         });

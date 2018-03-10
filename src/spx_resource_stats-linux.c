@@ -45,21 +45,15 @@ void spx_resource_stats_shutdown(void)
     }
 }
 
-#define TIMESPEC_TO_US(ts) ((ts).tv_sec * 1000 * 1000 + (ts).tv_nsec / 1000)
+#define TIMESPEC_TO_NS(ts) ((ts).tv_sec * 1000 * 1000 * 1000 + (ts).tv_nsec)
 
 size_t spx_resource_stats_wall_time(void)
 {
     struct timespec ts;
 
-    /*
-     *  CLOCK_REALTIME is used here for wall time because the performance drop (observed on 3.13.0 kernel)
-     *  with CLOCK_MONOTONIC_RAW or even CLOCK_MONOTONIC will cause more damages on accuracy than
-     *  potential concurrent system clock adjustments.
-     *  However it might be best to have optimal clock dispatching according to kernel version. 
-     */
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return TIMESPEC_TO_US(ts);
+    return TIMESPEC_TO_NS(ts);
 }
 
 size_t spx_resource_stats_cpu_time(void)
@@ -72,7 +66,7 @@ size_t spx_resource_stats_cpu_time(void)
      */
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
 
-    return TIMESPEC_TO_US(ts);
+    return TIMESPEC_TO_NS(ts);
 }
 
 void spx_resource_stats_io(size_t * in, size_t * out)

@@ -61,7 +61,6 @@ spx_profiler_reporter_t * spx_reporter_trace_create(const char * file_name, int 
     }
 
     reporter->file_name = file_name ? file_name : "spx_trace.txt.gz";
-    reporter->output = NULL;
 
     reporter->safe = safe;
 
@@ -69,8 +68,8 @@ spx_profiler_reporter_t * spx_reporter_trace_create(const char * file_name, int 
     reporter->buffer_size = 0;
 
     const int compressed = spx_utils_str_ends_with(reporter->file_name, ".gz");
-    spx_output_stream_t * output = spx_output_stream_open(reporter->file_name, compressed);
-    if (!output) {
+    reporter->output = spx_output_stream_open(reporter->file_name, compressed);
+    if (!reporter->output) {
         spx_profiler_reporter_destroy((spx_profiler_reporter_t *)reporter);
 
         return NULL;

@@ -100,25 +100,26 @@ class MetricValues {
 
 class CallListEntry {
 
-    static M_START() { return 0; }
-    static M_END()   { return 1; }
-    static M_EXC()   { return 2; }
-
     constructor(list, idx) {
-        if (idx < 0 || idx >= this.size) {
+        if (idx < 0 || idx >= list.getSize()) {
             throw new Error('Out of bound index: ' + idx);
         }
 
         this.list = list;
+        this.idx = idx;
         this.elemOffset = idx * this.list.elemSize;
     }
 
-    getFunctionId() {
-        return this.list.buffer[this.elemOffset];
+    getIdx() {
+        return this.idx;
+    }
+
+    getFunctionIdx() {
+        return this.list.array.getElementFieldValue(this.idx, 'functionIdx');
     }
 
     getFunctionName() {
-        return this.list.functionNames[this.getFunctionId()];
+        return this.list.functionNames[this.getFunctionIdx()];
     }
 
     getMetrics() {
@@ -126,12 +127,12 @@ class CallListEntry {
     }
 
     getMetricValue(type, metric) {
-        return this.list.buffer[this.elemOffset + 2 + (3 * this.list.metricOffsets[metric]) + type];
+        return this.list.array.getElementFieldValue(this.idx, type + '_' + metric);
     }
 
     getMetricValues(type) {
         let values = {};
-        for (var metric of this.list.metrics) {
+        for (let metric of this.list.metrics) {
             values[metric] = this.getMetricValue(type, metric);
         }
 
@@ -139,11 +140,11 @@ class CallListEntry {
     }
 
     getStart(metric) {
-        return this.getMetricValue(this.constructor.M_START(), metric);
+        return this.getMetricValue('start', metric);
     }
 
     getEnd(metric) {
-        return this.getMetricValue(this.constructor.M_END(), metric);
+        return this.getMetricValue('end', metric);
     }
 
     getInc(metric) {
@@ -151,7 +152,7 @@ class CallListEntry {
     }
 
     getExc(metric) {
-        return this.getMetricValue(this.constructor.M_EXC(), metric);
+        return this.getMetricValue('exc', metric);
     }
 
     getTimeRange() {
@@ -159,11 +160,12 @@ class CallListEntry {
     }
 
     getParent() {
-        if (this.list.buffer[this.elemOffset + 1] < 0) {
+        const parentIdx = this.list.array.getElementFieldValue(this.idx, 'parentIdx');
+        if (parentIdx < 0) {
             return null;
         }
 
-        return this.list.getCall(this.list.buffer[this.elemOffset + 1]);
+        return this.list.getCall(parentIdx);
     }
 
     getAncestors() {
@@ -186,25 +188,28 @@ class CallListEntry {
     }
 
     getDepth() {
-        let parentOffset = this.list.buffer[this.elemOffset + 1] * this.list.elemSize;
+        let parentIdx = this.list.array.getElementFieldValue(this.idx, 'parentIdx');
         let depth = 0;
-        while (parentOffset >= 0) {
+        while (parentIdx >= 0) {
+            parentIdx = this.list.array.getElementFieldValue(parentIdx, 'parentIdx');
             depth++;
-            parentOffset = this.list.buffer[parentOffset + 1] * this.list.elemSize;
         }
 
         return depth;
     }
 
     getCycleDepth() {
-        let parentOffset = this.list.buffer[this.elemOffset + 1] * this.list.elemSize;
+        const functionIdx = this.getFunctionIdx();
+        let parentIdx = this.list.array.getElementFieldValue(this.idx, 'parentIdx');
+
         let cycleDepth = 0;
-        while (parentOffset >= 0) {
-            if (this.list.buffer[parentOffset] == this.list.buffer[this.elemOffset]) {
+        while (parentIdx >= 0) {
+            const parentFunctionIdx = this.list.array.getElementFieldValue(parentIdx, 'functionIdx');
+            if (functionIdx == parentFunctionIdx) {
                 cycleDepth++;
             }
 
-            parentOffset = this.list.buffer[parentOffset + 1] * this.list.elemSize;
+            parentIdx = this.list.array.getElementFieldValue(parentIdx, 'parentIdx');
         }
 
         return cycleDepth;
@@ -214,7 +219,6 @@ class CallListEntry {
 class CallList {
 
     constructor(size, functionCount, metrics) {
-        this.size = size;
         this.metrics = metrics;
         this.functionNames = Array(functionCount).fill("n/a");
 
@@ -223,18 +227,23 @@ class CallList {
             this.metricOffsets[this.metrics[i]] = i;
         }
 
-        this.elemSize =
-            1                     // function idx
-            + 1                   // parent idx
-            + 3 * metrics.length  // (start, end, exc) for each metrics
-        ;
+        // FIXME use float32 to save space ?
+        const structure = {
+            functionIdx: 'int32',
+            parentIdx: 'int32',
+        };
 
-        // FIXME layout could be optimized with Int32 as type for function & parent idx
-        this.buffer = new Float64Array(this.size * this.elemSize);
+        for (let metric of this.metrics) {
+            structure['start_' + metric] = 'float64';
+            structure['end_'   + metric] = 'float64';
+            structure['exc_'   + metric] = 'float64';
+        }
+
+        this.array = new utils.PackedRecordArray(structure, size);
     }
 
     getSize() {
-        return this.size;
+        return this.array.size;
     }
 
     getMetrics() {
@@ -242,16 +251,20 @@ class CallList {
     }
 
     setRawCallData(idx, functionNameIdx, parentIdx, start, end, exc) {
-        let elemOffset = idx * this.elemSize;
+        const elt = {
+            functionIdx: functionNameIdx,
+            parentIdx: parentIdx,
+        };
 
-        this.buffer[elemOffset + 0] = functionNameIdx;
-        this.buffer[elemOffset + 1] = parentIdx;
-        
         for (let i = 0; i < this.metrics.length; i++) {
-            this.buffer[elemOffset + 2 + 3 * i + 0] = start[i];
-            this.buffer[elemOffset + 2 + 3 * i + 1] = end[i];
-            this.buffer[elemOffset + 2 + 3 * i + 2] = exc[i];
+            const metric = this.metrics[i];
+
+            elt['start_' + metric] = start[i];
+            elt['end_'   + metric] = end[i];
+            elt['exc_'   + metric] = exc[i];
         }
+
+        this.array.setElement(idx, elt);
 
         return this;
     }
@@ -267,13 +280,86 @@ class CallList {
     }
 }
 
+class MetricValuesList {
+
+    constructor(size, metrics) {
+        this.metrics = metrics;
+
+        const structure = {};
+        for (let metric of this.metrics) {
+            structure[metric] = 'float64';
+        }
+
+        this.array = new utils.PackedRecordArray(structure, size);
+    }
+
+    setRawMetricValuesData(idx, rawMetricValuesData) {
+        const elt = {};
+
+        for (let i = 0; i < this.metrics.length; i++) {
+            const metric = this.metrics[i];
+
+            elt[metric] = rawMetricValuesData[i];
+        }
+
+        this.array.setElement(idx, elt);
+    }
+
+    getMetricValues(time) {
+        const nearestIdx = this._findNearestIdx(time);
+        const nearestRawMetricValues = this.array.getElement(nearestIdx);
+
+        if (nearestRawMetricValues['wt'] == time) {
+            return new MetricValues(nearestRawMetricValues);
+        }
+
+        let lowerRawMetricValues = null;
+        let upperRawMetricValues = null;
+
+        if (nearestRawMetricValues['wt'] < time) {
+            lowerRawMetricValues = nearestRawMetricValues;
+            upperRawMetricValues = this.array.getElement(nearestIdx + 1);
+        } else {
+            lowerRawMetricValues = this.array.getElement(nearestIdx - 1);
+            upperRawMetricValues = nearestRawMetricValues;
+        }
+
+        return MetricValues.lerpByTime(
+            new MetricValues(lowerRawMetricValues),
+            new MetricValues(upperRawMetricValues),
+            time
+        );
+    }
+
+    _findNearestIdx(time, range) {
+        range = range || new math.Range(0, this.array.getSize());
+
+        if (range.length() == 1) {
+            return range.begin;
+        }
+
+        const center = Math.floor(range.center());
+        const centerTime = this.array.getElementFieldValue(center, 'wt');
+
+        if (time < centerTime) {
+            return this._findNearestIdx(time, new math.Range(range.begin, center));
+        }
+
+        if (time > centerTime) {
+            return this._findNearestIdx(time, new math.Range(center, range.end));
+        }
+
+        return center;
+    }
+}
+
 class Stats {
 
     constructor(metrics) {
         this.min = MetricValues.createFromMetricsAndValue(metrics, Number.MAX_VALUE);
-        this.max = MetricValues.createFromMetricsAndValue(metrics, Number.MIN_VALUE);
+        this.max = MetricValues.createFromMetricsAndValue(metrics, -Number.MAX_VALUE);
         this.callMin = MetricValues.createFromMetricsAndValue(metrics, Number.MAX_VALUE);
-        this.callMax = MetricValues.createFromMetricsAndValue(metrics, Number.MIN_VALUE);
+        this.callMax = MetricValues.createFromMetricsAndValue(metrics, -Number.MAX_VALUE);
     }
 
     getMin(metric) {
@@ -348,7 +434,7 @@ class FunctionsStats {
         callRefs = callRefs || [];
         for (let callRef of callRefs) {
             let call = callList.getCall(callRef);
-            let stats = this.functionsStats.get(call.getFunctionId());
+            let stats = this.functionsStats.get(call.getFunctionIdx());
             if (!stats) {
                 stats = {
                     functionName: call.getFunctionName(),
@@ -358,7 +444,7 @@ class FunctionsStats {
                     exc: MetricValues.createFromMetricsAndValue(call.getMetrics(), 0),
                 };
 
-                this.functionsStats.set(call.getFunctionId(), stats);
+                this.functionsStats.set(call.getFunctionIdx(), stats);
             }
 
             stats.called++;
@@ -370,13 +456,13 @@ class FunctionsStats {
 
             let truncated = false;
 
-            let start = call.getMetricValues(CallListEntry.M_START());
+            let start = call.getMetricValues('start');
             if (lowerBound && lowerBound.getValue('wt') > start.getValue('wt')) {
                 start = lowerBound;
                 truncated = true;
             }
 
-            let end = call.getMetricValues(CallListEntry.M_END());
+            let end = call.getMetricValues('end');
             if (upperBound && upperBound.getValue('wt') < end.getValue('wt')) {
                 end = upperBound;
                 truncated = true;
@@ -384,7 +470,7 @@ class FunctionsStats {
 
             stats.inc.add(end.copy().sub(start));
             if (!truncated) {
-                stats.exc.add(call.getMetricValues(CallListEntry.M_EXC()));
+                stats.exc.add(call.getMetricValues('exc'));
             }
         }
     }
@@ -486,7 +572,7 @@ class CallGraphStatsNode {
         }
 
         if (maxCumInc == null) {
-            maxCumInc = this.inc.copy().set(Number.MIN_VALUE);
+            maxCumInc = this.inc.copy().set(-Number.MAX_VALUE);
         }
 
         return maxCumInc.max(this.inc.copy().sub(minInc));
@@ -566,12 +652,12 @@ class CallGraphStats {
                 node = child;
             }
 
-            let start = call.getMetricValues(CallListEntry.M_START());
+            let start = call.getMetricValues('start');
             if (lowerBound && lowerBound.getValue('wt') > start.getValue('wt')) {
                 start = lowerBound;
             }
 
-            let end = call.getMetricValues(CallListEntry.M_END());
+            let end = call.getMetricValues('end');
             if (upperBound && upperBound.getValue('wt') < end.getValue('wt')) {
                 end = upperBound;
             }
@@ -604,9 +690,10 @@ class CallGraphStats {
 
 class CallRangeTree {
 
-    constructor(range, callList) {
+    constructor(range, callList, metricValuesList) {
         this.range = range;
         this.callList = callList;
+        this.metricValuesList = metricValuesList;
         this.callRefs = [];
         this.children = [];
         this.functionsStats = null;
@@ -631,78 +718,6 @@ class CallRangeTree {
         return maxDepth + 1;
     }
 
-    getMetricValues(time, precision) {
-        if (!this.range.contains(new math.Range(time, time))) {
-            return null;
-        }
-
-        const low = this.getNearestMetricValues(time, true, precision);
-        const up = this.getNearestMetricValues(time, false, precision);
-
-        if (low == null) {
-            return up;
-        }
-
-        if (up == null) {
-            return low;
-        }
-
-        return MetricValues.lerpByTime(low, up, time);
-    }
-
-    getNearestMetricValues(time, lower, precision) {
-        if (this.range.length() < precision) {
-            return null;
-        }
-
-        if (!this.range.contains(new math.Range(time, time))) {
-            return null;
-        }
-
-        let metricValuesSet = [];
-        for (let callRef of this.callRefs) {
-            const call = this.callList.getCall(callRef);
-
-            const startMetricValues = call.getMetricValues(CallListEntry.M_START());
-            const endMetricValues = call.getMetricValues(CallListEntry.M_END());
-
-            for (let metricValues of [startMetricValues, endMetricValues]) {
-                if (
-                    (lower && metricValues.getValue('wt') <= time)
-                    || (!lower && metricValues.getValue('wt') >= time)
-                ) {
-                    metricValuesSet.push(metricValues);
-                }
-            }
-        }
-
-        for (let child of this.children) {
-            const metricValues = child.getNearestMetricValues(time, lower, precision);
-            if (metricValues != null) {
-                metricValuesSet.push(metricValues);
-            }
-        }
-
-        let nearest = null;
-        for (let metricValues of metricValuesSet) {
-            if (nearest == null) {
-                nearest = metricValues.copy();
-
-                continue;
-            }
-
-            if (lower && nearest.getValue('wt') < metricValues.getValue('wt')) {
-                nearest = metricValues;
-            }
-
-            if (!lower && nearest.getValue('wt') > metricValues.getValue('wt')) {
-                nearest = metricValues;
-            }
-        }
-
-        return nearest;
-    }
-
     getFunctionsStats(range, lowerBound, upperBound) {
         if (!this.range.overlaps(range)) {
             return new FunctionsStats([]);
@@ -721,11 +736,11 @@ class CallRangeTree {
         }
 
         if (lowerBound == null && this.range.begin < range.begin) {
-            lowerBound = this.getMetricValues(range.begin);
+            lowerBound = this.metricValuesList.getMetricValues(range.begin);
         }
 
         if (upperBound == null && this.range.end > range.end) {
-            upperBound = this.getMetricValues(range.end);
+            upperBound = this.metricValuesList.getMetricValues(range.end);
         }
 
         let functionsStats = new FunctionsStats(
@@ -760,11 +775,11 @@ class CallRangeTree {
         }
 
         if (lowerBound == null && this.range.begin < range.begin) {
-            lowerBound = this.getMetricValues(range.begin);
+            lowerBound = this.metricValuesList.getMetricValues(range.begin);
         }
 
         if (upperBound == null && this.range.end > range.end) {
-            upperBound = this.getMetricValues(range.end);
+            upperBound = this.metricValuesList.getMetricValues(range.end);
         }
 
         let callGraphStats = new CallGraphStats(
@@ -790,7 +805,7 @@ class CallRangeTree {
             return [];
         }
 
-        if (typeof callRefs === 'undefined') {
+        if (callRefs === undefined) {
             callRefs = [];
         }
 
@@ -815,8 +830,8 @@ class CallRangeTree {
         return callRefs;
     }
 
-    static buildAsync(range, callRefs, callList, progress, done) {
-        let tree = new CallRangeTree(range, callList);
+    static buildAsync(range, callRefs, callList, metricValuesList, progress, done) {
+        let tree = new CallRangeTree(range, callList, metricValuesList);
 
         let lRange = tree.range.subRange(0.5, 0);
         let rRange = tree.range.subRange(0.5, 1);
@@ -897,6 +912,7 @@ class CallRangeTree {
                     lRange,
                     lCallRefs,
                     callList,
+                    metricValuesList,
                     progress,
                     child => {
                         tree.functionsStats.merge(child.functionsStats);
@@ -916,6 +932,7 @@ class CallRangeTree {
                     rRange,
                     rCallRefs,
                     callList,
+                    metricValuesList,
                     progress,
                     child => {
                         tree.functionsStats.merge(child.functionsStats);
@@ -925,10 +942,10 @@ class CallRangeTree {
                 ));
             },
             () => {
-                // prune calls < 1/80th as memory / accuracy trade-off
-                // /!\ this should be tunable, pruning on time basis only could broke accuracy on other metrics
-                // /!\ pruning appears to cause popping noise in flamegraph view
-                tree.callGraphStats.prune(range.length() / 80);
+                // prune calls < 1/150th of node range as memory / accuracy trade-off
+                // FIXME /!\ this should be tunable, pruning on time basis only could broke accuracy on other metrics
+                // FIXME /!\ pruning appears to cause popping noise in flamegraph view
+                tree.callGraphStats.prune(range.length() / 150);
                 done(tree);
             }
         ], callRefs.length >= 5000, 0);
@@ -939,34 +956,36 @@ class CallRangeTree {
 
 class ProfileData {
 
-    constructor(metadata, stats, callList, callRangeTree) {
+    constructor(metricsInfo, metadata, stats, callList, metricValuesList, callRangeTree) {
         console.log('tree', callRangeTree.getMaxDepth(), callRangeTree.getNodeCount(), callList.getSize());
+        this.metricsInfo = metricsInfo;
         this.metadata = metadata;
         this.stats = stats;
         this.callList = callList;
+        this.metricValuesList = metricValuesList;
         this.callRangeTree = callRangeTree;
     }
 
-    getMetadata() {
-        return this.metadata;
+    getMetricKeys() {
+        return Object.keys(this.metricsInfo);
     }
 
-    getStats() {
-        return this.stats;
+    getMetricInfo(metric) {
+        for (let info of this.metricsInfo) {
+            if (info.key == metric) {
+                return info;
+            }
+        }
+
+        throw new Error('Unknown metric: ' + key);
     }
 
-    getMetricFormater(metric) {
-        // FIXME remove hard-code
-        switch (metric) {
-            case 'wt':
-            case 'ct':
-            case 'it':
+    getMetricFormatter(metric) {
+        switch (this.getMetricInfo(metric).type) {
+            case 'time':
                 return fmt.time;
 
-            case 'zm':
-            case 'io':
-            case 'ior':
-            case 'iow':
+            case 'memory':
                 return fmt.memory;
 
             default:
@@ -975,16 +994,15 @@ class ProfileData {
     }
 
     isReleasableMetric(metric) {
-        // FIXME remove hard-code
-        switch (metric) {
-            case 'zm':
-            case 'zr':
-            case 'zo':
-                return true;
+        return this.getMetricInfo(metric).releasable;
+    }
 
-            default:
-                return false;
-        }
+    getMetadata() {
+        return this.metadata;
+    }
+
+    getStats() {
+        return this.stats;
     }
 
     getWallTime() {
@@ -1010,6 +1028,10 @@ class ProfileData {
         console.timeEnd('getFunctionsStats');
 
         return functionsStats;
+    }
+
+    getCall(idx) {
+        return this.callList.getCall(idx);
     }
 
     getCalls(range, minDuration) {
@@ -1039,14 +1061,18 @@ class ProfileData {
         return callGraphStats;
     }
 
-    getMetricValues(time, precision) {
-        return this.callRangeTree.getMetricValues(time, precision);
+    getMetricValues(time) {
+        return this.metricValuesList.getMetricValues(time);
     }
 }
 
 export class ProfileDataBuilder {
 
-    constructor(metadata) {
+    constructor(metricsInfo) {
+        this.metricsInfo = metricsInfo;
+    }
+
+    setMetadata(metadata) {
         this.metadata = metadata;
         this.metrics = metadata.enabled_metrics;
         this.stats = new Stats(this.metrics);
@@ -1060,7 +1086,13 @@ export class ProfileDataBuilder {
             this.metrics
         );
 
+        this.metricValuesList = new MetricValuesList(
+            metadata.recorded_call_count * 2,
+            this.metrics
+        );
+
         this.stack = [];
+        this.eventCount = 0;
         this.callCount = 0;
     }
 
@@ -1077,7 +1109,8 @@ export class ProfileDataBuilder {
             this.stack.push({
                 idx: this.callCount++,
                 startEvent: event,
-                fnId: event[0],
+                startEventIdx: this.eventCount++,
+                fnIdx: event[0],
                 parent: this.stack.length > 0 ? this.stack[this.stack.length - 1] : null,
                 start: Array(this.metrics.length).fill(0),
                 end: Array(this.metrics.length).fill(0),
@@ -1090,6 +1123,8 @@ export class ProfileDataBuilder {
 
         const frame = this.stack.pop();
 
+        frame.endEventIdx = this.eventCount++;
+
         for (let j = 0; j < this.metrics.length; j++) {
             const m = this.metrics[j];
             frame.start[j] = frame.startEvent[2 + j];
@@ -1099,6 +1134,9 @@ export class ProfileDataBuilder {
             this.stats.mergeMetricValue(m, frame.end[j]);
             this.stats.mergeCallMetricValue(m, frame.end[j] - frame.start[j]);
         }
+
+        this.metricValuesList.setRawMetricValuesData(frame.startEventIdx, frame.start);
+        this.metricValuesList.setRawMetricValuesData(frame.endEventIdx, frame.end);
 
         for (let j = 0; j < this.metrics.length; j++) {
             frame.exc[j] = frame.end[j] - frame.start[j];
@@ -1114,7 +1152,7 @@ export class ProfileDataBuilder {
             }
 
             for (let k = this.stack.length - 1; k >= 0; k--) {
-                if (this.stack[k].fnId == frame.fnId) {
+                if (this.stack[k].fnIdx == frame.fnIdx) {
                     for (let j = 0; j < this.metrics.length; j++) {
                         this.stack[k].children[j] -= frame.exc[j];
                     }
@@ -1127,7 +1165,7 @@ export class ProfileDataBuilder {
         this.currentCallCount++;
         this.callList.setRawCallData(
             frame.idx,
-            frame.fnId,
+            frame.fnIdx,
             frame.parent != null ? frame.parent.idx : -1,
             frame.start,
             frame.end,
@@ -1147,6 +1185,7 @@ export class ProfileDataBuilder {
                 new math.Range(0, this.stats.getMax('wt')),
                 null,
                 this.callList,
+                this.metricValuesList,
                 inserted => {
                     totalInserted += inserted;
                     setProgress(totalInserted, this.callList.getSize());
@@ -1162,9 +1201,11 @@ export class ProfileDataBuilder {
 
     getProfileData() {
         return new ProfileData(
+            this.metricsInfo,
             this.metadata,
             this.stats,
             this.callList,
+            this.metricValuesList,
             this.callRangeTree
         );
     }

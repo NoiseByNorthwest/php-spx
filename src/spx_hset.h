@@ -13,6 +13,7 @@ spx_hset_t * spx_hset_create(
     spx_hset_cmp_func_t cmp
 );
 
+void spx_hset_reset(spx_hset_t * hset);
 void spx_hset_destroy(spx_hset_t * hset);
 
 spx_hset_entry_t * spx_hset_get_entry(

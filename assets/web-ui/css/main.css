@@ -122,6 +122,15 @@ table.data_table td > a {
     cursor:-moz-grabbing;
 }
 
+table.layout {
+    border-spacing: 0;
+    width: 100%;
+}
+
+table.layout td {
+    padding: 0;
+}
+
 .widget {
     border: solid 1px #022;
 }
@@ -139,7 +148,7 @@ table.data_table td > a {
     user-select: none;
 }
 
-#control-bar select {
+#metric-selector select {
     background-color: #000;
 }
 

@@ -1,6 +1,6 @@
 
 export function round(n, d) {
-    let scale = Math.pow(10, d || 0);
+    const scale = Math.pow(10, d || 0);
 
     return Math.round(n * scale) / scale;
 }
@@ -44,7 +44,7 @@ export class Vec3 {
     }
 
     toHTMLColor() {
-        let c = this.copy().bound();
+        const c = this.copy().bound();
 
         return 'rgb(' + [
             parseInt(c.x * 255),
@@ -74,8 +74,8 @@ export class Vec3 {
     static lerpPath(vectors, dist) {
         dist = bound(dist);
 
-        let span = 1 / (vectors.length - 1);
-        let firstIdx = Math.min(vectors.length - 2, parseInt(dist / span));
+        const span = 1 / (vectors.length - 1);
+        const firstIdx = bound(parseInt(dist / span), 0, vectors.length - 2);
 
         return this.lerp(
             vectors[firstIdx],
@@ -128,7 +128,7 @@ export class Range {
     }
 
     subRange(ratio, num) {
-        let width = ratio * this.length();
+        const width = ratio * this.length();
 
         return new Range(
             Math.max(this.begin, this.begin + width * num),

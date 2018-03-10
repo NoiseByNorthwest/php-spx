@@ -92,11 +92,7 @@ spx_profiler_t * spx_profiler_create(
 
 void spx_profiler_destroy(spx_profiler_t * profiler);
 
-void spx_profiler_call_start(
-    spx_profiler_t * profiler,
-    const spx_php_function_t * function
-);
-
+void spx_profiler_call_start(spx_profiler_t * profiler);
 void spx_profiler_call_end(spx_profiler_t * profiler);
 
 void spx_profiler_finalize(spx_profiler_t * profiler);

@@ -224,7 +224,7 @@ static spx_profiler_reporter_cost_t full_notify(
             && (
                 event->cum->values[SPX_METRIC_WALL_TIME]
                     - previous->metric_values.values[SPX_METRIC_WALL_TIME]
-                < reporter->time_res_us
+                < 1000 * reporter->time_res_us
             )
         ) {
             reporter->buffer_size--;
@@ -568,7 +568,7 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
         fprintf(
             fp,
             "\"%s\"\n",
-            spx_metrics_info[i].short_name
+            spx_metrics_info[i].key
         );
     });
 
