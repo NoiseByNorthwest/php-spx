@@ -45,6 +45,6 @@ Flat profile:
  Wall Time           | ZE root buffer      |
  Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
- %s | %s |    10.0K |        0 |        1 | %s/spx_gc_traced_7_2.php
+ %s | %s |    10.0K |        0 |        1 | %s/spx_%s.php
  %s | %s |    10.0K |   100.0K |    50.0K | f
  %s | %s |   -90000 |   -90000 |        9 | gc_collect_cycles

@@ -47,5 +47,5 @@ Flat profile:
  Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
  %s | %s |        0 |   100.0K |    50.0K | f
- %s | %s |        0 |        0 |        1 | %s/spx_gc_traced.php
+ %s | %s |        0 |        0 |        1 | %s/spx_%s.php
  %s | %s |  -100000 |  -100000 |       10 | gc_collect_cycles
