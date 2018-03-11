@@ -6,13 +6,14 @@ if (
     version_compare(PHP_VERSION, '7.0.0') < 0
     || version_compare(PHP_VERSION, '7.2.0') >= 0
 ) {
-    die('Skip: this test is for PHP 7.0 & 7.1 only');
+    die('skip this test is for PHP 7.0 & 7.1 only');
 }
 ?>
 --ENV--
 return <<<END
 SPX_ENABLED=1
 SPX_METRICS=zr
+SPX_FP_FOCUS=zr
 END;
 --FILE--
 <?php
@@ -38,14 +39,13 @@ Global stats:
   Called functions    :    50.0K
   Distinct functions  :        3
 
-  Wall Time           :  %s
-  ZE root buffer      :  %s
+  ZE root buffer      :    10.0K
 
 Flat profile:
 
- Wall Time           | ZE root buffer      |
- Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
-----------+----------+----------+----------+----------+----------
- %s | %s |        0 |   100.0K |    50.0K | f
- %s | %s |        0 |        0 |        1 | %s/spx_%s.php
- %s | %s |  -100000 |  -100000 |       10 | gc_collect_cycles
+ ZE root buffer      |
+ Inc.     | *Exc.    | Called   | Function
+----------+----------+----------+----------
+        0 |   100.0K |    50.0K | f
+        0 |        0 |        1 | %s/spx_%s.php
+  -100000 |  -100000 |       10 | gc_collect_cycles
