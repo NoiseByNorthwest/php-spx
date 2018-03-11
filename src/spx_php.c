@@ -91,7 +91,9 @@ static void hook_execute_internal(
     TSRMLS_DC
 );
 
+#if ZEND_MODULE_API_NO >= 20151012
 static int hook_gc_collect_cycles(void);
+#endif
 
 static void hook_zend_error_cb(
     int type,
@@ -637,6 +639,7 @@ static void hook_execute_internal(
     }
 }
 
+#if ZEND_MODULE_API_NO >= 20151012
 static int hook_gc_collect_cycles(void)
 {
     if (context.execution_disabled) {
@@ -659,6 +662,7 @@ static int hook_gc_collect_cycles(void)
 
     return count;
 }
+#endif
 
 static void hook_zend_error_cb(
     int type,
