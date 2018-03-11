@@ -64,7 +64,25 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 ## Basic usage
 
+### Web page
+
+Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.  
+
+Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
+
+![Showcase](assets/docs/cp-form.png)
+
+Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
+
+Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.  
+
+![Showcase](assets/docs/cp-list2.png)
+
+Then click on the report in the list and enjoy the [analyze screen](#analyze-screen).  
+
 ### Command line script
+
+#### Instant flat profile
 
 Just prepend your command line with `SPX_ENABLED=1` to trigger profiling. You will get the flat profile printed on STDOUT at the end of the execution, even if you abort it by hitting Ctrl-C, as in the following example:
 
@@ -100,21 +118,15 @@ Flat profile:
   298.9us |  298.9us |    2.2KB |    2.2KB |       47 | Symfony\Component\Finder\Iterator\FileTypeFilterIterator::accept
 ```
 
-### Web page
+N.B.: Just add `SPX_FP_LIVE=1` to enable the live refresh of the flat profile during script execution.
 
-Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.  
+#### Generate profiling report for the web UI
 
-Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
+You just have to specify `SPX_REPORT=full` to generate a report available via the web UI:
 
-![Showcase](assets/docs/cp-form.png)
-
-Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
-
-Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.  
-
-![Showcase](assets/docs/cp-list2.png)
-
-Then click on the report in the list and enjoy the [analyze screen](#analyze-screen).  
+```shell
+SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
+```
 
 ## Advanced usage
 
@@ -295,14 +307,6 @@ However, whatever the platform, if you want to maximize accuracy to find a time 
 - try to play with maximum depth parameter to stop profiling at a given depth.
 
 ## Examples
-
-### Command line script: generate report for web UI
-
-To profile a command line script and generate a report available for the web UI you just have to select `full` report as in the following example:
-
-```shell
-SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
-```
 
 ### Command line script: generate trace file
 
