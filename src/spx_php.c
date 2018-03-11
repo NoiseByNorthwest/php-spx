@@ -33,6 +33,8 @@ static struct {
         TSRMLS_DC
     );
 
+    int (*gc_collect_cycles)(void);
+
     void (*zend_error_cb) (
         int type,
         const char *error_filename,
@@ -55,10 +57,11 @@ static SPX_THREAD_TLS struct {
     } ex_hook;
 
     int execution_disabled;
+    int output_disabled;
 
     size_t error_count;
+    int gc_active;
 
-    int output_disabled;
     struct {
         void (*handler) (INTERNAL_FUNCTION_PARAMETERS);
 #if ZEND_MODULE_API_NO >= 20151012
@@ -88,6 +91,10 @@ static void hook_execute_internal(
     TSRMLS_DC
 );
 
+#if ZEND_MODULE_API_NO >= 20151012
+static int hook_gc_collect_cycles(void);
+#endif
+
 static void hook_zend_error_cb(
     int type,
     const char *error_filename,
@@ -109,35 +116,41 @@ void spx_php_current_function(spx_php_function_t * function)
 {
     TSRMLS_FETCH();
 
-    function->file_name = zend_get_executed_filename(TSRMLS_C);
-    function->line = zend_get_executed_lineno(TSRMLS_C);
-
-    function->class_name = get_active_class_name(&function->call_type TSRMLS_CC);
-    function->func_name = get_active_function_name(TSRMLS_C);
-
-#if ZEND_MODULE_API_NO >= 20151012
-    const zend_function * func = EG(current_execute_data)->func;
-    /*
-     *  Required for PHP 7+ to avoid function name default'd to "main" in this case
-     *  (including file level code).
-     *  See get_active_function_name() implementation in php-src.
-     */
-    if (func->type == ZEND_USER_FUNCTION && !func->common.function_name) {
-        function->func_name = NULL;
-    }
-    /*
-     *  This hack is required for PHP 7.1 to prevent a segfault while dereferencing function->func_name
-     *  TODO: open an issue if not yet tracked
-     */
-    if (func->type == ZEND_INTERNAL_FUNCTION && !func->common.function_name) {
-        function->func_name = NULL;
-    }
-#endif
-
-    if (!function->func_name) {
+    if (context.gc_active) {
         function->class_name = "";
         function->call_type = "";
-        function->func_name = function->file_name;
+        function->func_name = "gc_collect_cycles";
+    } else {
+        function->file_name = zend_get_executed_filename(TSRMLS_C);
+        function->line = zend_get_executed_lineno(TSRMLS_C);
+
+        function->class_name = get_active_class_name(&function->call_type TSRMLS_CC);
+        function->func_name = get_active_function_name(TSRMLS_C);
+
+#if ZEND_MODULE_API_NO >= 20151012
+        const zend_function * func = EG(current_execute_data)->func;
+        /*
+         *  Required for PHP 7+ to avoid function name default'd to "main" in this case
+         *  (including file level code).
+         *  See get_active_function_name() implementation in php-src.
+         */
+        if (func->type == ZEND_USER_FUNCTION && !func->common.function_name) {
+            function->func_name = NULL;
+        }
+        /*
+         *  This hack is required for PHP 7.1 to prevent a segfault while dereferencing function->func_name
+         *  TODO: open an issue if not yet tracked
+         */
+        if (func->type == ZEND_INTERNAL_FUNCTION && !func->common.function_name) {
+            function->func_name = NULL;
+        }
+#endif
+
+        if (!function->func_name) {
+            function->class_name = "";
+            function->call_type = "";
+            function->func_name = function->file_name;
+        }
     }
 
     function->hash_code =
@@ -356,6 +369,11 @@ void spx_php_hooks_init(void)
     ze_hook.execute_internal = execute_internal;
     zend_execute_internal = hook_execute_internal;
 
+#if ZEND_MODULE_API_NO >= 20151012
+    ze_hook.gc_collect_cycles = gc_collect_cycles;
+    gc_collect_cycles = hook_gc_collect_cycles;
+#endif
+
     ze_hook.zend_error_cb = zend_error_cb;
     zend_error_cb = hook_zend_error_cb;
 }
@@ -392,6 +410,13 @@ void spx_php_hooks_shutdown(void)
         ze_hook.execute_internal = NULL;
     }
 
+#if ZEND_MODULE_API_NO >= 20151012
+    if (ze_hook.gc_collect_cycles) {
+        gc_collect_cycles = ze_hook.gc_collect_cycles;
+        ze_hook.gc_collect_cycles = NULL;
+    }
+#endif
+
     if (ze_hook.zend_error_cb) {
         zend_error_cb = ze_hook.zend_error_cb;
         ze_hook.zend_error_cb = NULL;
@@ -406,8 +431,9 @@ void spx_php_execution_init(void)
     context.ex_hook.internal.after = NULL;
 
     context.execution_disabled = 0;
-    context.error_count = 0;
     context.output_disabled = 0;
+    context.error_count = 0;
+    context.gc_active = 0;
 }
 
 void spx_php_execution_shutdown(void)
@@ -612,6 +638,31 @@ static void hook_execute_internal(
         context.ex_hook.internal.after();
     }
 }
+
+#if ZEND_MODULE_API_NO >= 20151012
+static int hook_gc_collect_cycles(void)
+{
+    if (context.execution_disabled) {
+        return 0;
+    }
+
+    context.gc_active = 1;
+
+    if (context.ex_hook.user.before) {
+        context.ex_hook.user.before();
+    }
+
+    const int count = ze_hook.gc_collect_cycles();
+
+    if (context.ex_hook.user.after) {
+        context.ex_hook.user.after();
+    }
+
+    context.gc_active = 0;
+
+    return count;
+}
+#endif
 
 static void hook_zend_error_cb(
     int type,
