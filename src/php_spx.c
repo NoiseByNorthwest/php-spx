@@ -218,7 +218,7 @@ static PHP_RINIT_FUNCTION(spx)
     char access_status_str[512];
     int access_status = check_access(access_status_str, sizeof access_status_str);
     if (web_ui_url) {
-        zend_error(E_NOTICE, access_status_str);
+        zend_error(E_NOTICE, "spx: %s", access_status_str);
     }
 
     if (!access_status) {
@@ -272,21 +272,21 @@ static int check_access(char * status_str, size_t status_str_size)
 
     if (!SPX_G(http_enabled)) {
         /* HTTP profiling explicitly turned off -> not granted */
-        snprintf(status_str, status_str_size, "spx: access not granted: http_enabled is false");
+        snprintf(status_str, status_str_size, "access not granted: http_enabled is false");
 
         return 0;
     }
 
     if (!SPX_G(http_key) || SPX_G(http_key)[0] == 0) {
         /* empty spx.http_key (server config) -> not granted */
-        snprintf(status_str, status_str_size, "spx: access not granted: http_key is empty");
+        snprintf(status_str, status_str_size, "access not granted: http_key is empty");
 
         return 0;
     }
 
     if (!context.config.key || context.config.key[0] == 0) {
         /* empty SPX_KEY (client config) -> not granted */
-        snprintf(status_str, status_str_size, "spx: access not granted: client key is empty");
+        snprintf(status_str, status_str_size, "access not granted: client key is empty");
 
         return 0;
     }
@@ -296,7 +296,7 @@ static int check_access(char * status_str, size_t status_str_size)
         snprintf(
             status_str,
             status_str_size,
-            "spx: access not granted: server (\"%s\") & client (\"%s\") key mismatch",
+            "access not granted: server (\"%s\") & client (\"%s\") key mismatch",
             SPX_G(http_key),
             context.config.key
         );
@@ -306,7 +306,7 @@ static int check_access(char * status_str, size_t status_str_size)
 
     if (!SPX_G(http_ip_var) || SPX_G(http_ip_var)[0] == 0) {
         /* empty client ip server var name -> not granted */
-        snprintf(status_str, status_str_size, "spx: access not granted: http_ip_var is empty");
+        snprintf(status_str, status_str_size, "access not granted: http_ip_var is empty");
 
         return 0;
     }
@@ -317,7 +317,7 @@ static int check_access(char * status_str, size_t status_str_size)
         snprintf(
             status_str,
             status_str_size,
-            "spx: access not granted: $_SERVER[\"%s\"] is empty",
+            "access not granted: $_SERVER[\"%s\"] is empty",
             SPX_G(http_ip_var)
         );
 
@@ -327,7 +327,7 @@ static int check_access(char * status_str, size_t status_str_size)
     const char * authorized_ips_str = SPX_G(http_ip_whitelist);
     if (!authorized_ips_str || authorized_ips_str[0] == 0) {
         /* empty ip white list -> not granted */
-        snprintf(status_str, status_str_size, "spx: access not granted: IP white list is empty");
+        snprintf(status_str, status_str_size, "access not granted: IP white list is empty");
 
         return 0;
     }
@@ -338,7 +338,7 @@ static int check_access(char * status_str, size_t status_str_size)
             snprintf(
                 status_str,
                 status_str_size,
-                "spx: access granted: \"%s\" IP with \"%s\" key",
+                "access granted: \"%s\" IP with \"%s\" key",
                 ip_str,
                 context.config.key
             );
@@ -350,7 +350,7 @@ static int check_access(char * status_str, size_t status_str_size)
     snprintf(
         status_str,
         status_str_size,
-        "spx: access not granted: \"%s\" IP is not in white list (\"%s\")",
+        "access not granted: \"%s\" IP is not in white list (\"%s\")",
         ip_str,
         authorized_ips_str
     );
