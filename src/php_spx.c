@@ -264,47 +264,80 @@ static int check_access(void)
 
     if (!SPX_G(http_enabled)) {
         /* HTTP profiling explicitly turned off -> not granted */
+        zend_error(E_NOTICE, "spx: access not granted: http_enabled is false");
+
         return 0;
     }
 
-    /* empty spx.http_key (server config) -> not granted */
     if (!SPX_G(http_key) || SPX_G(http_key)[0] == 0) {
+        /* empty spx.http_key (server config) -> not granted */
+        zend_error(E_NOTICE, "spx: access not granted: http_key is empty");
+
         return 0;
     }
 
-    /* empty SPX_KEY (client config) -> not granted */
     if (!context.config.key || context.config.key[0] == 0) {
+        /* empty SPX_KEY (client config) -> not granted */
+        zend_error(E_NOTICE, "spx: access not granted: client key is empty");
+
         return 0;
     }
 
-    /* server / client key mismatch -> not granted */
     if (0 != strcmp(SPX_G(http_key), context.config.key)) {
+        /* server / client key mismatch -> not granted */
+        zend_error(
+            E_NOTICE,
+            "spx: access not granted: server (\"%s\") & client (\"%s\") key mismatch",
+            SPX_G(http_key),
+            context.config.key
+        );
+
         return 0;
     }
 
-    /* empty client ip server var name -> not granted */
     if (!SPX_G(http_ip_var) || SPX_G(http_ip_var)[0] == 0) {
+        /* empty client ip server var name -> not granted */
+        zend_error(E_NOTICE, "spx: access not granted: http_ip_var is empty");
+
         return 0;
     }
 
-    /* empty client ip -> not granted */
     const char * ip_str = spx_php_global_array_get("_SERVER", SPX_G(http_ip_var));
     if (!ip_str || ip_str[0] == 0) {
+        /* empty client ip -> not granted */
+        zend_error(E_NOTICE, "spx: access not granted: $_SERVER[\"%s\"] is empty", SPX_G(http_ip_var));
+
         return 0;
     }
 
-    /* empty ip white list -> not granted */
     const char * authorized_ips_str = SPX_G(http_ip_whitelist);
     if (!authorized_ips_str || authorized_ips_str[0] == 0) {
+        /* empty ip white list -> not granted */
+        zend_error(E_NOTICE, "spx: access not granted: IP white list is empty");
+
         return 0;
     }
 
     SPX_UTILS_TOKENIZE_STRING(authorized_ips_str, ',', authorized_ip_str, 32, {
         if (0 == strcmp(ip_str, authorized_ip_str)) {
             /* ip authorized (OK, as well as all previous checks) -> granted */
+            zend_error(
+                E_NOTICE,
+                "spx: access granted: \"%s\" IP with \"%s\" key",
+                ip_str,
+                context.config.key
+            );
+
             return 1;
         }
     });
+
+    zend_error(
+        E_NOTICE,
+        "spx: access not granted: \"%s\" IP is not in white list (\"%s\")",
+        ip_str,
+        authorized_ips_str
+    );
 
     /* no matching ip in white list -> not granted */
     return 0;
