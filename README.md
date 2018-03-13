@@ -68,7 +68,7 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.  
 
-Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
+Just open with your browser the following URL: `http://localhost/_spx/?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
 
 ![Showcase](assets/docs/cp-form.png)
 
@@ -152,7 +152,7 @@ spx.http_key="dev"
 spx.http_ip_whitelist="127.0.0.1"
 ```
 
-And then access to the web UI at `http(s)://<your application host>/_spx?SPX_KEY=dev`.
+And then access to the web UI at `http(s)://<your application host>/_spx/?SPX_KEY=dev`.
 
 ### Available metrics
 
