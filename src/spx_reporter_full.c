@@ -87,10 +87,6 @@ size_t spx_reporter_full_metadata_list_files(
     size_t count = 0;
     const struct dirent * entry;
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_type != DT_REG) {
-            continue;
-        }
-
         if (!spx_utils_str_ends_with(entry->d_name, ".json")) {
             continue;
         }
