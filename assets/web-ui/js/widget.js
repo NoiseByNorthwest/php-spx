@@ -1024,7 +1024,7 @@ export class FlatProfile extends Widget {
     <tr>
         <th rowspan="3" class="sortable" data-sort="name">Function</th>
         <th rowspan="3" width="80px" class="sortable" data-sort="called">Called</th>
-        <th colspan="4">Wall Time</th>
+        <th colspan="4">${this.profileData.getMetricInfo(this.currentMetric).name}</th>
     </tr>
     <tr>
         <th colspan="2">Percentage</th>
