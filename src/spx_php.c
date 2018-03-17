@@ -159,6 +159,22 @@ void spx_php_current_function(spx_php_function_t * function)
     ;
 }
 
+double spx_php_ini_get_double(const char * name)
+{
+    return zend_ini_double(
+        /*
+         * This cast is checked
+         */
+        (char *)name,
+        strlen(name)
+#if ZEND_MODULE_API_NO < 20151012
+            + 1
+#endif
+        ,
+        0
+    );
+}
+
 const char * spx_php_global_array_get(const char * name, const char * key)
 {
     HashTable * global_array = get_global_array(name);
@@ -554,6 +570,28 @@ void spx_php_ouput_finalize(void)
      *  step (see php_request_shutdown()).
      */
     SG(headers_sent) = 1;
+}
+
+void spx_php_log_notice(const char * fmt, ...)
+{
+    if (0 == spx_php_ini_get_double("log_errors")) {
+        return;
+    }
+
+    va_list ap;
+    va_start(ap, fmt);
+
+    char * buf;
+    const int printed = vasprintf(&buf, fmt, ap);
+    va_end(ap);
+
+    if (printed < 0) {
+        return;
+    }
+
+    zend_error(E_NOTICE, "SPX: %s", buf);
+
+    free(buf);
 }
 
 static int hook_zend_write(const char * str, zend_write_len_t len)
