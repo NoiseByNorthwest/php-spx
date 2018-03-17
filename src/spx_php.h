@@ -41,4 +41,6 @@ int spx_php_output_direct_printf(const char * fmt, ...);
 
 void spx_php_ouput_finalize(void);
 
+void spx_php_log_notice(const char * fmt, ...);
+
 #endif /* SPX_PHP_H_DEFINED */
