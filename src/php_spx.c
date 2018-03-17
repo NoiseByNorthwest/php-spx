@@ -582,7 +582,7 @@ static void http_ui_handler_shutdown(void)
     if (relative_path[0] != '/') {
         spx_php_output_add_header_line("HTTP/1.1 301 Moved Permanently");
         spx_php_output_add_header_linef(
-            "Location: %s/%s\r\n",
+            "Location: %s/%s",
             SPX_G(http_ui_uri_prefix),
             query_string ? query_string : ""
         );
