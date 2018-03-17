@@ -16,6 +16,7 @@ int spx_php_is_cli_sapi(void);
 
 void spx_php_current_function(spx_php_function_t * function);
 
+double spx_php_ini_get_double(const char * name);
 const char * spx_php_global_array_get(const char * name, const char * key);
 char * spx_php_build_command_line(void);
 
