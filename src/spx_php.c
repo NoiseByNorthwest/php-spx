@@ -454,7 +454,6 @@ void spx_php_execution_init(void)
 
 void spx_php_execution_shutdown(void)
 {
-    spx_php_execution_output_restore();
     spx_php_execution_init();
 }
 
@@ -529,6 +528,42 @@ void spx_php_execution_output_restore(void)
     }
 }
 
+void spx_php_output_add_header_line(const char * header_line)
+{
+    sapi_header_line ctr = {0};
+
+    /*
+        This cast is checked, header_line will be first duped before being manipulated.
+        See sapi_header_op() implementation.
+    */
+    ctr.line = (char *)header_line;
+    ctr.line_len = strlen(header_line);
+
+    sapi_header_op(SAPI_HEADER_REPLACE, &ctr);
+}
+
+void spx_php_output_add_header_linef(const char * fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+
+    char * buf;
+    int printed = vasprintf(&buf, fmt, ap);
+    va_end(ap);
+
+    if (printed < 0) {
+        return;
+    }
+
+    spx_php_output_add_header_line(buf);
+    free(buf);
+}
+
+void spx_php_output_send_headers(void)
+{
+    sapi_send_headers();
+}
+
 size_t spx_php_output_direct_write(const void * ptr, size_t len)
 {
     TSRMLS_FETCH();
@@ -558,18 +593,6 @@ int spx_php_output_direct_printf(const char * fmt, ...)
     free(buf);
 
     return printed;
-}
-
-void spx_php_ouput_finalize(void)
-{
-    TSRMLS_FETCH();
-
-    /*
-     *  This side effect is required to avoid ZE sending default/user headers right
-     *  after extensions RSHUTDOWN handlers, as it is done in output layer shutdown
-     *  step (see php_request_shutdown()).
-     */
-    SG(headers_sent) = 1;
 }
 
 void spx_php_log_notice(const char * fmt, ...)
