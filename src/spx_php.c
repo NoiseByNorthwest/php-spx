@@ -530,6 +530,8 @@ void spx_php_execution_output_restore(void)
 
 void spx_php_output_add_header_line(const char * header_line)
 {
+    TSRMLS_FETCH();
+
     sapi_header_line ctr = {0};
 
     /*
@@ -539,7 +541,7 @@ void spx_php_output_add_header_line(const char * header_line)
     ctr.line = (char *)header_line;
     ctr.line_len = strlen(header_line);
 
-    sapi_header_op(SAPI_HEADER_REPLACE, &ctr);
+    sapi_header_op(SAPI_HEADER_REPLACE, &ctr TSRMLS_CC);
 }
 
 void spx_php_output_add_header_linef(const char * fmt, ...)
@@ -561,7 +563,9 @@ void spx_php_output_add_header_linef(const char * fmt, ...)
 
 void spx_php_output_send_headers(void)
 {
-    sapi_send_headers();
+    TSRMLS_FETCH();
+
+    sapi_send_headers(TSRMLS_C);
 }
 
 size_t spx_php_output_direct_write(const void * ptr, size_t len)
