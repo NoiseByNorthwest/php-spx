@@ -78,7 +78,7 @@ Then refresh the web page you want to profile and refresh the control panel to s
 
 ![Showcase](assets/docs/cp-list2.png)
 
-Then click on the report in the list and enjoy the [analyze screen](#analyze-screen).  
+Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).  
 
 ### Command line script
 
@@ -222,13 +222,13 @@ _You will have the best user experience with a Chromium-based browser._
 
 This is the home page of the web UI, divided into 2 parts:
 - the control panel for setting the profiling setup for your current browser session.
-- the profile report list as a sortable table. A click on a row allows to go to the [analyze screen](#analyze-screen) for the corresponding report.
+- the profile report list as a sortable table. A click on a row allows to go to the [analysis screen](#analysis-screen) for the corresponding report.
 
-#### Analyze screen
+#### Analysis screen
 
 ##### Performance, report size & time resolution
 
-The analyze screen can nicely handle profile reports with up to several (5+) millions of recorded function calls with Chromium on my i5 @ 3.3GHz / 8GB desktop.  
+The analysis screen can nicely handle profile reports with up to several (5+) millions of recorded function calls with Chromium on my i5 @ 3.3GHz / 8GB desktop.  
 In case you want to profile a long running, CPU intensive, script which tends to generate giant reports, you can change the time resolution of the report to skip the shortest function calls (i.e. those with execution time below the given resolution).  
 See _SPX_FULL_RES_ [parameter](#available-parameters) for command line script.
 
