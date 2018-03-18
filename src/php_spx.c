@@ -628,6 +628,7 @@ finish:
 #ifndef ZTS
     spx_php_hooks_shutdown();
 #endif
+    ;
 }
 
 static int http_ui_handler_data(const char * data_dir, const char *relative_path)
