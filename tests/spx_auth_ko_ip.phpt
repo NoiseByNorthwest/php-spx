@@ -17,6 +17,6 @@ SPX_KEY=dev
 <?php
 echo 'Normal output';
 ?>
---EXPECTF--
+--EXPECT--
 Notice: SPX: access not granted: "127.0.0.2" IP is not in white list ("127.0.0.1") in Unknown on line 0
 Normal output

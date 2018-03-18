@@ -563,12 +563,7 @@ static void http_ui_handler_init(void)
 static void http_ui_handler_shutdown(void)
 {
     TSRMLS_FETCH();
-
     spx_php_execution_shutdown();
-
-#ifndef ZTS
-    spx_php_hooks_shutdown();
-#endif
 
     const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
     if (!request_uri) {
@@ -584,6 +579,19 @@ static void http_ui_handler_shutdown(void)
     strncpy(relative_path, request_uri + strlen(SPX_G(http_ui_uri_prefix)), sizeof(relative_path));
 
     char * query_string = strchr(relative_path, '?');
+    if (relative_path[0] != '/') {
+        spx_php_output_add_header_line("HTTP/1.1 301 Moved Permanently");
+        spx_php_output_add_header_linef(
+            "Location: %s/%s",
+            SPX_G(http_ui_uri_prefix),
+            query_string ? query_string : ""
+        );
+
+        spx_php_output_send_headers();
+
+        goto finish;
+    }
+
     if (query_string) {
         *query_string = 0;
     }
@@ -610,22 +618,26 @@ static void http_ui_handler_shutdown(void)
     }
 
 error_404:
-    /* FIXME: 404 status does not work (response status is still 200) */
-    spx_php_output_direct_print("HTTP/1.1 404 Not Found\r\n");
-    spx_php_output_direct_print("Content-Type: text/plain\r\n");
-    spx_php_output_direct_print("\r\n");
+    spx_php_output_add_header_line("HTTP/1.1 404 Not Found");
+    spx_php_output_add_header_line("Content-Type: text/plain");
+    spx_php_output_send_headers();
+
     spx_php_output_direct_print("File not found.\n");
 
 finish:
-    spx_php_ouput_finalize();
+#ifndef ZTS
+    spx_php_hooks_shutdown();
+#endif
+    ;
 }
 
 static int http_ui_handler_data(const char * data_dir, const char *relative_path)
 {
     if (0 == strcmp(relative_path, "/data/metrics")) {
-        spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
-        spx_php_output_direct_print("Content-Type: application/json\r\n");
-        spx_php_output_direct_print("\r\n");
+        spx_php_output_add_header_line("HTTP/1.1 200 OK");
+        spx_php_output_add_header_line("Content-Type: application/json");
+        spx_php_output_send_headers();
+
         spx_php_output_direct_print("{\"results\": [\n");
 
         SPX_METRIC_FOREACH(i, {
@@ -673,9 +685,10 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
     }
 
     if (0 == strcmp(relative_path, "/data/reports/metadata")) {
-        spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
-        spx_php_output_direct_print("Content-Type: application/json\r\n");
-        spx_php_output_direct_print("\r\n");
+        spx_php_output_add_header_line("HTTP/1.1 200 OK");
+        spx_php_output_add_header_line("Content-Type: application/json");
+        spx_php_output_send_headers();
+
         spx_php_output_direct_print("{\"results\": [\n");
 
         spx_reporter_full_metadata_list_files(
@@ -765,17 +778,17 @@ static int http_ui_handler_output_file(const char * file_name)
         content_type = "application/json";
     }
 
-    spx_php_output_direct_print("HTTP/1.1 200 OK\r\n");
-    spx_php_output_direct_printf("Content-Type: %s\r\n", content_type);
+    spx_php_output_add_header_line("HTTP/1.1 200 OK");
+    spx_php_output_add_header_linef("Content-Type: %s", content_type);
     if (compressed) {
-        spx_php_output_direct_print("Content-Encoding: gzip\r\n");
+        spx_php_output_add_header_line("Content-Encoding: gzip");
     }
 
     fseek(fp, 0L, SEEK_END);
-    spx_php_output_direct_printf("Content-Length: %ld\r\n", ftell(fp));
+    spx_php_output_add_header_linef("Content-Length: %ld", ftell(fp));
     rewind(fp);
 
-    spx_php_output_direct_print("\r\n");
+    spx_php_output_send_headers();
 
     read_stream_content(fp, spx_php_output_direct_write);
     fclose(fp);

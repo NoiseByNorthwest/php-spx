@@ -36,11 +36,13 @@ void spx_php_execution_hook(void (*before)(void), void (*after)(void), int inter
 void spx_php_execution_output_disable(void);
 void spx_php_execution_output_restore(void);
 
+void spx_php_output_add_header_line(const char * header_line);
+void spx_php_output_add_header_linef(const char * fmt, ...);
+void spx_php_output_send_headers(void);
+
 size_t spx_php_output_direct_write(const void * ptr, size_t len);
 size_t spx_php_output_direct_print(const char * str);
 int spx_php_output_direct_printf(const char * fmt, ...);
-
-void spx_php_ouput_finalize(void);
 
 void spx_php_log_notice(const char * fmt, ...);
 
