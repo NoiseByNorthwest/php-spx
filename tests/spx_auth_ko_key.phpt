@@ -17,6 +17,6 @@ SPX_KEY=dev1
 <?php
 echo 'Normal output';
 ?>
---EXPECTF--
+--EXPECT--
 Notice: SPX: access not granted: server ("dev") & client ("dev1") key mismatch in Unknown on line 0
 Normal output
