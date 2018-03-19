@@ -302,7 +302,7 @@ Being a tracing profiler, SPX is subject to accuracy issues for time related met
 - close or lower than the timer precision
 - close or lower than SPX's own per function overhead
 
-The first issue is mitigated by using the highest resolution timer provided by the platform. For example the Linux timer resolution is 1ns while the macOS timer resolution is only 1us.
+The first issue is mitigated by using the highest resolution timer provided by the platform. On Linux & recent macOS versions the timer resolution is 1ns; on macOS before 10.12/Sierra, the timer resolution is only 1us.
 
 The second issue is mitigated by taking in account SPX time (wall / cpu) overhead by subtracting it to measured function execution time. This is done by evaluating SPX constant per function overhead before starting profiling the script.
 
