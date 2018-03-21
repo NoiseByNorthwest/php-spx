@@ -18,5 +18,5 @@ echo 'Normal output';
 ?>
 --EXPECTHEADERS--
 Status: 301 Moved Permanently
-Location: /_spx/
+Location: /_spx/index.html
 --EXPECT--
