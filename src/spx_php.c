@@ -17,9 +17,6 @@ typedef uint zend_write_len_t;
 
 static struct {
     zend_write_func_t zend_write;
-    int  (*send_headers) (sapi_headers_struct * sapi_headers TSRMLS_DC);
-    void (*send_header)  (sapi_header_struct * sapi_header, void * server_context TSRMLS_DC);
-    void (*flush)        (void * server_context);
 
     void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
     void (*execute_internal) (
@@ -43,8 +40,9 @@ static struct {
         va_list args
     );
 } ze_hook = {
-    NULL, NULL, NULL, NULL,
+    NULL,
     NULL, NULL,
+    NULL,
     NULL
 };
 
@@ -57,7 +55,6 @@ static SPX_THREAD_TLS struct {
     } ex_hook;
 
     int execution_disabled;
-    int output_disabled;
 
     size_t error_count;
     int gc_active;
@@ -75,9 +72,6 @@ static SPX_THREAD_TLS struct {
 } context;
 
 static int hook_zend_write(const char * str, zend_write_len_t len);
-static int hook_send_headers(sapi_headers_struct * sapi_headers TSRMLS_DC);
-static void hook_send_header(sapi_header_struct * sapi_header, void * server_context TSRMLS_DC);
-static void hook_flush(void * server_context);
 
 static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
 static void hook_execute_internal(
@@ -103,8 +97,6 @@ static void hook_zend_error_cb(
     va_list args
 );
 
-static PHP_FUNCTION(null_zend_function);
-static zend_internal_function * get_zend_internal_function(const char * name);
 static HashTable * get_global_array(const char * name);
 
 int spx_php_is_cli_sapi(void)
@@ -364,21 +356,6 @@ void spx_php_hooks_init(void)
     ze_hook.zend_write = zend_write;
     zend_write = hook_zend_write;
 
-    if (sapi_module.send_headers) {
-        ze_hook.send_headers = sapi_module.send_headers;
-        sapi_module.send_headers = hook_send_headers;
-    }
-
-    if (sapi_module.send_header) {
-        ze_hook.send_header = sapi_module.send_header;
-        sapi_module.send_header = hook_send_header;
-    }
-
-    if (sapi_module.flush) {
-        ze_hook.flush = sapi_module.flush;
-        sapi_module.flush = hook_flush;
-    }
-
     ze_hook.execute_ex = execute_ex;
     zend_execute_ex = hook_execute_ex;
 
@@ -399,21 +376,6 @@ void spx_php_hooks_shutdown(void)
     if (ze_hook.zend_write) {
         zend_write = ze_hook.zend_write;
         ze_hook.zend_write = NULL;
-    }
-
-    if (ze_hook.send_headers) {
-        sapi_module.send_headers = ze_hook.send_headers;
-        ze_hook.send_headers = NULL;
-    }
-
-    if (ze_hook.send_header) {
-        sapi_module.send_header = ze_hook.send_header;
-        ze_hook.send_header = NULL;
-    }
-
-    if (ze_hook.flush) {
-        sapi_module.flush = ze_hook.flush;
-        ze_hook.flush = NULL;
     }
 
     if (ze_hook.execute_ex) {
@@ -447,7 +409,6 @@ void spx_php_execution_init(void)
     context.ex_hook.internal.after = NULL;
 
     context.execution_disabled = 0;
-    context.output_disabled = 0;
     context.error_count = 0;
     context.gc_active = 0;
 }
@@ -470,61 +431,6 @@ void spx_php_execution_hook(void (*before)(void), void (*after)(void), int inter
     } else {
         context.ex_hook.user.before = before;
         context.ex_hook.user.after = after;
-    }
-}
-
-void spx_php_execution_output_disable(void)
-{
-    if (context.output_disabled == 1) {
-        return;
-    }
-
-    context.output_disabled = 1;
-
-    /*
-     *  fastcgi_finish_request() function nullification.
-     *  Required to prevent user land PHP code to finalize/close FPM output before end
-     *  of script and thus forbidding SPX to send additional output.
-     */
-    context.fastcgi_finish_request.handler = NULL;
-    context.fastcgi_finish_request.arg_info = NULL;
-    zend_internal_function * func = get_zend_internal_function("fastcgi_finish_request");
-    if (func) {
-        context.fastcgi_finish_request.handler = func->handler;
-        context.fastcgi_finish_request.arg_info = func->arg_info;
-#if ZEND_MODULE_API_NO >= 20151012
-        context.fastcgi_finish_request.num_args = func->num_args;
-        context.fastcgi_finish_request.fn_flags = func->fn_flags;
-#endif
-
-        func->handler = PHP_FN(null_zend_function);
-        func->arg_info = NULL;
-#if ZEND_MODULE_API_NO >= 20151012
-        func->num_args = 0;
-        func->fn_flags &= ~(ZEND_ACC_VARIADIC | ZEND_ACC_HAS_TYPE_HINTS);
-#endif
-    }
-}
-
-void spx_php_execution_output_restore(void)
-{
-    if (context.output_disabled == 0) {
-        return;
-    }
-
-    context.output_disabled = 0;
-
-    zend_internal_function * func = get_zend_internal_function("fastcgi_finish_request");
-    if (func && context.fastcgi_finish_request.handler) {
-        func->handler = context.fastcgi_finish_request.handler;
-        func->arg_info = context.fastcgi_finish_request.arg_info;
-#if ZEND_MODULE_API_NO >= 20151012
-        func->num_args = context.fastcgi_finish_request.num_args;
-        func->fn_flags = context.fastcgi_finish_request.fn_flags;
-#endif
-
-        context.fastcgi_finish_request.handler = NULL;
-        context.fastcgi_finish_request.arg_info = NULL;
     }
 }
 
@@ -623,38 +529,7 @@ void spx_php_log_notice(const char * fmt, ...)
 
 static int hook_zend_write(const char * str, zend_write_len_t len)
 {
-    if (context.output_disabled) {
-        return len;
-    }
-
     return ze_hook.zend_write(str, len);
-}
-
-static int hook_send_headers(sapi_headers_struct * sapi_headers TSRMLS_DC)
-{
-    if (context.output_disabled) {
-        return SAPI_HEADER_SENT_SUCCESSFULLY;
-    }
-
-    return ze_hook.send_headers(sapi_headers TSRMLS_CC);
-}
-
-static void hook_send_header(sapi_header_struct * sapi_header, void * server_context TSRMLS_DC)
-{
-    if (context.output_disabled) {
-        return;
-    }
-
-    ze_hook.send_header(sapi_header, server_context TSRMLS_CC);
-}
-
-static void hook_flush(void * server_context)
-{
-    if (context.output_disabled) {
-        return;
-    }
-
-    ze_hook.flush(server_context);
 }
 
 static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
@@ -738,38 +613,6 @@ static void hook_zend_error_cb(
 ) {
     context.error_count++;
     ze_hook.zend_error_cb(type, error_filename, error_lineno, format, args);
-}
-
-static PHP_FUNCTION(null_zend_function)
-{
-    RETURN_TRUE;
-}
-
-static zend_internal_function * get_zend_internal_function(const char * name)
-{
-#if ZEND_MODULE_API_NO >= 20151012
-    return zend_hash_str_find_ptr(
-        CG(function_table),
-        name,
-        strlen(name)
-    );
-#else
-    TSRMLS_FETCH();
-
-    zend_internal_function * func;
-    if (
-        zend_hash_find(
-            CG(function_table),
-            name,
-            strlen(name) + 1,
-            (void **)&func
-        ) == SUCCESS
-    ) {
-        return func;
-    }
-
-    return NULL;
-#endif
 }
 
 static HashTable * get_global_array(const char * name)

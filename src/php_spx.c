@@ -557,7 +557,6 @@ static void http_ui_handler_init(void)
 
     spx_php_execution_init();
     spx_php_execution_disable();
-    spx_php_execution_output_disable();
 }
 
 static void http_ui_handler_shutdown(void)

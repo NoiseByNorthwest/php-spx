@@ -33,9 +33,6 @@ void spx_php_execution_shutdown(void);
 void spx_php_execution_disable(void);
 void spx_php_execution_hook(void (*before)(void), void (*after)(void), int internal);
 
-void spx_php_execution_output_disable(void);
-void spx_php_execution_output_restore(void);
-
 void spx_php_output_add_header_line(const char * header_line);
 void spx_php_output_add_header_linef(const char * fmt, ...);
 void spx_php_output_send_headers(void);
