@@ -684,6 +684,10 @@ static void hook_execute_internal(
 #endif
     TSRMLS_DC
 ) {
+    if (context.execution_disabled) {
+        return;
+    }
+
     if (context.ex_hook.internal.before) {
         context.ex_hook.internal.before();
     }
