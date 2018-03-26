@@ -19,6 +19,10 @@ export function lerpDist(a, b, value) {
     return (value - a) / (b - a);
 }
 
+export function dist(a, b) {
+    return Math.abs(a - b);
+}
+
 export class Vec3 {
 
     constructor(x, y, z) {
@@ -146,6 +150,18 @@ export class Range {
     shift(dist) {
         this.begin += dist;
         this.end += dist;
+
+        return this;
+    }
+
+    shiftBegin(dist) {
+        this.begin = Math.min(this.begin + dist, this.end);
+
+        return this;
+    }
+
+    shiftEnd(dist) {
+        this.end = Math.max(this.end + dist, this.begin);
 
         return this;
     }
