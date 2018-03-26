@@ -242,6 +242,22 @@ class ViewTimeRange {
         return this.fix();
     }
 
+    shiftViewRangeBegin(dist) {
+        this.timeRange = this._viewRangeToTimeRange(
+            this.getViewRange().shiftBegin(dist)
+        );
+
+        return this.fix();
+    }
+
+    shiftViewRangeEnd(dist) {
+        this.timeRange = this._viewRangeToTimeRange(
+            this.getViewRange().shiftEnd(dist)
+        );
+
+        return this.fix();
+    }
+
     shiftScaledViewRange(dist) {
         return this.shiftViewRange(dist / this.getScale());
     }
@@ -470,14 +486,45 @@ export class OverView extends SVGWidget {
             updateTimeRangeRect();
         });
 
+        let action = null;
         this.container.on('mousedown mousemove', e => {
             if (e.type == 'mousemove' && e.buttons != 1) {
+                if (math.dist(e.clientX, this.viewTimeRange.getViewRange().begin) < 4) {
+                    this.container.css('cursor', 'e-resize');
+                    action = 'move-begin';
+                } else if (math.dist(e.clientX, this.viewTimeRange.getViewRange().end) < 4) {
+                    this.container.css('cursor', 'w-resize');
+                    action = 'move-end';
+                } else {
+                    this.container.css('cursor', 'pointer');
+                    action = 'move';
+                }
+
                 return;
             }
 
-            this.viewTimeRange.shiftViewRange(
-                e.clientX - this.viewTimeRange.getViewRange().center()
-            );
+            switch (action) {
+                case 'move-begin':
+                    this.viewTimeRange.shiftViewRangeBegin(
+                        e.clientX - this.viewTimeRange.getViewRange().begin
+                    );
+
+                    break;
+
+                case 'move-end':
+                    this.viewTimeRange.shiftViewRangeEnd(
+                        e.clientX - this.viewTimeRange.getViewRange().end
+                    );
+
+                    break;
+
+                case 'move':
+                    this.viewTimeRange.shiftViewRange(
+                        e.clientX - this.viewTimeRange.getViewRange().center()
+                    );
+
+                    break;
+            }
 
             $(window).trigger('spx-timerange-change', [this.viewTimeRange.getTimeRange()]);
         });
