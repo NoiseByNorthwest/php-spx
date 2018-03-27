@@ -417,7 +417,7 @@ export class ColorScale extends SVGWidget {
         const step = 8;
         const exp = 5;
 
-        const getCurrentMetricValue = (x) => {
+        const getCurrentMetricValue = x => {
             return this
                 .profileData
                 .getStats()
@@ -680,6 +680,77 @@ export class TimeLine extends SVGWidget {
 
             $(window).trigger('spx-timerange-change', [this.viewTimeRange.getTimeRange()]);
         });
+
+        this.infoViewPort = null;
+        let pointedElement = null, callIdx = null;
+
+        $(this.viewPort.node).dblclick(e => {
+            if (callIdx == null) {
+                return;
+            }
+
+            $(window).trigger('spx-timerange-change', [this.profileData.getCall(callIdx).getTimeRange()]);
+        });
+
+        $(this.viewPort.node).on('mousemove mouseout', e => {
+            if (this.infoViewPort == null) {
+                return;
+            }
+
+            if (pointedElement != null) {
+                pointedElement.setAttribute('stroke', 'none');
+                pointedElement = null;
+                callIdx = null;
+            }
+
+            this.infoViewPort.clear();
+
+            if (e.type == 'mouseout') {
+                return;
+            }
+
+            pointedElement = document.elementFromPoint(e.clientX, e.clientY);
+            if (pointedElement.nodeName == 'text') {
+                pointedElement = pointedElement.previousSibling;
+            }
+
+            callIdx = pointedElement.dataset.callIdx;
+            if (callIdx === undefined) {
+                callIdx = null;
+                pointedElement = null;
+
+                return;
+            }
+
+            pointedElement.setAttribute('stroke', '#0ff');
+
+            this.infoViewPort.appendChild(svg.createNode('rect', {
+                x: 0,
+                y: 0,
+                width: this.infoViewPort.width,
+                height: this.infoViewPort.height,
+                'fill-opacity': '0.5',
+            }));
+
+            const call = this.profileData.getCall(callIdx);
+            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
+            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
+
+            renderSVGMultiLineText(
+                this.infoViewPort.createSubViewPort(
+                    this.infoViewPort.width - 5,
+                    this.infoViewPort.height,
+                    5,
+                    0
+                ),
+                [
+                    'Function: ' + call.getFunctionName(),
+                    'Depth: ' + call.getDepth(),
+                    currentMetricName + ' inc.: ' + formatter(call.getInc(this.currentMetric)),
+                    currentMetricName + ' exc.: ' + formatter(call.getExc(this.currentMetric)),
+                ]
+            );
+        });
     }
 
     _fitToContainerSize() {
@@ -790,73 +861,12 @@ export class TimeLine extends SVGWidget {
             );
         }
 
-        const infoViewPort = overlayViewPort.createSubViewPort(
+        this.infoViewPort = overlayViewPort.createSubViewPort(
             overlayViewPort.width,
             65,
             0,
             0
         );
-
-        let pointedElement = null;
-
-        this.viewPort.node.addEventListener('mouseout', (e) => {
-            if (pointedElement != null) {
-                pointedElement.setAttribute('stroke', 'none');
-                pointedElement = null;
-            }
-
-            infoViewPort.clear();
-        });
-
-        this.viewPort.node.addEventListener('mousemove', (e) => {
-            if (pointedElement != null) {
-                pointedElement.setAttribute('stroke', 'none');
-                pointedElement = null;
-            }
-
-            infoViewPort.clear();
-
-            pointedElement = document.elementFromPoint(e.clientX, e.clientY);
-            if (pointedElement.nodeName == 'text') {
-                pointedElement = pointedElement.previousSibling;
-            }
-
-            const callIdx = pointedElement.dataset.callIdx;
-            if (callIdx === undefined) {
-                pointedElement = null;
-
-                return;
-            }
-
-            pointedElement.setAttribute('stroke', '#0ff');
-    
-            infoViewPort.appendChild(svg.createNode('rect', {
-                x: 0,
-                y: 0,
-                width: infoViewPort.width,
-                height: infoViewPort.height,
-                'fill-opacity': '0.5',
-            }));
-
-            const call = this.profileData.getCall(callIdx);
-            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
-            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
-
-            renderSVGMultiLineText(
-                infoViewPort.createSubViewPort(
-                    infoViewPort.width - 5,
-                    infoViewPort.height,
-                    5,
-                    0
-                ),
-                [
-                    'Function: ' + call.getFunctionName(),
-                    'Depth: ' + call.getDepth(),
-                    currentMetricName + ' inc.: ' + formatter(call.getInc(this.currentMetric)),
-                    currentMetricName + ' exc.: ' + formatter(call.getExc(this.currentMetric)),
-                ]
-            );
-        });
     }
 }
 
@@ -987,7 +997,7 @@ export class FlameGraph extends SVGWidget {
 
         let pointedElement = null;
 
-        this.viewPort.node.addEventListener('mouseout', (e) => {
+        this.viewPort.node.addEventListener('mouseout', e => {
             if (pointedElement != null) {
                 pointedElement.setAttribute('stroke', 'none');
                 pointedElement = null;
@@ -996,7 +1006,7 @@ export class FlameGraph extends SVGWidget {
             infoViewPort.clear();
         });
 
-        this.viewPort.node.addEventListener('mousemove', (e) => {
+        this.viewPort.node.addEventListener('mousemove', e => {
             if (pointedElement != null) {
                 pointedElement.setAttribute('stroke', 'none');
                 pointedElement = null;
