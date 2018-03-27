@@ -245,6 +245,10 @@ You can change the selected time range by, represented by a transparent green re
 
 Except for wall time, the current metric is also plotted (current value over time) on a foreground layer.
 
+Supported controls:
+- horizontal left click drag: shift the selected time range
+- resize click on selected time range rectangle: shift one of the selected time range boundary
+
 ![Showcase](assets/docs/as-ov.png)
 
 ##### Time line focus
@@ -256,6 +260,7 @@ Supported controls:
 - middle click vertical drag: time range zoom in/out
 - mouse wheel: time range zoom in/out
 - hovering a function call to show more details
+- double click on a function call: set the current time range as the one of the selected function call
 
 Except for wall time, the current metric is also plotted (current value over time) on a foreground layer.
 
