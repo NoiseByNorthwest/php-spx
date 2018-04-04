@@ -364,7 +364,7 @@ void spx_php_hooks_init(void)
     ze_hook.zend_write = zend_write;
     zend_write = hook_zend_write;
 
-    if (sapi_module.send_headers) {
+    if (sapi_module.send_headers && sapi_module.send_headers != hook_send_headers) {
         ze_hook.send_headers = sapi_module.send_headers;
         sapi_module.send_headers = hook_send_headers;
     }
@@ -403,7 +403,6 @@ void spx_php_hooks_shutdown(void)
 
     if (ze_hook.send_headers) {
         sapi_module.send_headers = ze_hook.send_headers;
-        ze_hook.send_headers = NULL;
     }
 
     if (ze_hook.send_header) {
