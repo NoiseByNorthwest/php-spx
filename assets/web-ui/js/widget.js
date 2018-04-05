@@ -380,6 +380,62 @@ class SVGWidget extends Widget {
     }
 }
 
+export class ColorSchemeControls extends Widget {
+
+    constructor(container, profileData) {
+        super(container, profileData);
+
+        this.panelOpen = false;
+
+        this.toggleLink = container.find('#colorscheme-current-name');
+        this.panel = container.find('#colorscheme-panel');
+
+        this.toggleLink.on('click', e => {
+            e.preventDefault();
+            this.togglePanel();
+        });
+
+        container.find('input[name="colorscheme-mode"]:radio').on('change', e => {
+            if (!e.target.checked) { return };
+
+            $(window).trigger('spx-colorscheme-update', [e.target.value]);
+            let label = this.panel.find(`label[for="${e.target.id}"]`);
+            this.toggleLink.html(label.html());
+        });
+    }
+
+    clear() { }
+
+    togglePanel() {
+        this.panelOpen = !this.panelOpen;
+        this.panel.toggle();
+        if (this.panelOpen) {
+            this.repaint();
+            setTimeout(() => this.listenForPanelClose(), 0);
+        }
+    }
+
+    listenForPanelClose() {
+        let onOutsideClick = e => {
+            if (e.target.closest('#colorscheme-panel') !== null) { return; }
+            e.preventDefault();
+            off()
+            this.togglePanel();
+        }
+        let onEscKey = e => {
+            if (e.key != 'Escape') { return; }
+            off();
+            this.togglePanel();
+        }
+        let off = () => {
+            $(document).off('mousedown', onOutsideClick);
+            $(document).off('keydown', onEscKey);
+        }
+        $(document).on('mousedown', onOutsideClick);
+        $(document).on('keydown', onEscKey);
+    }
+}
+
 export class ColorScale extends SVGWidget {
 
     constructor(container, profileData) {

@@ -1,12 +1,4 @@
 body {
-    background: #023;
-    background: -webkit-linear-gradient(#023, #000);
-    background: -o-linear-gradient(#023, #000);
-    background: -moz-linear-gradient(#023, #000);
-    background: linear-gradient(#023, #000);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-
     font-family: monospace;
     margin: 2px;
     padding: 0;
@@ -14,6 +6,16 @@ body {
 
 * {
     color: #089;
+}
+
+body, #colorscheme-panel {
+    background: #023;
+    background: -webkit-linear-gradient(#023, #000);
+    background: -o-linear-gradient(#023, #000);
+    background: -moz-linear-gradient(#023, #000);
+    background: linear-gradient(#023, #000);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 
 form#config label {
@@ -150,6 +152,14 @@ table.layout td {
 
 #metric-selector select {
     background-color: #000;
+}
+
+#colorscheme-panel {
+    display: none;
+    position: absolute;
+    top: 24px;
+    width: 300px;
+    padding: 6px;
 }
 
 #category-legend {

@@ -22,6 +22,16 @@
                 <select>
                 </select>
             </div>
+        </td><td style="width: 15%; min-width: 100px;">
+            <div id="colorscheme-selector" class="widget" style="width: 100%; height: 24px">
+                <span>Color by: </span><a href="#" id="colorscheme-current-name">Selected metric</a>
+                <div id="colorscheme-panel">
+                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-scale" value="scale" checked />
+                    <label for="colorscheme-mode-scale">Selected metric</label>
+                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-categories" value="categories" />
+                    <label for="colorscheme-mode-categories">Categories</label>
+                </div>
+            </div>
         </td><td>
             <div style="width:100%; position: relative">
                 <div id="color-scale" class="widget" style="width: 100%; height: 24px"></div>
@@ -215,17 +225,22 @@
                     const widgets = [
                         new widget.ColorScale($('#color-scale'), profileData),
                         new widget.CategoryLegend($('#category-legend'), profileData),
+                        new widget.ColorSchemeControls($('#colorscheme-selector'), profileData),
                         new widget.OverView($('#overview'), profileData, colorChooser),
                         new widget.TimeLine($('#timeline'), profileData, colorChooser),
                         new widget.FlatProfile($('#flatprofile'), profileData),
                         new widget.FlameGraph($('#flamegraph'), profileData),
                     ];
 
+                    const colSchemeWidgets = [widgets[0], widgets[1]];
+
                     $(window).on('spx-colorscheme-update', (e, newMode=null) => {
                         if (!!newMode && colorMode !== newMode) {
                             colorMode = newMode;
-                            $('#color-scale').toggle();
-                            $('#category-legend').toggle();
+                            colSchemeWidgets.forEach(widget => {
+                                widget.container.toggle();
+                                widget._fitToContainerSize();
+                            });
                         }
                         widgets.forEach(widget => widget.repaint());
                     });
