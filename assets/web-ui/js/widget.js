@@ -176,33 +176,6 @@ function renderSVGMetricValuesPlot(viewPort, profileData, metric, timeRange) {
     }
 }
 
-function getCallMetricValueColor(profileData, metric, value) {
-    const metricRange = profileData.getStats().getCallRange(metric);
-
-    let scaleValue = 0;
-
-    if (metricRange.length() > 100) {
-        scaleValue =
-            Math.log10(value - metricRange.begin)
-                / Math.log10(metricRange.length())
-        ;
-    } else {
-        scaleValue = metricRange.lerp(value);
-    }
-
-    return math.Vec3.lerpPath(
-        [
-            new math.Vec3(0, 0.3, 0.9),
-            new math.Vec3(0, 0.9, 0.9),
-            new math.Vec3(0, 0.9, 0),
-            new math.Vec3(0.9, 0.9, 0),
-            new math.Vec3(0.9, 0.2, 0),
-        ],
-        scaleValue
-    ).toHTMLColor();
-}
-
-
 class ViewTimeRange {
 
     constructor(timeRange, wallTime, viewWidth) {
@@ -434,7 +407,7 @@ export class ColorScale extends SVGWidget {
                 y: 0,
                 width: step,
                 height: this.viewPort.height,
-                fill: getCallMetricValueColor(
+                fill: utils.getCallMetricValueColor(
                     this.profileData,
                     this.currentMetric,
                     getCurrentMetricValue(i)
@@ -461,9 +434,10 @@ export class ColorScale extends SVGWidget {
 
 export class OverView extends SVGWidget {
 
-    constructor(container, profileData) {
+    constructor(container, profileData, colorChooser) {
         super(container, profileData);
-        
+
+        this.colorChooser = colorChooser;
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
@@ -567,10 +541,10 @@ export class OverView extends SVGWidget {
                 y1: y,
                 x2: x + w,
                 y2: y + h,
-                stroke: getCallMetricValueColor(
+                stroke: this.colorChooser(
                     this.profileData,
                     this.currentMetric,
-                    call.getInc(this.currentMetric)
+                    call
                 ),
             }));
         }
@@ -608,9 +582,10 @@ export class OverView extends SVGWidget {
 
 export class TimeLine extends SVGWidget {
 
-    constructor(container, profileData) {
+    constructor(container, profileData, colorChooser) {
         super(container, profileData);
 
+        this.colorChooser = colorChooser;
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
@@ -806,10 +781,10 @@ export class TimeLine extends SVGWidget {
                 height: h,
                 stroke: 'none',
                 'stroke-width': 2,
-                fill: getCallMetricValueColor(
+                fill: this.colorChooser(
                     this.profileData,
                     this.currentMetric,
-                    call.getInc(this.currentMetric)
+                    call
                 ),
                 'data-call-idx': call.getIdx(),
             });

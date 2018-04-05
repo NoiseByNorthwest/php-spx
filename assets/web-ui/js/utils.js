@@ -204,3 +204,29 @@ export class PackedRecordArray {
         return field.typeArray[idx * field.typeElemSize + field.typeOffset];
     }
 }
+
+export function getCallMetricValueColor(profileData, metric, value) {
+    const metricRange = profileData.getStats().getCallRange(metric);
+
+    let scaleValue = 0;
+
+    if (metricRange.length() > 100) {
+        scaleValue =
+            Math.log10(value - metricRange.begin)
+                / Math.log10(metricRange.length())
+        ;
+    } else {
+        scaleValue = metricRange.lerp(value);
+    }
+
+    return math.Vec3.lerpPath(
+        [
+            new math.Vec3(0, 0.3, 0.9),
+            new math.Vec3(0, 0.9, 0.9),
+            new math.Vec3(0, 0.9, 0),
+            new math.Vec3(0.9, 0.9, 0),
+            new math.Vec3(0.9, 0.2, 0),
+        ],
+        scaleValue
+    ).toHTMLColor();
+}
