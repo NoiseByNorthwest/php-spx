@@ -432,6 +432,39 @@ export class ColorScale extends SVGWidget {
     }
 }
 
+export class CategoryLegend extends SVGWidget {
+
+    constructor(container, profileData) {
+        super(container, profileData);
+    }
+
+    render() {
+        let categories = utils.getCategories()
+        let width = this.viewPort.width / categories.length;
+
+        for (let i = 0; i < categories.length; i++) {
+            let category = categories[i];
+            let [r, g, b] = category.color;
+            this.viewPort.appendChild(svg.createNode('rect', {
+                x: width * i,
+                y: 0,
+                width,
+                height: this.viewPort.height,
+                fill: `rgb(${r},${g},${b})`,
+            }));
+            this.viewPort.appendChild(svg.createNode('text', {
+                x: width * i + 4,
+                y: 13,
+                width,
+                height: this.viewPort.height,
+                fill: `rgb(${r},${g},${b})`,
+                'font-size': 12,
+                fill: '#000',
+            }, node => { node.textContent = category.label }));
+        }
+    }
+}
+
 export class OverView extends SVGWidget {
 
     constructor(container, profileData, colorChooser) {

@@ -23,7 +23,10 @@
                 </select>
             </div>
         </td><td>
-            <div id="color-scale" class="widget" style="width: 100%; height: 24px"></div>
+            <div style="width:100%; position: relative">
+                <div id="color-scale" class="widget" style="width: 100%; height: 24px"></div>
+                <div id="category-legend" class="widget" style="width: 100%; height: 24px"></div>
+            </div>
         </td>
     </tr></table>
 
@@ -194,19 +197,38 @@
                     return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
                 })
                 .then(profileData => {
+
+                    const COLOUR_SCALE = 'scale';
+                    const COLOUR_CATEGORIES = 'categories';
+
+                    let colorMode = COLOUR_SCALE;
                     let colorChooser = function(profileData, metric, call) {
-                        return utils.getCallMetricValueColor(profileData, metric, call.getInc(metric));
+                        if (colorMode == COLOUR_SCALE) {
+                            return utils.getCallMetricValueColor(profileData, metric, call.getInc(metric));
+                        } else if (colorMode == COLOUR_CATEGORIES) {
+                            return utils.getCallCategoryColor(call.getFunctionName());
+                        } else {
+                            throw new Error(`Unknown color mode ${colorMode}`);
+                        }
                     };
 
                     const widgets = [
                         new widget.ColorScale($('#color-scale'), profileData),
+                        new widget.CategoryLegend($('#category-legend'), profileData),
                         new widget.OverView($('#overview'), profileData, colorChooser),
                         new widget.TimeLine($('#timeline'), profileData, colorChooser),
                         new widget.FlatProfile($('#flatprofile'), profileData),
                         new widget.FlameGraph($('#flamegraph'), profileData),
                     ];
 
-                    widgets.forEach(widget => widget.render());
+                    $(window).on('spx-colorscheme-update', (e, newMode=null) => {
+                        if (!!newMode && colorMode !== newMode) {
+                            colorMode = newMode;
+                            $('#color-scale').toggle();
+                            $('#category-legend').toggle();
+                        }
+                        widgets.forEach(widget => widget.repaint());
+                    });
 
                     const metricSelector = $('#metric-selector select');
                     for (const metric of profileData.getMetadata().enabled_metrics) {

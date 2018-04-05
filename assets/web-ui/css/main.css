@@ -152,6 +152,10 @@ table.layout td {
     background-color: #000;
 }
 
+#category-legend {
+    display: none;
+}
+
 #flatprofile {
     h: right;
 }

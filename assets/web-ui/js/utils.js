@@ -237,6 +237,18 @@ export function setCategories(categories) {
     window.localStorage.setItem(categStoreKey, JSON.stringify(categories));
 }
 
+export function getCallCategoryColor(funcName) {
+    let categories = getCategories();
+    for (let category of categories) {
+        for (let pattern of category.patterns) {
+            if (pattern.test(funcName)) {
+                pattern.lastIndex = 0;
+                return `rgb(${category.color[0]},${category.color[1]},${category.color[2]})`;
+            }
+        }
+    }
+}
+
 export function getCallMetricValueColor(profileData, metric, value) {
     const metricRange = profileData.getStats().getCallRange(metric);
 
