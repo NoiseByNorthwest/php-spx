@@ -205,6 +205,38 @@ export class PackedRecordArray {
     }
 }
 
+let categCache = null;
+const categStoreKey = 'spx-report-current-categories';
+
+export function getCategories() {
+    if (!!categCache) { return categCache; }
+
+    let loaded = window.localStorage.getItem(categStoreKey);
+    categCache = !!loaded ? JSON.parse(loaded): [];
+    categCache.forEach(c => {
+        c.patterns = c.patterns.map(p => new RegExp(p, 'gi'))
+    });
+
+    categCache.push({
+        label: '<uncategorized>',
+        color: [140,140,140],
+        patterns: [/./],
+        isDefault: true
+    })
+
+    return categCache;
+}
+
+export function setCategories(categories) {
+    categCache = null;
+    categories = categories
+        .filter(c => !c.isDefault)
+        .forEach(c => {
+            c.patterns = c.patterns.split(/[\r\n]+/);
+        });
+    window.localStorage.setItem(categStoreKey, JSON.stringify(categories));
+}
+
 export function getCallMetricValueColor(profileData, metric, value) {
     const metricRange = profileData.getStats().getCallRange(metric);
 
