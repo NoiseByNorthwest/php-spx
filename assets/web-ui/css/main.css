@@ -158,16 +158,48 @@ table.layout td {
     display: none;
     position: absolute;
     top: 24px;
-    width: 300px;
+    width: 350px;
     padding: 6px;
+}
+
+#colorscheme-panel ol {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#colorscheme-panel hr {
+    border-color: #089;
+}
+
+#colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea {
+    font-family: monospace;
+    font-size: 12px;
+    background-color: #000;
+    border: 1px solid #0898;
+}
+
+#colorscheme-panel .category {
+    margin: 10px 0 0;
+}
+
+#colorscheme-panel input[name="label"] {
+    width: 181px;
+}
+
+#colorscheme-panel textarea[name="patterns"] {
+    width: calc(100% - 6px);
+}
+
+#colorscheme-panel .swatch {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 1px solid #eee;
 }
 
 #category-legend {
     display: none;
-}
-
-#flatprofile {
-    h: right;
 }
 
 #flatprofile table {

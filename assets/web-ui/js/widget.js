@@ -389,11 +389,24 @@ export class ColorSchemeControls extends Widget {
 
         this.toggleLink = container.find('#colorscheme-current-name');
         this.panel = container.find('#colorscheme-panel');
+        this.categoryList = container.find('#colorscheme-panel ol');
 
         this.toggleLink.on('click', e => {
             e.preventDefault();
             this.togglePanel();
         });
+
+        $('#new-category').on('click', e => {
+            e.preventDefault();
+            let cats = utils.getCategories();
+            cats.unshift({
+                color: [90, 90, 90],
+                label: 'untitled',
+                patterns: []
+            })
+            utils.setCategories(cats);
+            $(window).trigger('spx-colorscheme-update');
+        })
 
         container.find('input[name="colorscheme-mode"]:radio').on('change', e => {
             if (!e.target.checked) { return };
@@ -402,9 +415,40 @@ export class ColorSchemeControls extends Widget {
             let label = this.panel.find(`label[for="${e.target.id}"]`);
             this.toggleLink.html(label.html());
         });
+
+        this.categoryList.on('input', 'textarea', e => {
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+        });
+
+        let editHandler = e => {
+            this.onCategoryEdit(e.target);
+            e.stopPropagation();
+        }
+        this.categoryList.on('change', 'input,textarea', editHandler);
+        this.categoryList.on('click', 'button', editHandler);
+
+        setTimeout(() => this.repaint(), 0);
     }
 
     clear() { }
+
+    render() {
+        let categories = utils.getCategories();
+        let items = categories.map((cat, i) => {
+            return `
+<li class="category" data-index=${i}>
+    <div class="swatch" style="background-color: rgb(${cat.color[0]},${cat.color[1]},${cat.color[2]})"/></div>
+    <input type="text" name="label" value="${cat.label}"/>
+    <button name="push-up">⬆︎</button>
+    <button name="push-down">⬇︎</button>
+    <button name="del">╳</button>
+    <textarea name="patterns">${cat.patterns.map(p => p.source).join('\n')}</textarea>
+</li>`;
+        });
+        this.categoryList.html(items.join(''));
+        this.categoryList.find('textarea').trigger('input');
+    }
 
     togglePanel() {
         this.panelOpen = !this.panelOpen;
@@ -433,6 +477,38 @@ export class ColorSchemeControls extends Widget {
         }
         $(document).on('mousedown', onOutsideClick);
         $(document).on('keydown', onEscKey);
+    }
+
+    onCategoryEdit(elem) {
+        let idx = parseInt(elem.closest('li').dataset['index'], 10);
+        let categories = utils.getCategories();
+
+        let pushTarget = Math.max(idx-1, 0);
+        switch (elem.name) {
+            case 'push-down':
+                pushTarget = Math.min(idx+1, categories.length-1);
+            case 'push-up':
+                categories.splice(pushTarget, 0, categories.splice(idx, 1)[0]);
+                break;
+            case 'del':
+                categories.splice(idx, 1);
+                break;
+            case 'label':
+                categories[idx].label = elem.value.trim();
+                break;
+            case 'patterns':
+                let regexes = elem.value
+                    .split(/[\r\n]+/)
+                    .map(line => line.trim())
+                    .filter(line => line != '')
+                    .map(line => new RegExp(line, 'gi'));
+                categories[idx].patterns = regexes;
+                break;
+            default:
+                throw new Error(`Unknown category prop '${elem.name}'`);
+        }
+        utils.setCategories(categories);
+        $(window).trigger('spx-colorscheme-update');
     }
 }
 
@@ -495,7 +571,7 @@ export class CategoryLegend extends SVGWidget {
     }
 
     render() {
-        let categories = utils.getCategories()
+        let categories = utils.getCategories(true);
         let width = this.viewPort.width / categories.length;
 
         for (let i = 0; i < categories.length; i++) {

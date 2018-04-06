@@ -208,37 +208,39 @@ export class PackedRecordArray {
 let categCache = null;
 const categStoreKey = 'spx-report-current-categories';
 
-export function getCategories() {
-    if (!!categCache) { return categCache; }
+export function getCategories(includeUncategorized=false) {
+    if (categCache === null) {
+        let loaded = window.localStorage.getItem(categStoreKey);
+        categCache = !!loaded ? JSON.parse(loaded): [];
+        categCache.forEach(c => {
+            c.patterns = c.patterns.map(p => new RegExp(p, 'gi'))
+        });
+    }
 
-    let loaded = window.localStorage.getItem(categStoreKey);
-    categCache = !!loaded ? JSON.parse(loaded): [];
-    categCache.forEach(c => {
-        c.patterns = c.patterns.map(p => new RegExp(p, 'gi'))
-    });
-
-    categCache.push({
-        label: '<uncategorized>',
-        color: [140,140,140],
-        patterns: [/./],
-        isDefault: true
-    })
-
+    if (includeUncategorized) {
+        let all = categCache.slice();
+        all.push({
+            label: '<uncategorized>',
+            color: [140,140,140],
+            patterns: [/./],
+            isDefault: true
+        });
+        return all;
+    }
     return categCache;
 }
 
 export function setCategories(categories) {
     categCache = null;
-    categories = categories
-        .filter(c => !c.isDefault)
-        .forEach(c => {
-            c.patterns = c.patterns.split(/[\r\n]+/);
-        });
+    categories = categories.filter(c => !c.isDefault)
+    categories.forEach(c => {
+        c.patterns = c.patterns.map(p => p.source)
+    });
     window.localStorage.setItem(categStoreKey, JSON.stringify(categories));
 }
 
 export function getCallCategoryColor(funcName) {
-    let categories = getCategories();
+    let categories = getCategories(true);
     for (let category of categories) {
         for (let pattern of category.patterns) {
             if (pattern.test(funcName)) {
