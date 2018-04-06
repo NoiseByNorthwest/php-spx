@@ -191,11 +191,9 @@ table.layout td {
     width: calc(100% - 6px);
 }
 
-#colorscheme-panel .swatch {
-    display: inline-block;
-    width: 15px;
+#colorscheme-panel .jscolor {
+    width: 45px;
     height: 15px;
-    border: 1px solid #eee;
 }
 
 #category-legend {

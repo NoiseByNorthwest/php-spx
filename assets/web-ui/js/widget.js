@@ -425,7 +425,7 @@ export class ColorSchemeControls extends Widget {
             this.onCategoryEdit(e.target);
             e.stopPropagation();
         }
-        this.categoryList.on('change', 'input,textarea', editHandler);
+        this.categoryList.on('change', '.jscolor,input,textarea', editHandler);
         this.categoryList.on('click', 'button', editHandler);
 
         setTimeout(() => this.repaint(), 0);
@@ -435,10 +435,11 @@ export class ColorSchemeControls extends Widget {
 
     render() {
         let categories = utils.getCategories();
+        let hex = n => n.toString(16).padStart(2, "0");
         let items = categories.map((cat, i) => {
             return `
 <li class="category" data-index=${i}>
-    <div class="swatch" style="background-color: rgb(${cat.color[0]},${cat.color[1]},${cat.color[2]})"/></div>
+    <input name="colorpicker" class="jscolor" value="${hex(cat.color[0])}${hex(cat.color[1])}${hex(cat.color[2])}" />
     <input type="text" name="label" value="${cat.label}"/>
     <button name="push-up">⬆︎</button>
     <button name="push-down">⬇︎</button>
@@ -448,6 +449,20 @@ export class ColorSchemeControls extends Widget {
         });
         this.categoryList.html(items.join(''));
         this.categoryList.find('textarea').trigger('input');
+        this.categoryList.find('.jscolor').each((i, el) => {
+            el.picker = new jscolor(el, {
+                width: 101,
+                padding: 0,
+                shadow: false,
+                borderWidth: 0,
+                backgroundColor: 'transparent',
+                insetColor: '#000'
+            });
+            if (this.openPicker === i) {
+                this.openPicker = null;
+                el.picker.show();
+            }
+        });
     }
 
     togglePanel() {
@@ -456,12 +471,14 @@ export class ColorSchemeControls extends Widget {
         if (this.panelOpen) {
             this.repaint();
             setTimeout(() => this.listenForPanelClose(), 0);
+        } else {
+            this.panel.find('.jscolor').each((_, e) => e.picker.hide());
         }
     }
 
     listenForPanelClose() {
         let onOutsideClick = e => {
-            if (e.target.closest('#colorscheme-panel') !== null) { return; }
+            if (!!e.target._jscControlName || e.target.closest('#colorscheme-panel') !== null) { return; }
             e.preventDefault();
             off()
             this.togglePanel();
@@ -492,6 +509,10 @@ export class ColorSchemeControls extends Widget {
                 break;
             case 'del':
                 categories.splice(idx, 1);
+                break;
+            case 'colorpicker':
+                this.openPicker = idx;
+                categories[idx].color = elem.picker.rgb.map(n => Math.floor(n));
                 break;
             case 'label':
                 categories[idx].label = elem.value.trim();
