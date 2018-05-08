@@ -30,3 +30,4 @@ modules
 tmp-php.ini
 
 *.sublime-*
+*.swp

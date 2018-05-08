@@ -1,10 +1,10 @@
-# SPX
+# SPX - A simple profiler for PHP
 
 [![Build Status](https://travis-ci.org/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.org/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 7.x](https://img.shields.io/badge/php-5.6,%207.x-blue.svg)
 
-![Showcase](assets/docs/fp1.gif)
+![Showcase](assets/docs/as.gif)
 
-![Showcase](assets/docs/as.png)
+![Showcase](assets/docs/fp1.gif)
 
 SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.  
 It differentiates itself from other similar extensions as being:
@@ -225,6 +225,8 @@ This is the home page of the web UI, divided into 2 parts:
 - the profile report list as a sortable table. A click on a row allows to go to the [analysis screen](#analysis-screen) for the corresponding report.
 
 #### Analysis screen
+
+![Showcase](assets/docs/as.th.png)
 
 ##### Performance, report size & time resolution
 
