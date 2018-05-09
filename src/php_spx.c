@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <unistd.h>
 
 #ifndef ZTS
 #   define USE_SIGNAL
@@ -42,13 +43,14 @@ static SPX_THREAD_TLS struct {
                 struct sigaction sigterm;
             } prev_handler;
 
+            volatile sig_atomic_t handler_called;
             volatile sig_atomic_t probing;
             volatile sig_atomic_t stop;
-            volatile sig_atomic_t finish_called;
             int signo;
         } sig_handling;
 #endif
 
+        spx_profiler_reporter_t * reporter;
         spx_profiler_t * profiler;
     } profiling_handler;
 } context;
@@ -354,24 +356,24 @@ static void profiling_handler_init(void)
     context.profiling_handler.sig_handling.handler_set = 0;
     context.profiling_handler.sig_handling.probing = 0;
     context.profiling_handler.sig_handling.stop = 0;
-    context.profiling_handler.sig_handling.finish_called = 0;
+    context.profiling_handler.sig_handling.handler_called = 0;
     context.profiling_handler.sig_handling.signo = -1;
 #endif
 
     profiling_handler_ex_set_context();
 
+    context.profiling_handler.reporter = NULL;
     context.profiling_handler.profiler = NULL;
-    spx_profiler_reporter_t * reporter = NULL;
 
     switch (context.config.report) {
         default:
         case SPX_CONFIG_REPORT_FULL:
-            reporter = spx_reporter_full_create(SPX_G(data_dir), context.config.full_res);
+            context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir), context.config.full_res);
 
             break;
 
         case SPX_CONFIG_REPORT_FLAT_PROFILE:
-            reporter = spx_reporter_fp_create(
+            context.profiling_handler.reporter = spx_reporter_fp_create(
                 context.config.fp_focus,
                 context.config.fp_inc,
                 context.config.fp_rel,
@@ -382,19 +384,22 @@ static void profiling_handler_init(void)
             break;
 
         case SPX_CONFIG_REPORT_TRACE:
-            reporter = spx_reporter_trace_create(context.config.trace_file, context.config.trace_safe);
+            context.profiling_handler.reporter = spx_reporter_trace_create(
+                context.config.trace_file,
+                context.config.trace_safe
+            );
 
             break;
     }
 
-    if (!reporter) {
+    if (!context.profiling_handler.reporter) {
         goto error;
     }
 
     context.profiling_handler.profiler = spx_profiler_create(
         context.config.max_depth,
         context.config.enabled_metrics,
-        reporter
+        context.profiling_handler.reporter
     );
 
     if (!context.profiling_handler.profiler) {
@@ -404,24 +409,21 @@ static void profiling_handler_init(void)
     return;
 
 error:
-    profiling_handler_ex_unset_context();
+    profiling_handler_shutdown();
 }
 
 static void profiling_handler_shutdown(void)
 {
-    context.profiling_handler.sig_handling.finish_called++;
-
-    if (context.profiling_handler.sig_handling.finish_called != 1) {
-        return;
+    if (context.profiling_handler.profiler) {
+        spx_profiler_finalize(context.profiling_handler.profiler);
+        spx_profiler_destroy(context.profiling_handler.profiler);
+        context.profiling_handler.profiler = NULL;
     }
 
-    if (!context.profiling_handler.profiler) {
-        return;
+    if (context.profiling_handler.reporter) {
+        spx_profiler_reporter_destroy(context.profiling_handler.reporter);
+        context.profiling_handler.reporter = NULL;
     }
-
-    spx_profiler_finalize(context.profiling_handler.profiler);
-    spx_profiler_destroy(context.profiling_handler.profiler);
-    context.profiling_handler.profiler = NULL;
 
     profiling_handler_ex_unset_context();
 }
@@ -500,7 +502,7 @@ static void profiling_handler_sig_terminate(void)
 {
     profiling_handler_shutdown();
 
-    exit(
+    _exit(
         context.profiling_handler.sig_handling.signo < 0 ?
             EXIT_SUCCESS : 128 + context.profiling_handler.sig_handling.signo
     );
@@ -508,7 +510,8 @@ static void profiling_handler_sig_terminate(void)
 
 static void profiling_handler_sig_handler(int signo)
 {
-    if (context.profiling_handler.sig_handling.finish_called > 0) {
+    context.profiling_handler.sig_handling.handler_called++;
+    if (context.profiling_handler.sig_handling.handler_called > 1) {
         return;
     }
 

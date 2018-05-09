@@ -1,8 +1,6 @@
 #ifndef SPX_REPORTER_FULL_H_DEFINED
 #define SPX_REPORTER_FULL_H_DEFINED
 
-#include <unistd.h>
-
 #include "spx_profiler.h"
 
 size_t spx_reporter_full_metadata_list_files(

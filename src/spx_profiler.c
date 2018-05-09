@@ -190,8 +190,6 @@ spx_profiler_t * spx_profiler_create(
 error:
     if (profiler) {
         spx_profiler_destroy(profiler);
-    } else {
-        spx_profiler_reporter_destroy(reporter);
     }
 
     return NULL;
@@ -199,8 +197,6 @@ error:
 
 void spx_profiler_destroy(spx_profiler_t * profiler)
 {
-    spx_profiler_reporter_destroy(profiler->reporter);
-
     if (profiler->metric_collector) {
         spx_metric_collector_destroy(profiler->metric_collector);
     }
