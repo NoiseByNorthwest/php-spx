@@ -13,6 +13,7 @@ It differentiates itself from other similar extensions as being:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
 * [multi metrics](#available-metrics) capable: 10 currently supported (various time metrics, memory, objects in use, I/O...).
+* able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
   * list profiled script reports
