@@ -46,176 +46,179 @@
             import * as fmt from './js/fmt.js';
 
             $(() => {
-                let parameters = [
-                    {
-                        key: 'SPX_ENABLED',
-                        label: 'Enabled',
-                        type: 'switch',
-                        defaultValue: 0,
-                        description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
-                    },
-                    {
-                        key: 'SPX_BUILTINS',
-                        label: 'Profile internal functions',
-                        type: 'switch',
-                        defaultValue: 0,
-                        description: 'Whether to profile internal functions. It is not recommended to profile internal functions if you want to accurately find a time bottleneck.',
-                    },
-                    {
-                        key: 'SPX_DEPTH',
-                        label: 'Max profiling depth',
-                        type: 'choice',
-                        choice: {
-                            multi: false,
-                            values: [
-                                {key: '0',    label: 'Unlimited'},
-                                {key: '1',    label: '1'},
-                                {key: '2',    label: '2'},
-                                {key: '3',    label: '3'},
-                                {key: '4',    label: '4'},
-                                {key: '5',    label: '5'},
-                                {key: '6',    label: '6'},
-                                {key: '7',    label: '7'},
-                                {key: '8',    label: '8'},
-                                {key: '9',    label: '9'},
-                            ],
-                        },
-                        defaultValue: '0',
-                        description: 'The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls).',
-                    },
-                    {
-                        key: 'SPX_FULL_RES',
-                        label: 'Time resolution',
-                        type: 'choice',
-                        choice: {
-                            multi: false,
-                            values: [
-                                {key: '0',    label: 'Unlimited'},
-                                {key: '5',    label: '5us'},
-                                {key: '10',   label: '10us'},
-                                {key: '20',   label: '20us'},
-                                {key: '50',   label: '50us'},
-                                {key: '100',  label: '100us'},
-                                {key: '200',  label: '200us'},
-                                {key: '500',  label: '500us'},
-                                {key: '1000', label: '1ms'},
-                                {key: '2000', label: '2ms'},
-                                {key: '5000', label: '5ms'},
-                            ],
-                        },
-                        defaultValue: '0',
-                        description: 'When profiling a long running request, this option will allow you to contain report size and thus keeping it small enough to be exploitable.',
-                    },
-                    {
-                        key: 'SPX_METRICS',
-                        label: 'Additional metrics',
-                        type: 'choice',
-                        choice: {
-                            multi: true,
-                            values: [
-                                {key: 'ct', label: 'CPU Time'},
-                                {key: 'it', label: 'Idle Time'},
-                                {key: 'zr', label: 'Zend Engine root buffer length'},
-                                {key: 'zo', label: 'Zend Engine object count'},
-                                {key: 'ze', label: 'Zend Engine error count'},
-                                {key: 'io', label: 'I/O (reads + writes)'},
-                                {key: 'ior', label: 'I/O (reads)'},
-                                {key: 'iow', label: 'I/O (writes)'},
-                            ],
-                        },
-                        defaultValue: 'wt,zm',
-                        description: 'List of available metrics to collect in addition to Wall Time and Zend Engine Memory. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
-                    },
-                ];
+                fetch('data/metrics', {credentials: "same-origin"})
+                    .then(response => response.json())
+                    .then(response => {
+                        const metrics = response.results;
 
-                let $fieldSet = $($('#config > fieldset')[0]);
-                $.each(parameters, (_, parameter) => {
-                    $fieldSet.append(
-                        '<label for="' + parameter.key + '">'
-                            + parameter.label + '</label>'
-                    );
+                        const parameters = [
+                            {
+                                key: 'SPX_ENABLED',
+                                label: 'Enabled',
+                                type: 'switch',
+                                defaultValue: 0,
+                                description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
+                            },
+                            {
+                                key: 'SPX_BUILTINS',
+                                label: 'Profile internal functions',
+                                type: 'switch',
+                                defaultValue: 0,
+                                description: 'Whether to profile internal functions. It is not recommended to profile internal functions if you want to accurately find a time bottleneck.',
+                            },
+                            {
+                                key: 'SPX_DEPTH',
+                                label: 'Max profiling depth',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: [
+                                        {key: '0',    label: 'Unlimited'},
+                                        {key: '1',    label: '1'},
+                                        {key: '2',    label: '2'},
+                                        {key: '3',    label: '3'},
+                                        {key: '4',    label: '4'},
+                                        {key: '5',    label: '5'},
+                                        {key: '6',    label: '6'},
+                                        {key: '7',    label: '7'},
+                                        {key: '8',    label: '8'},
+                                        {key: '9',    label: '9'},
+                                    ],
+                                },
+                                defaultValue: '0',
+                                description: 'The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls).',
+                            },
+                            {
+                                key: 'SPX_FULL_RES',
+                                label: 'Time resolution',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: [
+                                        {key: '0',    label: 'Unlimited'},
+                                        {key: '5',    label: '5us'},
+                                        {key: '10',   label: '10us'},
+                                        {key: '20',   label: '20us'},
+                                        {key: '50',   label: '50us'},
+                                        {key: '100',  label: '100us'},
+                                        {key: '200',  label: '200us'},
+                                        {key: '500',  label: '500us'},
+                                        {key: '1000', label: '1ms'},
+                                        {key: '2000', label: '2ms'},
+                                        {key: '5000', label: '5ms'},
+                                    ],
+                                },
+                                defaultValue: '0',
+                                description: 'When profiling a long running request, this option will allow you to contain report size and thus keeping it small enough to be exploitable.',
+                            },
+                            {
+                                key: 'SPX_METRICS',
+                                label: 'Additional metrics',
+                                type: 'choice',
+                                choice: {
+                                    multi: true,
+                                    values: metrics
+                                        .filter(e => e.key != 'wt' && e.key != 'zm')
+                                        .map(e => ({
+                                            key: e.key,
+                                            label: e.name,
+                                        }))
+                                    ,
+                                },
+                                defaultValue: 'wt,zm',
+                                description: 'List of available metrics to collect in addition to Wall Time and Zend Engine Memory. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
+                            },
+                        ];
 
-                    switch (parameter.type) {
-                        case 'switch':
+                        let $fieldSet = $($('#config > fieldset')[0]);
+                        $.each(parameters, (_, parameter) => {
                             $fieldSet.append(
-                                '<input id="'+ parameter.key + '" type="checkbox">'
+                                '<label for="' + parameter.key + '">'
+                                    + parameter.label + '</label>'
                             );
 
-                            break;
+                            switch (parameter.type) {
+                                case 'switch':
+                                    $fieldSet.append(
+                                        '<input id="'+ parameter.key + '" type="checkbox">'
+                                    );
 
-                        case 'choice':
-                            let size = Math.max(5, parseInt(parameter.choice.values.length * 0.7));
-                            let html =
-                                '<select id="'+ parameter.key + '" '
-                                    + (
-                                        parameter.choice.multi
-                                            ? 'multiple size="' + size + '"'
-                                            : ''
-                                    ) + '>'
-                            ;
+                                    break;
 
-                            $.each(parameter.choice.values, (_, e) => {
-                                html += '<option value="' + e.key + '">' + e.label + '</option>';
-                            });
+                                case 'choice':
+                                    let size = Math.max(5, parseInt(parameter.choice.values.length * 0.7));
+                                    let html =
+                                        '<select id="'+ parameter.key + '" '
+                                            + (
+                                                parameter.choice.multi
+                                                    ? 'multiple size="' + size + '"'
+                                                    : ''
+                                            ) + '>'
+                                    ;
 
-                            html += '</select>';
-                            $fieldSet.append(html);
+                                    $.each(parameter.choice.values, (_, e) => {
+                                        html += '<option value="' + e.key + '">' + e.label + '</option>';
+                                    });
 
-                            break;
-                    }
+                                    html += '</select>';
+                                    $fieldSet.append(html);
 
-                    $fieldSet.append('<em>' + parameter.description + '</em>');
+                                    break;
+                            }
 
-                    $fieldSet.append('<br>');
-                });
+                            $fieldSet.append('<em>' + parameter.description + '</em>');
 
-                $.each(parameters, (_, parameter) => {
-                    let value = getCookieVar(parameter.key) || parameter.defaultValue;
-                    switch (parameter.type) {
-                        case 'switch':
-                            $('#' + parameter.key).prop('checked', value != '0');
+                            $fieldSet.append('<br>');
+                        });
 
-                            break;
+                        $.each(parameters, (_, parameter) => {
+                            let value = getCookieVar(parameter.key) || parameter.defaultValue;
+                            switch (parameter.type) {
+                                case 'switch':
+                                    $('#' + parameter.key).prop('checked', value != '0');
 
-                        case 'choice':
-                            $('#' + parameter.key + ' > option').each((_, e) => {
-                                $(e).prop('selected', false);
-                            });
+                                    break;
 
-                            $.each(value.split(','), (_, e) => {
-                                $('#' + parameter.key + ' option[value="' + e + '"]').prop('selected', true);
-                            });
+                                case 'choice':
+                                    $('#' + parameter.key + ' > option').each((_, e) => {
+                                        $(e).prop('selected', false);
+                                    });
 
-                            break;
-                    }
-                });
+                                    $.each(value.split(','), (_, e) => {
+                                        $('#' + parameter.key + ' option[value="' + e + '"]').prop('selected', true);
+                                    });
 
-                $('#config').on('click blur change', () => {
-                    $.each(parameters, (_, parameter) => {
-                        let value = null;
+                                    break;
+                            }
+                        });
 
-                        switch (parameter.type) {
-                            case 'switch':
-                                value = $('#' + parameter.key).is(':checked') ? '1' : '0';
+                        $('#config').on('click blur change', () => {
+                            $.each(parameters, (_, parameter) => {
+                                let value = null;
 
-                                break;
+                                switch (parameter.type) {
+                                    case 'switch':
+                                        value = $('#' + parameter.key).is(':checked') ? '1' : '0';
 
-                            case 'choice':
-                                value = $('#' + parameter.key).val();
-                                if (value.constructor === Array) {
-                                    value = value.join(',');
+                                        break;
+
+                                    case 'choice':
+                                        value = $('#' + parameter.key).val();
+                                        if (value.constructor === Array) {
+                                            value = value.join(',');
+                                        }
+
+                                        break;
                                 }
 
-                                break;
-                        }
+                                setCookieVar(parameter.key, value);
+                            });
+                        });
 
-                        setCookieVar(parameter.key, value);
-                    });
-                });
-
-                $.ajax({
-                    url: 'data/reports/metadata',
-                    success: data => {
+                        return fetch('data/reports/metadata', {credentials: "same-origin"});
+                    })
+                    .then(response => response.json())
+                    .then(data => {
                         makeDataTable(
                             'reports',
                             {
@@ -267,8 +270,8 @@
                             },
                             data.results
                         );
-                    }
-                })
+                    })
+                ;
             });
         </script>
     </body>
