@@ -1,3 +1,7 @@
+html {
+    height: 100%;
+}
+
 body {
     background: #023;
     background: -webkit-linear-gradient(#023, #000);
@@ -10,6 +14,7 @@ body {
     font-family: monospace;
     margin: 2px;
     padding: 0;
+    height: 100%;
 }
 
 * {
@@ -120,15 +125,6 @@ table.data_table td > a {
 #timeline:active {
     cursor: -webkit-grabbing;
     cursor:-moz-grabbing;
-}
-
-table.layout {
-    border-spacing: 0;
-    width: 100%;
-}
-
-table.layout td {
-    padding: 0;
 }
 
 .widget {
