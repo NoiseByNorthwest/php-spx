@@ -83,6 +83,7 @@ function renderSVGMultiLineText(viewPort, lines) {
         y: y,
         'font-size': 12,
         fill: '#fff',
+        'pointer-events': 'none',
     });
 
     viewPort.appendChild(text);
@@ -730,6 +731,7 @@ export class TimeLine extends SVGWidget {
                 width: this.infoViewPort.width,
                 height: this.infoViewPort.height,
                 'fill-opacity': '0.5',
+                'pointer-events': 'none',
             }));
 
             const call = this.profileData.getCall(callIdx);
@@ -844,6 +846,7 @@ export class TimeLine extends SVGWidget {
             width: overlayViewPort.width,
             height: overlayViewPort.height,
             'fill-opacity': '0.5',
+            'pointer-events': 'none',
         }));
 
         renderSVGTimeGrid(
@@ -1034,6 +1037,7 @@ export class FlameGraph extends SVGWidget {
                 width: infoViewPort.width,
                 height: infoViewPort.height,
                 'fill-opacity': '0.5',
+                'pointer-events': 'none',
             }));
 
             const cgNode = renderedCgNodes[cgNodeIdx];
