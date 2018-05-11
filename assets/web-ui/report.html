@@ -16,27 +16,21 @@
         </div>
     </div>
 
-    <table class="layout"><tr>
-        <td style="width: 10%; min-width: 100px;">
-            <div id="metric-selector" class="widget" style="width: 100%; height: 24px">
+    <div style="display: flex; flex-direction: column; height: 100%">
+        <div style="flex: 0 0 24px; display: flex; flex-direction: row;">
+            <div id="metric-selector" class="widget" style="flex: 0 0 100px;">
                 <select>
                 </select>
             </div>
-        </td><td>
-            <div id="color-scale" class="widget" style="width: 100%; height: 24px"></div>
-        </td>
-    </tr></table>
-
-    <div id="overview" class="widget visualization" style="width: 100%; height: 120px"></div>
-    <div id="timeline" class="widget visualization" style="width: 100%; height: 400px"></div>
-
-    <table class="layout"><tr>
-        <td style="width: 60%; min-width: 600px;">
-            <div id="flatprofile" class="widget" style="height: 500px"></div>
-        </td><td>
-            <div id="flamegraph" class="widget visualization" style="width: 100%; height: 500px"></div>
-        </td>
-    </tr></table>
+            <div id="color-scale" class="widget" style="flex: 1 0 300px;"></div>
+        </div>
+        <div id="overview" class="widget visualization" style="flex: 0 0 80px"></div>
+        <div id="timeline" class="widget visualization" style="flex: 1 0 200px"></div>
+        <div style="flex: 1 0 100px; display: flex; flex-direction: row;">
+            <div id="flatprofile" class="widget" style="flex: 4 0 300px;"></div>
+            <div id="flamegraph" class="widget visualization" style="flex: 3 0 100px;"></div>
+        </div>
+    </div>
 
     <script
         src="https://code.jquery.com/jquery-3.2.1.min.js"
