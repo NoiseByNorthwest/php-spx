@@ -10,6 +10,9 @@ typedef enum {
 
     SPX_METRIC_ZE_MEMORY,
     SPX_METRIC_ZE_ROOT_BUFFER,
+    SPX_METRIC_ZE_INCLUDED_FILE_COUNT,
+    SPX_METRIC_ZE_CLASS_COUNT,
+    SPX_METRIC_ZE_FUNCTION_COUNT,
     SPX_METRIC_ZE_OBJECT_COUNT,
     SPX_METRIC_ZE_ERROR_COUNT,
 
@@ -31,6 +34,7 @@ do {                                             \
 
 typedef struct {
     const char * key;
+    const char * short_name;
     const char * name;
     spx_fmt_value_type_t type;
     int releasable;

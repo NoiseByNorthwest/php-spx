@@ -164,7 +164,7 @@ static void print_header(spx_output_stream_t * output, const int * enabled_metri
             continue;
         }
 
-        spx_fmt_row_add_tcell(fmt_row, 3, spx_metrics_info[i].name);
+        spx_fmt_row_add_tcell(fmt_row, 3, spx_metrics_info[i].short_name);
     });
 
     spx_fmt_row_print(fmt_row, output);

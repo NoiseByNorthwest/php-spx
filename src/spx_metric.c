@@ -15,11 +15,13 @@ const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
     ARRAY_INIT_INDEX(SPX_METRIC_WALL_TIME) {
         "wt",
         "Wall Time",
+        "Wall Time",
         SPX_FMT_TIME,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_CPU_TIME) {
         "ct",
+        "CPU Time",
         "CPU Time",
         SPX_FMT_TIME,
         0,
@@ -27,47 +29,76 @@ const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
     ARRAY_INIT_INDEX(SPX_METRIC_IDLE_TIME) {
         "it",
         "Idle Time",
+        "Idle Time",
         SPX_FMT_TIME,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY) {
         "zm",
         "ZE memory",
+        "Zend Engine memory usage",
         SPX_FMT_MEMORY,
         1,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_ROOT_BUFFER) {
         "zr",
         "ZE root buffer",
+        "Zend Engine root buffer length",
         SPX_FMT_QUANTITY,
         1,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_INCLUDED_FILE_COUNT) {
+        "zif",
+        "ZE file count",
+        "Zend Engine included file count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_CLASS_COUNT) {
+        "zc",
+        "ZE class count",
+        "Zend Engine class count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_FUNCTION_COUNT) {
+        "zf",
+        "ZE func. count",
+        "Zend Engine function count",
+        SPX_FMT_QUANTITY,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_OBJECT_COUNT) {
         "zo",
         "ZE object count",
+        "Zend Engine object count",
         SPX_FMT_QUANTITY,
         1,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_ERROR_COUNT) {
         "ze",
         "ZE error count",
+        "Zend Engine error count",
         SPX_FMT_QUANTITY,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_BYTES) {
         "io",
         "I/O Bytes",
+        "I/O Bytes (reads + writes)",
         SPX_FMT_MEMORY,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_RBYTES) {
         "ior",
         "I/O Read Bytes",
+        "I/O Read Bytes",
         SPX_FMT_MEMORY,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_WBYTES) {
         "iow",
+        "I/O Written Bytes",
         "I/O Written Bytes",
         SPX_FMT_MEMORY,
         0,
@@ -219,6 +250,18 @@ static void collect_raw_values(const int * enabled_metrics, double * current_val
 
     if (enabled_metrics[SPX_METRIC_ZE_ROOT_BUFFER]) {
         current_values[SPX_METRIC_ZE_ROOT_BUFFER] = spx_php_zend_root_buffer_length();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_INCLUDED_FILE_COUNT]) {
+        current_values[SPX_METRIC_ZE_INCLUDED_FILE_COUNT] = spx_php_zend_included_file_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_CLASS_COUNT]) {
+        current_values[SPX_METRIC_ZE_CLASS_COUNT] = spx_php_zend_class_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_FUNCTION_COUNT]) {
+        current_values[SPX_METRIC_ZE_FUNCTION_COUNT] = spx_php_zend_function_count();
     }
 
     if (enabled_metrics[SPX_METRIC_ZE_OBJECT_COUNT]) {

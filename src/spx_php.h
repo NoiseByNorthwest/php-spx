@@ -22,6 +22,9 @@ char * spx_php_build_command_line(void);
 
 size_t spx_php_zend_memory_usage(void);
 size_t spx_php_zend_root_buffer_length(void);
+size_t spx_php_zend_included_file_count(void);
+size_t spx_php_zend_class_count(void);
+size_t spx_php_zend_function_count(void);
 size_t spx_php_zend_object_count(void);
 size_t spx_php_zend_error_count(void);
 

@@ -648,13 +648,10 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
             }
 
             spx_php_output_direct_print("{");
-            spx_php_output_direct_print("\"key\": \"");
-            spx_php_output_direct_print(spx_metrics_info[i].key);
-            spx_php_output_direct_print("\",");
 
-            spx_php_output_direct_print("\"name\": \"");
-            spx_php_output_direct_print(spx_metrics_info[i].name);
-            spx_php_output_direct_print("\",");
+            spx_php_output_direct_printf("\"key\": \"%s\",", spx_metrics_info[i].key);
+            spx_php_output_direct_printf("\"short_name\": \"%s\",", spx_metrics_info[i].short_name);
+            spx_php_output_direct_printf("\"name\": \"%s\",", spx_metrics_info[i].name);
 
             spx_php_output_direct_print("\"type\": \"");
             switch (spx_metrics_info[i].type) {

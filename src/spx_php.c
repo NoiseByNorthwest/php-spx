@@ -98,6 +98,7 @@ static void hook_zend_error_cb(
 );
 
 static HashTable * get_global_array(const char * name);
+static size_t get_array_size(HashTable * ht);
 
 int spx_php_is_cli_sapi(void)
 {
@@ -324,6 +325,21 @@ size_t spx_php_zend_root_buffer_length(void)
     }
 
     return length;
+}
+
+size_t spx_php_zend_included_file_count(void)
+{
+    return get_array_size(&EG(included_files));
+}
+
+size_t spx_php_zend_class_count(void)
+{
+    return get_array_size(EG(class_table));
+}
+
+size_t spx_php_zend_function_count(void)
+{
+    return get_array_size(EG(function_table));
 }
 
 size_t spx_php_zend_object_count(void)
@@ -656,5 +672,14 @@ static HashTable * get_global_array(const char * name)
     }
 
     return Z_ARRVAL_PP(zv_array);
+#endif
+}
+
+static size_t get_array_size(HashTable * ht)
+{
+#if ZEND_MODULE_API_NO >= 20151012
+    return (size_t) zend_array_count(ht);
+#else
+    return (size_t) zend_hash_num_elements(ht);
 #endif
 }
