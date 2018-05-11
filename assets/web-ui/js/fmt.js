@@ -22,15 +22,15 @@ export function date(d) {
 }
 
 export function quantity(n) {
-    if (n > 1000 * 1000 * 1000) {
+    if (n >= 1000 * 1000 * 1000) {
         return round(n / (1000 * 1000 * 1000), 2).toFixed(2) + 'G';
     }
 
-    if (n > 1000 * 1000) {
+    if (n >= 1000 * 1000) {
         return round(n / (1000 * 1000), 2).toFixed(2) + 'M';
     }
 
-    if (n > 1000) {
+    if (n >= 1000) {
         return round(n / 1000, 2).toFixed(2) + 'K';
     }
 
@@ -42,15 +42,15 @@ export function pct(n) {
 }
 
 export function time(n) {
-    if (n > 1000 * 1000 * 1000) {
+    if (n >= 1000 * 1000 * 1000) {
         return round(n / (1000 * 1000 * 1000), 2).toFixed(2) + 's';
     }
 
-    if (n > 1000 * 1000) {
+    if (n >= 1000 * 1000) {
         return round(n / (1000 * 1000), 2).toFixed(2) + 'ms';
     }
 
-    if (n > 1000) {
+    if (n >= 1000) {
         return round(n / (1000), 2).toFixed(2) + 'us';
     }
 
@@ -60,15 +60,15 @@ export function time(n) {
 export function memory(n) {
     const abs = Math.abs(n);
 
-    if (abs > (1 << 30)) {
+    if (abs >= (1 << 30)) {
         return round(n / (1 << 30), 2).toFixed(2) + 'GB';
     }
 
-    if (abs > (1 << 20)) {
+    if (abs >= (1 << 20)) {
         return round(n / (1 << 20), 2).toFixed(2) + 'MB';
     }
 
-    if (abs > (1 << 10)) {
+    if (abs >= (1 << 10)) {
         return round(n / (1 << 10), 2).toFixed(2) + 'KB';
     }
 
