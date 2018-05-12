@@ -45,7 +45,7 @@ form#config input {
 form#config select {
     margin-bottom: 10px;
     background-color: #000;
-    width: 200px;
+    width: 250px;
 }
 
 table.data_table {
