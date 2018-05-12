@@ -30,7 +30,12 @@ static struct {
         TSRMLS_DC
     );
 
+    zend_op_array * (*zend_compile_file)(zend_file_handle * file_handle, int type TSRMLS_DC);
+    zend_op_array * (*zend_compile_string)(zval * source_string, char * filename TSRMLS_DC);
+
+#if ZEND_MODULE_API_NO >= 20151012
     int (*gc_collect_cycles)(void);
+#endif
 
     void (*zend_error_cb) (
         int type,
@@ -42,7 +47,10 @@ static struct {
 } ze_hook = {
     NULL,
     NULL, NULL,
+    NULL, NULL,
+#if ZEND_MODULE_API_NO >= 20151012
     NULL,
+#endif
     NULL
 };
 
@@ -57,7 +65,8 @@ static SPX_THREAD_TLS struct {
     int execution_disabled;
 
     size_t error_count;
-    int gc_active;
+
+    const char * active_function_name;
 
     struct {
         void (*handler) (INTERNAL_FUNCTION_PARAMETERS);
@@ -85,6 +94,9 @@ static void hook_execute_internal(
     TSRMLS_DC
 );
 
+static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC);
+static zend_op_array * hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC);
+
 #if ZEND_MODULE_API_NO >= 20151012
 static int hook_gc_collect_cycles(void);
 #endif
@@ -109,10 +121,10 @@ void spx_php_current_function(spx_php_function_t * function)
 {
     TSRMLS_FETCH();
 
-    if (context.gc_active) {
+    if (context.active_function_name) {
         function->class_name = "";
         function->call_type = "";
-        function->func_name = "gc_collect_cycles";
+        function->func_name = context.active_function_name;
     } else {
         function->file_name = zend_get_executed_filename(TSRMLS_C);
         function->line = zend_get_executed_lineno(TSRMLS_C);
@@ -398,6 +410,12 @@ void spx_php_hooks_init(void)
     ze_hook.execute_internal = execute_internal;
     zend_execute_internal = hook_execute_internal;
 
+    ze_hook.zend_compile_file = zend_compile_file;
+    zend_compile_file = hook_zend_compile_file;
+
+    ze_hook.zend_compile_string = zend_compile_string;
+    zend_compile_string = hook_zend_compile_string;
+
 #if ZEND_MODULE_API_NO >= 20151012
     ze_hook.gc_collect_cycles = gc_collect_cycles;
     gc_collect_cycles = hook_gc_collect_cycles;
@@ -424,6 +442,16 @@ void spx_php_hooks_shutdown(void)
         ze_hook.execute_internal = NULL;
     }
 
+    if (ze_hook.zend_compile_file) {
+        zend_compile_file = ze_hook.zend_compile_file;
+        ze_hook.zend_compile_file = NULL;
+    }
+
+    if (ze_hook.zend_compile_string) {
+        zend_compile_string = ze_hook.zend_compile_string;
+        ze_hook.zend_compile_string = NULL;
+    }
+
 #if ZEND_MODULE_API_NO >= 20151012
     if (ze_hook.gc_collect_cycles) {
         gc_collect_cycles = ze_hook.gc_collect_cycles;
@@ -446,7 +474,6 @@ void spx_php_execution_init(void)
 
     context.execution_disabled = 0;
     context.error_count = 0;
-    context.gc_active = 0;
 }
 
 void spx_php_execution_shutdown(void)
@@ -619,6 +646,44 @@ static void hook_execute_internal(
     }
 }
 
+static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC)
+{
+    context.active_function_name = "::zend_compile_file";
+
+    if (context.ex_hook.internal.before) {
+        context.ex_hook.internal.before();
+    }
+
+    zend_op_array * ret = ze_hook.zend_compile_file(file_handle, type TSRMLS_CC);
+
+    if (context.ex_hook.internal.after) {
+        context.ex_hook.internal.after();
+    }
+
+    context.active_function_name = NULL;
+
+    return ret;
+}
+
+static zend_op_array * hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC)
+{
+    context.active_function_name = "::zend_compile_string";
+
+    if (context.ex_hook.internal.before) {
+        context.ex_hook.internal.before();
+    }
+
+    zend_op_array * ret = ze_hook.zend_compile_string(source_string, filename TSRMLS_CC);
+
+    if (context.ex_hook.internal.after) {
+        context.ex_hook.internal.after();
+    }
+
+    context.active_function_name = NULL;
+
+    return ret;
+}
+
 #if ZEND_MODULE_API_NO >= 20151012
 static int hook_gc_collect_cycles(void)
 {
@@ -626,19 +691,19 @@ static int hook_gc_collect_cycles(void)
         return 0;
     }
 
-    context.gc_active = 1;
+    context.active_function_name = "::gc_collect_cycles";
 
-    if (context.ex_hook.user.before) {
-        context.ex_hook.user.before();
+    if (context.ex_hook.internal.before) {
+        context.ex_hook.internal.before();
     }
 
     const int count = ze_hook.gc_collect_cycles();
 
-    if (context.ex_hook.user.after) {
-        context.ex_hook.user.after();
+    if (context.ex_hook.internal.after) {
+        context.ex_hook.internal.after();
     }
 
-    context.gc_active = 0;
+    context.active_function_name = NULL;
 
     return count;
 }

@@ -12,6 +12,7 @@ if (
 --ENV--
 return <<<END
 SPX_ENABLED=1
+SPX_BUILTINS=1
 SPX_METRICS=zgr,zgb,zgc
 SPX_FP_FOCUS=zgb
 END;
@@ -37,7 +38,7 @@ for ($i = 0; $i < 50 * 1000; $i++) {
 Global stats:
 
   Called functions    :    50.0K
-  Distinct functions  :        3
+  Distinct functions  :        4
 
   ZE GC runs          :       10
   ZE GC root buffer   :    10.0K
@@ -49,5 +50,6 @@ Flat profile:
  Inc.     | Exc.     | Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------+----------+----------
        10 |        0 |        0 |   100.0K |   100.0K |        0 |    50.0K | f
+        0 |        0 |        0 |        0 |        0 |        0 |        1 | ::zend_compile_file
        10 |        0 |        0 |        0 |   100.0K |        0 |        1 | %s/spx_%s.php
-       10 |       10 |  -100000 |  -100000 |   100.0K |   100.0K |       10 | gc_collect_cycles
+       10 |       10 |  -100000 |  -100000 |   100.0K |   100.0K |       10 | ::gc_collect_cycles
