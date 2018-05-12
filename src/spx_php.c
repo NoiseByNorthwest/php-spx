@@ -329,16 +329,22 @@ size_t spx_php_zend_root_buffer_length(void)
 
 size_t spx_php_zend_included_file_count(void)
 {
+    TSRMLS_FETCH();
+
     return get_array_size(&EG(included_files));
 }
 
 size_t spx_php_zend_class_count(void)
 {
+    TSRMLS_FETCH();
+
     return get_array_size(EG(class_table));
 }
 
 size_t spx_php_zend_function_count(void)
 {
+    TSRMLS_FETCH();
+
     return get_array_size(EG(function_table));
 }
 
