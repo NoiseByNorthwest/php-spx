@@ -197,7 +197,7 @@ Here is the list below:
 | Name  | Default  | Description  |
 | ----- | -------- | ------------ |
 | _SPX_ENABLED_ | `0` | Whether to enable SPX profiler (i.e. triggering profiling). When disabled there is no performance impact on your application. |
-| _SPX_BUILTINS_ | `0` | Whether to profile internal functions. |
+| _SPX_BUILTINS_ | `0` | Whether to profile internal functions, script compilations and GC runs. |
 | _SPX_DEPTH_ | `0` | The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls). 0 (default value) means unlimited. |
 | _SPX_METRICS_ | `wt,zm` | Comma separated list of [available metric keys](#available-metrics) to collect. All report types take advantage of multi-metric profiling. |
 | _SPX_REPORT_ | `fp` | Selected [report key](#available-report-types). |
