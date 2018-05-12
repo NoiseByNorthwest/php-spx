@@ -12,7 +12,7 @@ It differentiates itself from other similar extensions as being:
 * very simple to use: just set an environment variable (command line) or switch on a radio button (web page) to profile your script. Thus, you are free of:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
-* [multi metrics](#available-metrics) capable: 13 currently supported (various time metrics, memory, included files, objects in use, I/O...).
+* [multi metrics](#available-metrics) capable: 15 currently supported (various time metrics, memory, included files, objects in use, I/O...).
 * able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
@@ -165,7 +165,9 @@ Here is the list of available metrics to collect. By default only _Wall Time_ an
 | _ct_ | CPU Time | The time spent while running on CPU. |
 | _it_ | Idle Time | The time spent off-CPU, that means waiting for CPU, I/O completion, a lock acquisition... or explicitly sleeping. |
 | _zm_ | Zend Engine memory | Zend Engine memory usage. Equivalent to `memory_get_usage(false)`. |
-| _zr_ | Zend Engine root buffer length | Root buffer length, see explanation [here](http://php.net/manual/en/features.gc.collecting-cycles.php). It could be helpful to track pressure on garbage collector. |
+| _zgr_ | Zend Engine GC run count | Number of times the GC (cycle collector) have been triggered (either manually or automatically). |
+| _zgb_ | Zend Engine GC root buffer length | Root buffer length, see explanation [here](http://php.net/manual/en/features.gc.collecting-cycles.php). It could be helpful to track pressure on garbage collector. |
+| _zgc_ | Zend Engine GC collected cycle count | Total number of collected cycles through all GC runs. |
 | _zif_ | Zend Engine included file count | Number of included files. |
 | _zc_ | Zend Engine class count | Number of classes. |
 | _zf_ | Zend Engine function count | Number of functions. |

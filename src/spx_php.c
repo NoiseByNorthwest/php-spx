@@ -312,7 +312,14 @@ size_t spx_php_zend_memory_usage(void)
     return zend_memory_usage(0 TSRMLS_CC);
 }
 
-size_t spx_php_zend_root_buffer_length(void)
+size_t spx_php_zend_gc_run_count(void)
+{
+    TSRMLS_FETCH();
+
+    return GC_G(gc_runs);
+}
+
+size_t spx_php_zend_gc_root_buffer_length(void)
 {
     TSRMLS_FETCH();
 
@@ -325,6 +332,13 @@ size_t spx_php_zend_root_buffer_length(void)
     }
 
     return length;
+}
+
+size_t spx_php_zend_gc_collected_count(void)
+{
+    TSRMLS_FETCH();
+
+    return GC_G(collected);
 }
 
 size_t spx_php_zend_included_file_count(void)
