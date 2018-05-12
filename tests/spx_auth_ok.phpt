@@ -22,7 +22,9 @@ echo 'Normal output';
 ,{"key": "ct","short_name": "CPU Time","name": "CPU Time","type": "time","releasable": 0}
 ,{"key": "it","short_name": "Idle Time","name": "Idle Time","type": "time","releasable": 0}
 ,{"key": "zm","short_name": "ZE memory","name": "Zend Engine memory usage","type": "memory","releasable": 1}
-,{"key": "zr","short_name": "ZE root buffer","name": "Zend Engine root buffer length","type": "quantity","releasable": 1}
+,{"key": "zgr","short_name": "ZE GC runs","name": "Zend Engine GC run count","type": "quantity","releasable": 0}
+,{"key": "zgb","short_name": "ZE GC root buffer","name": "Zend Engine GC root buffer length","type": "quantity","releasable": 1}
+,{"key": "zgc","short_name": "ZE GC collected","name": "Zend Engine GC collected cycle count","type": "quantity","releasable": 0}
 ,{"key": "zif","short_name": "ZE file count","name": "Zend Engine included file count","type": "quantity","releasable": 0}
 ,{"key": "zc","short_name": "ZE class count","name": "Zend Engine class count","type": "quantity","releasable": 0}
 ,{"key": "zf","short_name": "ZE func. count","name": "Zend Engine function count","type": "quantity","releasable": 0}

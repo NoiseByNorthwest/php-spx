@@ -40,12 +40,26 @@ const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
         SPX_FMT_MEMORY,
         1,
     },
-    ARRAY_INIT_INDEX(SPX_METRIC_ZE_ROOT_BUFFER) {
-        "zr",
-        "ZE root buffer",
-        "Zend Engine root buffer length",
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_GC_RUNS) {
+        "zgr",
+        "ZE GC runs",
+        "Zend Engine GC run count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_GC_ROOT_BUFFER) {
+        "zgb",
+        "ZE GC root buffer",
+        "Zend Engine GC root buffer length",
         SPX_FMT_QUANTITY,
         1,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_GC_COLLECTED) {
+        "zgc",
+        "ZE GC collected",
+        "Zend Engine GC collected cycle count",
+        SPX_FMT_QUANTITY,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_INCLUDED_FILE_COUNT) {
         "zif",
@@ -248,8 +262,16 @@ static void collect_raw_values(const int * enabled_metrics, double * current_val
         current_values[SPX_METRIC_ZE_MEMORY] = spx_php_zend_memory_usage();
     }
 
-    if (enabled_metrics[SPX_METRIC_ZE_ROOT_BUFFER]) {
-        current_values[SPX_METRIC_ZE_ROOT_BUFFER] = spx_php_zend_root_buffer_length();
+    if (enabled_metrics[SPX_METRIC_ZE_GC_RUNS]) {
+        current_values[SPX_METRIC_ZE_GC_RUNS] = spx_php_zend_gc_run_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_GC_ROOT_BUFFER]) {
+        current_values[SPX_METRIC_ZE_GC_ROOT_BUFFER] = spx_php_zend_gc_root_buffer_length();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_GC_COLLECTED]) {
+        current_values[SPX_METRIC_ZE_GC_COLLECTED] = spx_php_zend_gc_collected_count();
     }
 
     if (enabled_metrics[SPX_METRIC_ZE_INCLUDED_FILE_COUNT]) {
