@@ -38,7 +38,7 @@ for ($i = 0; $i < 50 * 1000; $i++) {
 Global stats:
 
   Called functions    :    50.0K
-  Distinct functions  :        4
+  Distinct functions  :        5
 
   ZE GC runs          :       10
   ZE GC root buffer   :    10.0K
@@ -52,4 +52,5 @@ Flat profile:
        10 |        0 |        0 |   100.0K |   100.0K |        0 |    50.0K | f
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::zend_compile_file
        10 |        0 |        0 |        0 |   100.0K |        0 |        1 | %s/spx_%s.php
+        0 |        0 |        0 |        0 |        0 |        0 |        1 | ::php_request_shutdown
        10 |       10 |  -100000 |  -100000 |   100.0K |   100.0K |       10 | ::gc_collect_cycles

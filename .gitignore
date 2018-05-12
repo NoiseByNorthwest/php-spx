@@ -16,6 +16,7 @@ config.status
 config.sub
 configure
 configure.in
+configure.ac
 install-sh
 libtool
 ltmain.sh
