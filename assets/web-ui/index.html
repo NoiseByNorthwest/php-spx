@@ -72,18 +72,16 @@
                                 type: 'choice',
                                 choice: {
                                     multi: false,
-                                    values: [
-                                        {key: '0',    label: 'Unlimited'},
-                                        {key: '1',    label: '1'},
-                                        {key: '2',    label: '2'},
-                                        {key: '3',    label: '3'},
-                                        {key: '4',    label: '4'},
-                                        {key: '5',    label: '5'},
-                                        {key: '6',    label: '6'},
-                                        {key: '7',    label: '7'},
-                                        {key: '8',    label: '8'},
-                                        {key: '9',    label: '9'},
-                                    ],
+                                    values: Array
+                                        .from(Array(10).keys(), e => e != 0 ? e : Number.POSITIVE_INFINITY)
+                                        .sort()
+                                        .reverse()
+                                        .map(e => e == Number.POSITIVE_INFINITY ? 0 : e)
+                                        .map(e => ({
+                                            key: '' + e,
+                                            label: '' + (e == 0 ? 'Unlimited' : e),
+                                        }))
+                                    ,
                                 },
                                 defaultValue: '0',
                                 description: 'The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls).',
