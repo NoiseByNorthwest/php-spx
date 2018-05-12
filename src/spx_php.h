@@ -31,6 +31,7 @@ size_t spx_php_zend_object_count(void);
 size_t spx_php_zend_error_count(void);
 
 void spx_php_hooks_init(void);
+void spx_php_hooks_finalize(void);
 void spx_php_hooks_shutdown(void);
 
 void spx_php_execution_init(void);

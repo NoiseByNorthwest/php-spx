@@ -414,6 +414,8 @@ error:
 
 static void profiling_handler_shutdown(void)
 {
+    spx_php_hooks_finalize();
+
     if (context.profiling_handler.profiler) {
         spx_profiler_finalize(context.profiling_handler.profiler);
         spx_profiler_destroy(context.profiling_handler.profiler);

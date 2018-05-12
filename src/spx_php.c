@@ -64,6 +64,9 @@ static SPX_THREAD_TLS struct {
 
     int execution_disabled;
 
+    size_t user_depth;
+    int request_shutdown;
+
     size_t error_count;
 
     const char * active_function_name;
@@ -425,6 +428,19 @@ void spx_php_hooks_init(void)
     zend_error_cb = hook_zend_error_cb;
 }
 
+void spx_php_hooks_finalize(void)
+{
+    if (!context.request_shutdown) {
+        return;
+    }
+
+    if (context.ex_hook.internal.after) {
+        context.active_function_name = "::php_request_shutdown";
+        context.ex_hook.internal.after();
+        context.active_function_name = NULL;
+    }
+}
+
 void spx_php_hooks_shutdown(void)
 {
     if (ze_hook.zend_write) {
@@ -473,6 +489,8 @@ void spx_php_execution_init(void)
     context.ex_hook.internal.after = NULL;
 
     context.execution_disabled = 0;
+    context.user_depth = 0;
+    context.request_shutdown = 0;
     context.error_count = 0;
 }
 
@@ -601,6 +619,8 @@ static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
         return;
     }
 
+    context.user_depth++;
+
     if (context.ex_hook.user.before) {
         context.ex_hook.user.before();
     }
@@ -609,6 +629,18 @@ static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
 
     if (context.ex_hook.user.after) {
         context.ex_hook.user.after();
+    }
+
+    context.user_depth--;
+
+    if (context.user_depth == 0 && !context.request_shutdown) {
+        context.request_shutdown = 1;
+
+        if (context.ex_hook.internal.before) {
+            context.active_function_name = "::php_request_shutdown";
+            context.ex_hook.internal.before();
+            context.active_function_name = NULL;
+        }
     }
 }
 
