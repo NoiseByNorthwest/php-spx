@@ -18,14 +18,17 @@ echo 'Normal output';
 ?>
 --EXPECT--
 {"results": [
-{"key": "wt","name": "Wall Time","type": "time","releasable": 0}
-,{"key": "ct","name": "CPU Time","type": "time","releasable": 0}
-,{"key": "it","name": "Idle Time","type": "time","releasable": 0}
-,{"key": "zm","name": "ZE memory","type": "memory","releasable": 1}
-,{"key": "zr","name": "ZE root buffer","type": "quantity","releasable": 1}
-,{"key": "zo","name": "ZE object count","type": "quantity","releasable": 1}
-,{"key": "ze","name": "ZE error count","type": "quantity","releasable": 0}
-,{"key": "io","name": "I/O Bytes","type": "memory","releasable": 0}
-,{"key": "ior","name": "I/O Read Bytes","type": "memory","releasable": 0}
-,{"key": "iow","name": "I/O Written Bytes","type": "memory","releasable": 0}
+{"key": "wt","short_name": "Wall Time","name": "Wall Time","type": "time","releasable": 0}
+,{"key": "ct","short_name": "CPU Time","name": "CPU Time","type": "time","releasable": 0}
+,{"key": "it","short_name": "Idle Time","name": "Idle Time","type": "time","releasable": 0}
+,{"key": "zm","short_name": "ZE memory","name": "Zend Engine memory usage","type": "memory","releasable": 1}
+,{"key": "zr","short_name": "ZE root buffer","name": "Zend Engine root buffer length","type": "quantity","releasable": 1}
+,{"key": "zif","short_name": "ZE file count","name": "Zend Engine included file count","type": "quantity","releasable": 0}
+,{"key": "zc","short_name": "ZE class count","name": "Zend Engine class count","type": "quantity","releasable": 0}
+,{"key": "zf","short_name": "ZE func. count","name": "Zend Engine function count","type": "quantity","releasable": 0}
+,{"key": "zo","short_name": "ZE object count","name": "Zend Engine object count","type": "quantity","releasable": 1}
+,{"key": "ze","short_name": "ZE error count","name": "Zend Engine error count","type": "quantity","releasable": 0}
+,{"key": "io","short_name": "I/O Bytes","name": "I/O Bytes (reads + writes)","type": "memory","releasable": 0}
+,{"key": "ior","short_name": "I/O Read Bytes","name": "I/O Read Bytes","type": "memory","releasable": 0}
+,{"key": "iow","short_name": "I/O Written Bytes","name": "I/O Written Bytes","type": "memory","releasable": 0}
 ]}
