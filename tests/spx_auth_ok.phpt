@@ -26,8 +26,10 @@ echo 'Normal output';
 ,{"key": "zgb","short_name": "ZE GC root buffer","name": "Zend Engine GC root buffer length","type": "quantity","releasable": 1}
 ,{"key": "zgc","short_name": "ZE GC collected","name": "Zend Engine GC collected cycle count","type": "quantity","releasable": 0}
 ,{"key": "zif","short_name": "ZE file count","name": "Zend Engine included file count","type": "quantity","releasable": 0}
-,{"key": "zc","short_name": "ZE class count","name": "Zend Engine class count","type": "quantity","releasable": 0}
-,{"key": "zf","short_name": "ZE func. count","name": "Zend Engine function count","type": "quantity","releasable": 0}
+,{"key": "zil","short_name": "ZE line count","name": "Zend Engine included line count","type": "quantity","releasable": 0}
+,{"key": "zuc","short_name": "ZE class count","name": "Zend Engine user class count","type": "quantity","releasable": 0}
+,{"key": "zuf","short_name": "ZE func. count","name": "Zend Engine user function count","type": "quantity","releasable": 0}
+,{"key": "zuo","short_name": "ZE opcodes count","name": "Zend Engine user opcode count","type": "quantity","releasable": 0}
 ,{"key": "zo","short_name": "ZE object count","name": "Zend Engine object count","type": "quantity","releasable": 1}
 ,{"key": "ze","short_name": "ZE error count","name": "Zend Engine error count","type": "quantity","releasable": 0}
 ,{"key": "io","short_name": "I/O Bytes","name": "I/O Bytes (reads + writes)","type": "memory","releasable": 0}

@@ -12,7 +12,7 @@ It differentiates itself from other similar extensions as being:
 * very simple to use: just set an environment variable (command line) or switch on a radio button (web page) to profile your script. Thus, you are free of:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
-* [multi metrics](#available-metrics) capable: 15 currently supported (various time metrics, memory, included files, objects in use, I/O...).
+* [multi metrics](#available-metrics) capable: 17 currently supported (various time metrics, memory, included files, objects in use, I/O...).
 * able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
@@ -169,8 +169,10 @@ Here is the list of available metrics to collect. By default only _Wall Time_ an
 | _zgb_ | Zend Engine GC root buffer length | Root buffer length, see explanation [here](http://php.net/manual/en/features.gc.collecting-cycles.php). It could be helpful to track pressure on garbage collector. |
 | _zgc_ | Zend Engine GC collected cycle count | Total number of collected cycles through all GC runs. |
 | _zif_ | Zend Engine included file count | Number of included files. |
-| _zc_ | Zend Engine class count | Number of classes. |
-| _zf_ | Zend Engine function count | Number of functions. |
+| _zil_ | Zend Engine included line count | Number of included lines. |
+| _zuc_ | Zend Engine user class count | Number of userland classes. |
+| _zuf_ | Zend Engine user function count | Number of userland functions (including userland class/instance methods). |
+| _zuo_ | Zend Engine user opcode count | Number of included userland opcodes (sum of all userland function/method opcodes). |
 | _zo_ | Zend Engine object count | Number of objects currently held by user code. |
 | _ze_ | Zend Engine error count | Number of raised PHP errors. |
 | _io_ | I/O (reads + writes) | Bytes read or written while performing I/O. |
