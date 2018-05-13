@@ -10,6 +10,36 @@
 #include "spx_str_builder.h"
 
 #if ZEND_MODULE_API_NO >= 20151012
+#   define ZE_HASHTABLE_FOREACH(ht, entry, block)               \
+do {                                                            \
+    zval * entry;                                               \
+    zend_hash_internal_pointer_reset(ht);                       \
+    while ((entry = zend_hash_get_current_data(ht)) != NULL) {  \
+        zend_hash_move_forward(ht);                             \
+        block                                                   \
+    }                                                           \
+} while (0)
+#else
+#   define ZE_HASHTABLE_FOREACH(ht, entry, block)    \
+do {                                                 \
+    HashPosition pos_;                               \
+    zval ** entry_p_;                                \
+    zend_hash_internal_pointer_reset_ex(ht, &pos_);  \
+    while (                                          \
+        SUCCESS == zend_hash_get_current_data_ex(    \
+            ht,                                      \
+            (void **)&entry_p_,                      \
+            &pos                                     \
+        )                                            \
+    ) {                                              \
+        zend_hash_move_forward_ex(ht, &pos_);        \
+        zval * entry = *entry_p_;                    \
+        block                                        \
+    }                                                \
+} while (0)
+#endif
+
+#if ZEND_MODULE_API_NO >= 20151012
 typedef size_t zend_write_len_t;
 #else
 typedef uint zend_write_len_t;
@@ -67,6 +97,10 @@ static SPX_THREAD_TLS struct {
     size_t user_depth;
     int request_shutdown;
 
+    size_t line_count;
+    size_t class_count;
+    size_t function_count;
+    size_t opcode_count;
     size_t error_count;
 
     const char * active_function_name;
@@ -111,6 +145,10 @@ static void hook_zend_error_cb(
     const char *format,
     va_list args
 );
+
+static size_t compute_class_count(void);
+static size_t compute_function_count(void);
+static size_t compute_function_opcode_count(void);
 
 static HashTable * get_global_array(const char * name);
 static size_t get_array_size(HashTable * ht);
@@ -251,23 +289,6 @@ char * spx_php_build_command_line(void)
     }
 
     HashTable * argv_array = Z_ARRVAL_P(argv);
-    zval * entry;
-    int i = 0;
-
-    zend_hash_internal_pointer_reset(argv_array);
-    while ((entry = zend_hash_get_current_data(argv_array)) != NULL) {
-        if (Z_TYPE_P(entry) == IS_STRING) {
-            if (i++ > 0) {
-                spx_str_builder_append_char(str_builder, ' ');
-            }
-
-            if (0 == spx_str_builder_append_str(str_builder, Z_STRVAL_P(entry))) {
-                break;
-            }
-        }
-
-        zend_hash_move_forward(argv_array);
-    }
 #else
     zval ** argv;
     if (
@@ -291,25 +312,20 @@ char * spx_php_build_command_line(void)
     }
 
     HashTable * argv_array = Z_ARRVAL_PP(argv);
-    HashPosition pos;
-    zval ** entry;
+#endif
     int i = 0;
 
-    zend_hash_internal_pointer_reset_ex(argv_array, &pos);
-    while (zend_hash_get_current_data_ex(argv_array, (void **)&entry, &pos) == SUCCESS) {
-        if (Z_TYPE_PP(entry) == IS_STRING) {
+    ZE_HASHTABLE_FOREACH(argv_array, entry, {
+        if (Z_TYPE_P(entry) == IS_STRING) {
             if (i++ > 0) {
                 spx_str_builder_append_char(str_builder, ' ');
             }
 
-            if (0 == spx_str_builder_append_str(str_builder, Z_STRVAL_PP(entry))) {
+            if (0 == spx_str_builder_append_str(str_builder, Z_STRVAL_P(entry))) {
                 break;
             }
         }
-
-        zend_hash_move_forward_ex(argv_array, &pos);
-    }
-#endif
+    });
 
     char * command_line = strdup(spx_str_builder_str(str_builder));
     spx_str_builder_destroy(str_builder);
@@ -363,18 +379,25 @@ size_t spx_php_zend_included_file_count(void)
     return get_array_size(&EG(included_files));
 }
 
+
+size_t spx_php_zend_included_line_count(void)
+{
+    return context.line_count;
+}
+
+size_t spx_php_zend_included_opcode_count(void)
+{
+    return context.opcode_count;
+}
+
 size_t spx_php_zend_class_count(void)
 {
-    TSRMLS_FETCH();
-
-    return get_array_size(EG(class_table));
+    return context.class_count;
 }
 
 size_t spx_php_zend_function_count(void)
 {
-    TSRMLS_FETCH();
-
-    return get_array_size(EG(function_table));
+    return context.function_count;
 }
 
 size_t spx_php_zend_object_count(void)
@@ -491,6 +514,10 @@ void spx_php_execution_init(void)
     context.execution_disabled = 0;
     context.user_depth = 0;
     context.request_shutdown = 0;
+    context.line_count = 0;
+    context.class_count = 0;
+    context.function_count = 0;
+    context.opcode_count = 0;
     context.error_count = 0;
 }
 
@@ -633,6 +660,9 @@ static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
 
     context.user_depth--;
 
+    /*
+     *  FIXME might not work with prepend files
+     */
     if (context.user_depth == 0 && !context.request_shutdown) {
         context.request_shutdown = 1;
 
@@ -686,7 +716,7 @@ static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, in
         context.ex_hook.internal.before();
     }
 
-    zend_op_array * ret = ze_hook.zend_compile_file(file_handle, type TSRMLS_CC);
+    zend_op_array * op_array = ze_hook.zend_compile_file(file_handle, type TSRMLS_CC);
 
     if (context.ex_hook.internal.after) {
         context.ex_hook.internal.after();
@@ -694,7 +724,14 @@ static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, in
 
     context.active_function_name = NULL;
 
-    return ret;
+    if (op_array) {
+        context.line_count += 1 + (op_array->line_end - op_array->line_start);
+        context.class_count = compute_class_count();
+        context.function_count = compute_function_count();
+        context.opcode_count = compute_function_opcode_count();
+    }
+
+    return op_array;
 }
 
 static zend_op_array * hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC)
@@ -705,7 +742,7 @@ static zend_op_array * hook_zend_compile_string(zval * source_string, char * fil
         context.ex_hook.internal.before();
     }
 
-    zend_op_array * ret = ze_hook.zend_compile_string(source_string, filename TSRMLS_CC);
+    zend_op_array * op_array = ze_hook.zend_compile_string(source_string, filename TSRMLS_CC);
 
     if (context.ex_hook.internal.after) {
         context.ex_hook.internal.after();
@@ -713,7 +750,14 @@ static zend_op_array * hook_zend_compile_string(zval * source_string, char * fil
 
     context.active_function_name = NULL;
 
-    return ret;
+    if (op_array) {
+        context.line_count += 1 + (op_array->line_end - op_array->line_start);
+        context.class_count = compute_class_count();
+        context.function_count = compute_function_count();
+        context.opcode_count = compute_function_opcode_count();
+    }
+
+    return op_array;
 }
 
 #if ZEND_MODULE_API_NO >= 20151012
@@ -750,6 +794,105 @@ static void hook_zend_error_cb(
 ) {
     context.error_count++;
     ze_hook.zend_error_cb(type, error_filename, error_lineno, format, args);
+}
+
+static size_t compute_class_count(void)
+{
+    size_t class_count = 0;
+
+    ZE_HASHTABLE_FOREACH(EG(class_table), entry, {
+        if (Z_TYPE_P(entry) != IS_PTR) {
+            continue;
+        }
+
+        zend_class_entry * ce = Z_PTR_P(entry);
+        if (ce->type != ZEND_USER_CLASS) {
+            continue;
+        }
+
+        class_count++;
+    });
+
+    return class_count;
+}
+
+static size_t compute_function_count(void)
+{
+    size_t function_count = 0;
+
+    ZE_HASHTABLE_FOREACH(EG(class_table), entry, {
+        if (Z_TYPE_P(entry) != IS_PTR) {
+            continue;
+        }
+
+        zend_class_entry * ce = Z_PTR_P(entry);
+        if (ce->type != ZEND_USER_CLASS) {
+            continue;
+        }
+
+        ZE_HASHTABLE_FOREACH(&ce->function_table, entry, {
+            if (Z_TYPE_P(entry) != IS_PTR) {
+                continue;
+            }
+
+            function_count++;
+        });
+    });
+
+    ZE_HASHTABLE_FOREACH(EG(function_table), entry, {
+        if (Z_TYPE_P(entry) != IS_PTR) {
+            continue;
+        }
+
+        zend_function * func = Z_PTR_P(entry);
+        if (func->type != ZEND_USER_FUNCTION) {
+            continue;
+        }
+
+        function_count++;
+    });
+
+    return function_count;
+}
+
+static size_t compute_function_opcode_count(void)
+{
+    size_t opcode_count = 0;
+
+    ZE_HASHTABLE_FOREACH(EG(class_table), entry, {
+        if (Z_TYPE_P(entry) != IS_PTR) {
+            continue;
+        }
+
+        zend_class_entry * ce = Z_PTR_P(entry);
+        if (ce->type != ZEND_USER_CLASS) {
+            continue;
+        }
+
+        ZE_HASHTABLE_FOREACH(&ce->function_table, entry, {
+            if (Z_TYPE_P(entry) != IS_PTR) {
+                continue;
+            }
+
+            zend_function * func = Z_PTR_P(entry);
+            opcode_count += func->op_array.last;
+        });
+    });
+
+    ZE_HASHTABLE_FOREACH(EG(function_table), entry, {
+        if (Z_TYPE_P(entry) != IS_PTR) {
+            continue;
+        }
+
+        zend_function * func = Z_PTR_P(entry);
+        if (func->type != ZEND_USER_FUNCTION) {
+            continue;
+        }
+
+        opcode_count += func->op_array.last;
+    });
+
+    return opcode_count;
 }
 
 static HashTable * get_global_array(const char * name)

@@ -25,6 +25,8 @@ size_t spx_php_zend_gc_run_count(void);
 size_t spx_php_zend_gc_root_buffer_length(void);
 size_t spx_php_zend_gc_collected_count(void);
 size_t spx_php_zend_included_file_count(void);
+size_t spx_php_zend_included_line_count(void);
+size_t spx_php_zend_included_opcode_count(void);
 size_t spx_php_zend_class_count(void);
 size_t spx_php_zend_function_count(void);
 size_t spx_php_zend_object_count(void);

@@ -68,17 +68,31 @@ const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
         SPX_FMT_QUANTITY,
         0,
     },
-    ARRAY_INIT_INDEX(SPX_METRIC_ZE_CLASS_COUNT) {
-        "zc",
-        "ZE class count",
-        "Zend Engine class count",
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_INCLUDED_LINE_COUNT) {
+        "zil",
+        "ZE line count",
+        "Zend Engine included line count",
         SPX_FMT_QUANTITY,
         0,
     },
-    ARRAY_INIT_INDEX(SPX_METRIC_ZE_FUNCTION_COUNT) {
-        "zf",
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_USER_CLASS_COUNT) {
+        "zuc",
+        "ZE class count",
+        "Zend Engine user class count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_USER_FUNCTION_COUNT) {
+        "zuf",
         "ZE func. count",
-        "Zend Engine function count",
+        "Zend Engine user function count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_USER_OPCODE_COUNT) {
+        "zuo",
+        "ZE opcodes count",
+        "Zend Engine user opcode count",
         SPX_FMT_QUANTITY,
         0,
     },
@@ -278,12 +292,20 @@ static void collect_raw_values(const int * enabled_metrics, double * current_val
         current_values[SPX_METRIC_ZE_INCLUDED_FILE_COUNT] = spx_php_zend_included_file_count();
     }
 
-    if (enabled_metrics[SPX_METRIC_ZE_CLASS_COUNT]) {
-        current_values[SPX_METRIC_ZE_CLASS_COUNT] = spx_php_zend_class_count();
+    if (enabled_metrics[SPX_METRIC_ZE_INCLUDED_LINE_COUNT]) {
+        current_values[SPX_METRIC_ZE_INCLUDED_LINE_COUNT] = spx_php_zend_included_line_count();
     }
 
-    if (enabled_metrics[SPX_METRIC_ZE_FUNCTION_COUNT]) {
-        current_values[SPX_METRIC_ZE_FUNCTION_COUNT] = spx_php_zend_function_count();
+    if (enabled_metrics[SPX_METRIC_ZE_USER_CLASS_COUNT]) {
+        current_values[SPX_METRIC_ZE_USER_CLASS_COUNT] = spx_php_zend_class_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_USER_FUNCTION_COUNT]) {
+        current_values[SPX_METRIC_ZE_USER_FUNCTION_COUNT] = spx_php_zend_function_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_USER_OPCODE_COUNT]) {
+        current_values[SPX_METRIC_ZE_USER_OPCODE_COUNT] = spx_php_zend_included_opcode_count();
     }
 
     if (enabled_metrics[SPX_METRIC_ZE_OBJECT_COUNT]) {
