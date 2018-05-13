@@ -838,6 +838,8 @@ static void hook_zend_error_cb(
 
 static void update_userland_stats(void)
 {
+    TSRMLS_FETCH();
+
     context.class_count = 0;
     context.function_count = 0;
     context.opcode_count = context.file_opcode_count;
