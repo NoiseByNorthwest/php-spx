@@ -305,7 +305,7 @@ static void collect_raw_values(const int * enabled_metrics, double * current_val
     }
 
     if (enabled_metrics[SPX_METRIC_ZE_USER_OPCODE_COUNT]) {
-        current_values[SPX_METRIC_ZE_USER_OPCODE_COUNT] = spx_php_zend_included_opcode_count();
+        current_values[SPX_METRIC_ZE_USER_OPCODE_COUNT] = spx_php_zend_opcode_count();
     }
 
     if (enabled_metrics[SPX_METRIC_ZE_OBJECT_COUNT]) {
