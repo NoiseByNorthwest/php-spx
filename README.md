@@ -172,7 +172,7 @@ Here is the list of available metrics to collect. By default only _Wall Time_ an
 | _zil_ | Zend Engine included line count | Number of included lines. |
 | _zuc_ | Zend Engine user class count | Number of userland classes. |
 | _zuf_ | Zend Engine user function count | Number of userland functions (including userland class/instance methods). |
-| _zuo_ | Zend Engine user opcode count | Number of included userland opcodes (sum of all userland function/method opcodes). |
+| _zuo_ | Zend Engine user opcode count | Number of included userland opcodes (sum of all userland file/function/method opcodes). |
 | _zo_ | Zend Engine object count | Number of objects currently held by user code. |
 | _ze_ | Zend Engine error count | Number of raised PHP errors. |
 | _io_ | I/O (reads + writes) | Bytes read or written while performing I/O. |
