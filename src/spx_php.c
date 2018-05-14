@@ -775,7 +775,6 @@ static zend_op_array * hook_zend_compile_string(zval * source_string, char * fil
     zend_op_array * op_array = ze_hook.zend_compile_string(source_string, filename TSRMLS_CC);
 
     if (op_array) {
-        context.file_count++;
         context.file_opcode_count += op_array->last - 1;
 
         /*
