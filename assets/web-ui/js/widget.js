@@ -177,33 +177,6 @@ function renderSVGMetricValuesPlot(viewPort, profileData, metric, timeRange) {
     }
 }
 
-function getCallMetricValueColor(profileData, metric, value) {
-    const metricRange = profileData.getStats().getCallRange(metric);
-
-    let scaleValue = 0;
-
-    if (metricRange.length() > 100) {
-        scaleValue =
-            Math.log10(value - metricRange.begin)
-                / Math.log10(metricRange.length())
-        ;
-    } else {
-        scaleValue = metricRange.lerp(value);
-    }
-
-    return math.Vec3.lerpPath(
-        [
-            new math.Vec3(0, 0.3, 0.9),
-            new math.Vec3(0, 0.9, 0.9),
-            new math.Vec3(0, 0.9, 0),
-            new math.Vec3(0.9, 0.9, 0),
-            new math.Vec3(0.9, 0.2, 0),
-        ],
-        scaleValue
-    ).toHTMLColor();
-}
-
-
 class ViewTimeRange {
 
     constructor(timeRange, wallTime, viewWidth) {
@@ -428,6 +401,159 @@ class SVGWidget extends Widget {
     }
 }
 
+export class ColorSchemeControls extends Widget {
+
+    constructor(container, profileData) {
+        super(container, profileData);
+
+        this.panelOpen = false;
+
+        this.toggleLink = container.find('#colorscheme-current-name');
+        this.panel = container.find('#colorscheme-panel');
+        this.categoryList = container.find('#colorscheme-panel ol');
+
+        this.toggleLink.on('click', e => {
+            e.preventDefault();
+            this.togglePanel();
+        });
+
+        $('#new-category').on('click', e => {
+            e.preventDefault();
+            let cats = utils.getCategories();
+            cats.unshift({
+                color: [90, 90, 90],
+                label: 'untitled',
+                patterns: []
+            })
+            utils.setCategories(cats);
+            $(window).trigger('spx-colorscheme-update');
+        })
+
+        container.find('input[name="colorscheme-mode"]:radio').on('change', e => {
+            if (!e.target.checked) { return };
+
+            $(window).trigger('spx-colorscheme-update', [e.target.value]);
+            let label = this.panel.find(`label[for="${e.target.id}"]`);
+            this.toggleLink.html(label.html());
+        });
+
+        this.categoryList.on('input', 'textarea', e => {
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+        });
+
+        let editHandler = e => {
+            this.onCategoryEdit(e.target);
+            e.stopPropagation();
+        }
+        this.categoryList.on('change', '.jscolor,input,textarea', editHandler);
+        this.categoryList.on('click', 'button', editHandler);
+
+        setTimeout(() => this.repaint(), 0);
+    }
+
+    clear() { }
+
+    render() {
+        let categories = utils.getCategories();
+        let hex = n => n.toString(16).padStart(2, "0");
+        let items = categories.map((cat, i) => {
+            return `
+<li class="category" data-index=${i}>
+    <input name="colorpicker" class="jscolor" value="${hex(cat.color[0])}${hex(cat.color[1])}${hex(cat.color[2])}" />
+    <input type="text" name="label" value="${cat.label}"/>
+    <button name="push-up">⬆︎</button>
+    <button name="push-down">⬇︎</button>
+    <button name="del">╳</button>
+    <textarea name="patterns">${cat.patterns.map(p => p.source).join('\n')}</textarea>
+</li>`;
+        });
+        this.categoryList.html(items.join(''));
+        this.categoryList.find('textarea').trigger('input');
+        this.categoryList.find('.jscolor').each((i, el) => {
+            el.picker = new jscolor(el, {
+                width: 101,
+                padding: 0,
+                shadow: false,
+                borderWidth: 0,
+                backgroundColor: 'transparent',
+                insetColor: '#000'
+            });
+            if (this.openPicker === i) {
+                this.openPicker = null;
+                el.picker.show();
+            }
+        });
+    }
+
+    togglePanel() {
+        this.panelOpen = !this.panelOpen;
+        this.panel.toggle();
+        if (this.panelOpen) {
+            this.repaint();
+            setTimeout(() => this.listenForPanelClose(), 0);
+        } else {
+            this.panel.find('.jscolor').each((_, e) => e.picker.hide());
+        }
+    }
+
+    listenForPanelClose() {
+        let onOutsideClick = e => {
+            if (!!e.target._jscControlName || e.target.closest('#colorscheme-panel') !== null) { return; }
+            e.preventDefault();
+            off()
+            this.togglePanel();
+        }
+        let onEscKey = e => {
+            if (e.key != 'Escape') { return; }
+            off();
+            this.togglePanel();
+        }
+        let off = () => {
+            $(document).off('mousedown', onOutsideClick);
+            $(document).off('keydown', onEscKey);
+        }
+        $(document).on('mousedown', onOutsideClick);
+        $(document).on('keydown', onEscKey);
+    }
+
+    onCategoryEdit(elem) {
+        let idx = parseInt(elem.closest('li').dataset['index'], 10);
+        let categories = utils.getCategories();
+
+        let pushTarget = Math.max(idx-1, 0);
+        switch (elem.name) {
+            case 'push-down':
+                pushTarget = Math.min(idx+1, categories.length-1);
+            case 'push-up':
+                categories.splice(pushTarget, 0, categories.splice(idx, 1)[0]);
+                break;
+            case 'del':
+                categories.splice(idx, 1);
+                break;
+            case 'colorpicker':
+                this.openPicker = idx;
+                categories[idx].color = elem.picker.rgb.map(n => Math.floor(n));
+                break;
+            case 'label':
+                categories[idx].label = elem.value.trim();
+                break;
+            case 'patterns':
+                let regexes = elem.value
+                    .split(/[\r\n]+/)
+                    .map(line => line.trim())
+                    .filter(line => line != '')
+                    .map(line => new RegExp(line, 'gi'));
+                categories[idx].patterns = regexes;
+                break;
+            default:
+                throw new Error(`Unknown category prop '${elem.name}'`);
+        }
+        utils.setCategories(categories);
+        $(window).trigger('spx-colorscheme-update');
+    }
+}
+
 export class ColorScale extends SVGWidget {
 
     constructor(container, profileData) {
@@ -458,7 +584,7 @@ export class ColorScale extends SVGWidget {
                 y: 0,
                 width: step,
                 height: this.viewPort.height,
-                fill: getCallMetricValueColor(
+                fill: utils.getCallMetricValueColor(
                     this.profileData,
                     this.currentMetric,
                     getCurrentMetricValue(i)
@@ -483,11 +609,45 @@ export class ColorScale extends SVGWidget {
     }
 }
 
-export class OverView extends SVGWidget {
+export class CategoryLegend extends SVGWidget {
 
     constructor(container, profileData) {
         super(container, profileData);
-        
+    }
+
+    render() {
+        let categories = utils.getCategories(true);
+        let width = this.viewPort.width / categories.length;
+
+        for (let i = 0; i < categories.length; i++) {
+            let category = categories[i];
+            let [r, g, b] = category.color;
+            this.viewPort.appendChild(svg.createNode('rect', {
+                x: width * i,
+                y: 0,
+                width,
+                height: this.viewPort.height,
+                fill: `rgb(${r},${g},${b})`,
+            }));
+            this.viewPort.appendChild(svg.createNode('text', {
+                x: width * i + 4,
+                y: 13,
+                width,
+                height: this.viewPort.height,
+                fill: `rgb(${r},${g},${b})`,
+                'font-size': 12,
+                fill: '#000',
+            }, node => { node.textContent = category.label }));
+        }
+    }
+}
+
+export class OverView extends SVGWidget {
+
+    constructor(container, profileData, colorChooser) {
+        super(container, profileData);
+
+        this.colorChooser = colorChooser;
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
@@ -587,10 +747,10 @@ export class OverView extends SVGWidget {
                 y1: y,
                 x2: x + w,
                 y2: y + h,
-                stroke: getCallMetricValueColor(
+                stroke: this.colorChooser(
                     this.profileData,
                     this.currentMetric,
-                    call.getInc(this.currentMetric)
+                    call
                 ),
             }));
         }
@@ -628,9 +788,10 @@ export class OverView extends SVGWidget {
 
 export class TimeLine extends SVGWidget {
 
-    constructor(container, profileData) {
+    constructor(container, profileData, colorChooser) {
         super(container, profileData);
 
+        this.colorChooser = colorChooser;
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
@@ -827,10 +988,10 @@ export class TimeLine extends SVGWidget {
                 height: h,
                 stroke: 'none',
                 'stroke-width': 2,
-                fill: getCallMetricValueColor(
+                fill: this.colorChooser(
                     this.profileData,
                     this.currentMetric,
-                    call.getInc(this.currentMetric)
+                    call
                 ),
                 'data-call-idx': call.getIdx(),
             });

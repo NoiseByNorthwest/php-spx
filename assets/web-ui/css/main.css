@@ -3,14 +3,6 @@ html {
 }
 
 body {
-    background: #023;
-    background: -webkit-linear-gradient(#023, #000);
-    background: -o-linear-gradient(#023, #000);
-    background: -moz-linear-gradient(#023, #000);
-    background: linear-gradient(#023, #000);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-
     font-family: monospace;
     margin: 2px;
     padding: 0;
@@ -19,6 +11,16 @@ body {
 
 * {
     color: #089;
+}
+
+body, #colorscheme-panel {
+    background: #023;
+    background: -webkit-linear-gradient(#023, #000);
+    background: -o-linear-gradient(#023, #000);
+    background: -moz-linear-gradient(#023, #000);
+    background: linear-gradient(#023, #000);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 
 form#config label {
@@ -151,8 +153,50 @@ table.data_table td > a {
     background-color: #000;
 }
 
-#flatprofile {
-    h: right;
+#colorscheme-panel {
+    display: none;
+    position: absolute;
+    top: 24px;
+    width: 350px;
+    padding: 6px;
+}
+
+#colorscheme-panel ol {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#colorscheme-panel hr {
+    border-color: #089;
+}
+
+#colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea {
+    font-family: monospace;
+    font-size: 12px;
+    background-color: #000;
+    border: 1px solid #0898;
+}
+
+#colorscheme-panel .category {
+    margin: 10px 0 0;
+}
+
+#colorscheme-panel input[name="label"] {
+    width: 181px;
+}
+
+#colorscheme-panel textarea[name="patterns"] {
+    width: calc(100% - 6px);
+}
+
+#colorscheme-panel .jscolor {
+    width: 45px;
+    height: 15px;
+}
+
+#category-legend {
+    display: none;
 }
 
 #flatprofile table {
