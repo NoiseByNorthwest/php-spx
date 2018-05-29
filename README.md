@@ -18,7 +18,7 @@ It differentiates itself from other similar extensions as being:
   * enable / configure profiling for the current browser session
   * list profiled script reports
   * select a report for in-depth analysis, featuring these interactive visualizations:
-    * time line
+    * time line (scale to millions of function calls)
     * flat profile
     * flame graph
 

@@ -1,7 +1,7 @@
 
 import {round} from './math.js';
 
-function lpad(str, len, char) {
+export function lpad(str, len, char) {
     str = str + '';
     let d = len - str.length;
     if (d <= 0) {

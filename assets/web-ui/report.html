@@ -13,6 +13,7 @@
             <div class="progress">
                 <div style="width: 0%"></div>
             </div>
+            <p></p>
         </div>
     </div>
 
@@ -61,13 +62,15 @@
 
             const initDialog = {
                 container: $('#init-report'),
-                text: $('#init-report p'),
+                title: $('#init-report p:nth-of-type(1)'),
+                progressInfo: $('#init-report p:nth-of-type(2)'),
                 progress: $('#init-report .progress'),
                 progressBar: $('#init-report .progress > div'),
+                data: {}
             };
 
-            function setProgress(text, current, total) {
-                initDialog.text.text(text);
+            function setProgress(title, current, total) {
+                initDialog.title.text(title);
 
                 if (!total) {
                     initDialog.progress.hide();
@@ -75,10 +78,37 @@
                     return;
                 }
 
+                if (!(title in initDialog.data)) {
+                    initDialog.data[title] = {
+                        lastCount: current,
+                        lastTime: new Date().getTime() / 1000,
+                        startCount: current,
+                        startTime: new Date().getTime() / 1000,
+                    };
+                }
+
                 initDialog.progress.show();
                 initDialog.progressBar.width(
                     Math.round(100 * current / total) + '%'
                 );
+
+                const currentTime = new Date().getTime() / 1000;
+
+                const remainingTime = Math.round(
+                    (total - current)
+                        * (
+                            (currentTime - initDialog.data[title].startTime)
+                            / (current - initDialog.data[title].startCount)
+                        )
+                );
+
+                initDialog.progressInfo.text(
+                    fmt.pct(current / total) + ' (' + fmt.quantity(current) + ')'
+                        + ' ETA: ' + remainingTime + 's'
+                );
+
+                initDialog.data[title].lastCount = current;
+                initDialog.data[title].lastTime = currentTime;
             }
 
             fetch('data/metrics', {credentials: "same-origin"})
@@ -97,22 +127,18 @@
                 .then(response => {
                     let type = null;
                     let currentFunctionIdx = 0;
-                    let currentLine = '';
+                    let lastTruncatedLine = '';
+
+                    const decoder = new TextDecoder('ascii');
 
                     function readBuffer(buffer) {
-                        const lines = [];
-                        for (const byte of buffer) {
-                            // ascii only
-                            const c = String.fromCharCode(byte);
-                            if (c == "\n") {
-                                lines.push(currentLine);
-                                currentLine = '';
-
-                                continue;
-                            }
-
-                            currentLine += c;
+                        if (buffer.length == 0) {
+                            return;
                         }
+
+                        const lines = decoder.decode(buffer).split("\n");
+                        lines[0] = lastTruncatedLine + lines[0];
+                        lastTruncatedLine = lines.pop();
 
                         for (const line of lines) {
                             if (line == '[events]') {
@@ -146,7 +172,7 @@
                         }
 
                         setProgress(
-                            'Building call list... ' + fmt.quantity(profileDataBuilder.getCurrentCallCount()),
+                            'Building call list... (1/2)',
                             profileDataBuilder.getCurrentCallCount(),
                             profileDataBuilder.getTotalCallCount()
                         );
@@ -177,13 +203,13 @@
                 })
                 .then(() => profileDataBuilder.buildCallRangeTree(
                     (current, total) => setProgress(
-                        'Building call range tree... ' + fmt.quantity(current),
+                        'Building call range tree... (2/2)',
                         current,
                         total
                     )
                 ))
                 .then(() => {
-                    initDialog.text.text('Initializing widgets...');
+                    initDialog.title.text('Initializing widgets...');
 
                     return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
                 })

@@ -347,11 +347,31 @@ class Widget {
     constructor(container, profileData) {
         this.container = container;
         this.profileData = profileData;
+        this.timeRange = profileData.getTimeRange();
+        this.timeRangeStats = profileData.getTimeRangeStats(this.timeRange);
         this.currentMetric = profileData.getMetadata().enabled_metrics[0];
 
         $(window).on('resize', () => {
             this._fitToContainerSize();
         });
+
+        $(window).on('spx-timerange-update', (e, timeRange, timeRangeStats) => {
+            this.timeRange = timeRange;
+            this.timeRangeStats = timeRangeStats;
+
+            this.onTimeRangeUpdate();
+        });
+    }
+
+    onTimeRangeUpdate() {
+        this.repaint();
+    }
+
+    updateTimeRange(timeRange) {
+        this.timeRange = timeRange;
+        this.timeRangeStats = this.profileData.getTimeRangeStats(this.timeRange);
+
+        $(window).trigger('spx-timerange-update', [this.timeRange, this.timeRangeStats]);
     }
 
     setCurrentMetric(metric) {
@@ -414,6 +434,9 @@ export class ColorScale extends SVGWidget {
         super(container, profileData);
     }
 
+    onTimeRangeUpdate() {
+    }
+
     render() {
         const step = 8;
         const exp = 5;
@@ -471,22 +494,6 @@ export class OverView extends SVGWidget {
             this.viewPort.width
         );
 
-        const updateTimeRangeRect = () => {
-            if (!this.timeRangeRect) {
-                return;
-            }
-
-            const viewRange = this.viewTimeRange.getViewRange();
-
-            this.timeRangeRect.setAttribute('x', viewRange.begin);
-            this.timeRangeRect.setAttribute('width', viewRange.length());
-        }
-
-        $(window).on('spx-timerange-change', (e, timeRange) => {
-            this.viewTimeRange.setTimeRange(timeRange);
-            updateTimeRangeRect();
-        });
-
         let action = null;
         this.container.on('mousedown mousemove', e => {
             if (e.type == 'mousemove' && e.buttons != 1) {
@@ -527,8 +534,20 @@ export class OverView extends SVGWidget {
                     break;
             }
 
-            $(window).trigger('spx-timerange-change', [this.viewTimeRange.getTimeRange()]);
+            this.updateTimeRange(this.viewTimeRange.getTimeRange());
         });
+    }
+
+    onTimeRangeUpdate() {
+        this.viewTimeRange.setTimeRange(this.timeRange.copy());
+        if (!this.timeRangeRect) {
+            return;
+        }
+
+        const viewRange = this.viewTimeRange.getViewRange();
+
+        this.timeRangeRect.setAttribute('x', viewRange.begin);
+        this.timeRangeRect.setAttribute('width', viewRange.length());
     }
 
     _fitToContainerSize() {
@@ -623,11 +642,6 @@ export class TimeLine extends SVGWidget {
         this.svgRectPool = new svg.NodePool('rect');
         this.svgTextPool = new svg.NodePool('text');
 
-        $(window).on('spx-timerange-change', (e, timeRange) => {
-            this.viewTimeRange.setTimeRange(timeRange.copy());
-            this.repaint();
-        });
-
         this.container.bind('wheel', e => {
             e.preventDefault();
             let f = 1.5;
@@ -637,7 +651,7 @@ export class TimeLine extends SVGWidget {
 
             this.viewTimeRange.zoomScaledViewRange(f, e.clientX);
 
-            $(window).trigger('spx-timerange-change', [this.viewTimeRange.getTimeRange()]);
+            this.updateTimeRange(this.viewTimeRange.getTimeRange());
         });
 
         let lastPos = {x: 0, y: 0};
@@ -679,7 +693,7 @@ export class TimeLine extends SVGWidget {
                     return;
             }
 
-            $(window).trigger('spx-timerange-change', [this.viewTimeRange.getTimeRange()]);
+            this.updateTimeRange(this.viewTimeRange.getTimeRange());
         });
 
         this.infoViewPort = null;
@@ -690,7 +704,7 @@ export class TimeLine extends SVGWidget {
                 return;
             }
 
-            $(window).trigger('spx-timerange-change', [this.profileData.getCall(callIdx).getTimeRange()]);
+            this.updateTimeRange(this.profileData.getCall(callIdx).getTimeRange());
         });
 
         $(this.viewPort.node).on('mousemove mouseout', e => {
@@ -753,6 +767,11 @@ export class TimeLine extends SVGWidget {
                 ]
             );
         });
+    }
+
+    onTimeRangeUpdate() {
+        this.viewTimeRange.setTimeRange(this.timeRange.copy());
+        super.onTimeRangeUpdate();
     }
 
     _fitToContainerSize() {
@@ -878,13 +897,72 @@ export class FlameGraph extends SVGWidget {
     constructor(container, profileData) {
         super(container, profileData);
 
-        this.timeRange = this.profileData.getTimeRange();
         this.svgRectPool = new svg.NodePool('rect');
         this.svgTextPool = new svg.NodePool('text');
 
-        $(window).on('spx-timerange-change', (e, timeRange) => {
-            this.timeRange = timeRange.copy();
-            this.repaint();
+        this.pointedElement = null;
+        this.renderedCgNodes = [];
+        this.infoViewPort = null;
+
+        this.viewPort.node.addEventListener('mouseout', e => {
+            if (this.pointedElement != null) {
+                this.pointedElement.setAttribute('stroke', 'none');
+                this.pointedElement = null;
+            }
+
+            this.infoViewPort.clear();
+        });
+
+        this.viewPort.node.addEventListener('mousemove', e => {
+            if (this.pointedElement != null) {
+                this.pointedElement.setAttribute('stroke', 'none');
+                this.pointedElement = null;
+            }
+
+            this.infoViewPort.clear();
+
+            this.pointedElement = document.elementFromPoint(e.clientX, e.clientY);
+            if (this.pointedElement.nodeName == 'text') {
+                this.pointedElement = this.pointedElement.previousSibling;
+            }
+
+            const cgNodeIdx = this.pointedElement.dataset.cgNodeIdx;
+            if (cgNodeIdx === undefined) {
+                this.pointedElement = null;
+
+                return;
+            }
+
+            this.pointedElement.setAttribute('stroke', '#0ff');
+
+            console.log('dddd');
+            this.infoViewPort.appendChild(svg.createNode('rect', {
+                x: 0,
+                y: 0,
+                width: this.infoViewPort.width,
+                height: this.infoViewPort.height,
+                'fill-opacity': '0.5',
+                'pointer-events': 'none',
+            }));
+
+            const cgNode = this.renderedCgNodes[cgNodeIdx];
+            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
+            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
+
+            renderSVGMultiLineText(
+                this.infoViewPort.createSubViewPort(
+                    this.infoViewPort.width - 5,
+                    this.infoViewPort.height,
+                    5,
+                    0
+                ),
+                [
+                    'Function: ' + cgNode.getFunctionName(),
+                    'Depth: ' + cgNode.getDepth(),
+                    'Called: ' + cgNode.getCalled(),
+                    currentMetricName + ' inc.: ' + formatter(cgNode.getInc().getValue(this.currentMetric)),
+                ]
+            );
         });
     }
 
@@ -914,7 +992,7 @@ export class FlameGraph extends SVGWidget {
         this.svgRectPool.releaseAll();
         this.svgTextPool.releaseAll();
 
-        const renderedCgNodes = [];
+        this.renderedCgNodes = [];
 
         const renderNode = (node, minInc, maxCumInc, x, y) => {
             x = x || 0;
@@ -938,8 +1016,8 @@ export class FlameGraph extends SVGWidget {
                 childrenX = renderNode(child, minInc, maxCumInc, childrenX, y);
             }
 
-            renderedCgNodes.push(node);
-            const nodeIdx = renderedCgNodes.length - 1;
+            this.renderedCgNodes.push(node);
+            const nodeIdx = this.renderedCgNodes.length - 1;
 
             this.viewPort.appendChild(this.svgRectPool.acquire({
                 x: x,
@@ -978,8 +1056,8 @@ export class FlameGraph extends SVGWidget {
         };
 
         const cgRoot = this
-            .profileData
-            .getCallGraphStats(this.timeRange)
+            .timeRangeStats
+            .getCallTreeStats(this.timeRange)
             .getRoot()
         ;
 
@@ -991,74 +1069,14 @@ export class FlameGraph extends SVGWidget {
             x = renderNode(child, minInc, maxCumInc, x);
         }
 
-        const infoViewPort = this.viewPort.createSubViewPort(
+        this.pointedElement = null;
+
+        this.infoViewPort = this.viewPort.createSubViewPort(
             this.viewPort.width,
             65,
             0,
             0
         );
-
-        let pointedElement = null;
-
-        this.viewPort.node.addEventListener('mouseout', e => {
-            if (pointedElement != null) {
-                pointedElement.setAttribute('stroke', 'none');
-                pointedElement = null;
-            }
-
-            infoViewPort.clear();
-        });
-
-        this.viewPort.node.addEventListener('mousemove', e => {
-            if (pointedElement != null) {
-                pointedElement.setAttribute('stroke', 'none');
-                pointedElement = null;
-            }
-
-            infoViewPort.clear();
-
-            pointedElement = document.elementFromPoint(e.clientX, e.clientY);
-            if (pointedElement.nodeName == 'text') {
-                pointedElement = pointedElement.previousSibling;
-            }
-
-            const cgNodeIdx = pointedElement.dataset.cgNodeIdx;
-            if (cgNodeIdx === undefined) {
-                pointedElement = null;
-
-                return;
-            }
-
-            pointedElement.setAttribute('stroke', '#0ff');
-    
-            infoViewPort.appendChild(svg.createNode('rect', {
-                x: 0,
-                y: 0,
-                width: infoViewPort.width,
-                height: infoViewPort.height,
-                'fill-opacity': '0.5',
-                'pointer-events': 'none',
-            }));
-
-            const cgNode = renderedCgNodes[cgNodeIdx];
-            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
-            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
-
-            renderSVGMultiLineText(
-                infoViewPort.createSubViewPort(
-                    infoViewPort.width - 5,
-                    infoViewPort.height,
-                    5,
-                    0
-                ),
-                [
-                    'Function: ' + cgNode.getFunctionName(),
-                    'Depth: ' + cgNode.getDepth(),
-                    'Called: ' + cgNode.getCalled(),
-                    currentMetricName + ' inc.: ' + formatter(cgNode.getInc().getValue(this.currentMetric)),
-                ]
-            );
-        });
     };
 }
 
@@ -1067,14 +1085,8 @@ export class FlatProfile extends Widget {
     constructor(container, profileData) {
         super(container, profileData);
 
-        this.timeRange = this.profileData.getTimeRange();
         this.sortCol = 'exc';
         this.sortDir = -1;
-
-        $(window).on('spx-timerange-change', (e, timeRange) => {
-            this.timeRange = timeRange.copy();
-            this.repaint();
-        });
     }
 
     render() {
@@ -1106,7 +1118,7 @@ export class FlatProfile extends Widget {
 <table width="${this.container.width() - 20}px"><tbody>
         `;
 
-        let functionsStats = this.profileData.getFunctionsStats(this.timeRange);
+        let functionsStats = this.timeRangeStats.getFunctionsStats().getValues();
 
         functionsStats.sort((a, b) => {
             switch (this.sortCol) {
@@ -1142,21 +1154,42 @@ export class FlatProfile extends Widget {
         const formatter = this.profileData.getMetricFormatter(this.currentMetric);
         const limit = Math.min(100, functionsStats.length);
 
+        const cumCostStats = this.timeRangeStats.getCumCostStats();
+
+        const renderRelativeCostBar = (value) => {
+            if (this.profileData.isReleasableMetric(this.currentMetric)) {
+                return `
+                    <div style="display: flex; width: 100%; height: 2px">
+                        <div style="width: ${value > 0 ? 50 : Math.round(50 * (1 + value))}%;"></div>
+                        <div style="width: 50%; height: 100%">
+                            <div style="width: ${Math.round(100 * Math.abs(value))}%; height: 100%; background-color: ${value > 0 ? 'red' : 'blue'}"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div style="width=100%; height: 2px">
+                    <div style="width: ${Math.round(100 * value)}%; height: 100%; background-color: red"></div>
+                </div>
+            `;
+        };
+
         for (let i = 0; i < limit; i++) {
             const stats = functionsStats[i];
 
-            const inc = formatter(stats.inc.getValue(this.currentMetric));
-            const incRel = fmt.pct(
-                this.profileData.getStats().getRange(this.currentMetric).lerpDist(
-                    stats.inc.getValue(this.currentMetric)
-                )
+            const neg = stats.inc.getValue(this.currentMetric) < 0 ? 1 : 0;
+            const relRange =  neg ?
+                cumCostStats.getNegRange(this.currentMetric) : cumCostStats.getPosRange(this.currentMetric);
+
+            const inc = stats.inc.getValue(this.currentMetric);
+            const incRel = -1 * neg + relRange.lerpDist(
+                stats.inc.getValue(this.currentMetric)
             );
 
-            const exc = formatter(stats.exc.getValue(this.currentMetric));
-            const excRel = fmt.pct(
-                this.profileData.getStats().getRange(this.currentMetric).lerpDist(
-                    stats.exc.getValue(this.currentMetric)
-                )
+            const exc = stats.exc.getValue(this.currentMetric);
+            const excRel = -1 * neg + relRange.lerpDist(
+                stats.exc.getValue(this.currentMetric)
             );
 
             let funcName = stats.functionName;
@@ -1170,10 +1203,10 @@ export class FlatProfile extends Widget {
         ${utils.truncateFunctionName(funcName, (this.container.width() - 5 * 90) / 8)}
     </td>
     <td width="80px">${fmt.quantity(stats.called)}</td>
-    <td width="80px">${incRel}</td>
-    <td width="80px">${excRel}</td>
-    <td width="80px">${inc}</td>
-    <td width="80px">${exc}</td>
+    <td width="80px">${fmt.pct(incRel)}${renderRelativeCostBar(incRel)}</td>
+    <td width="80px">${fmt.pct(excRel)}${renderRelativeCostBar(excRel)}</td>
+    <td width="80px">${formatter(inc)}</td>
+    <td width="80px">${formatter(exc)}</td>
 </tr>
             `;
         }
