@@ -24,6 +24,9 @@
             <fieldset>
                 <legend>Configuration</legend>
                 <br>
+                <label for="cli-prefix">Command line prefix</label>
+                <textarea id="cli-prefix" rows="2" cols="60" readonly></textarea>
+                <br>
             </fieldset>
         </form> 
 
@@ -56,14 +59,14 @@
                                 key: 'SPX_ENABLED',
                                 label: 'Enabled',
                                 type: 'switch',
-                                defaultValue: 0,
+                                defaultValue: '0',
                                 description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
                             },
                             {
                                 key: 'SPX_BUILTINS',
                                 label: 'Profile internal functions',
                                 type: 'switch',
-                                defaultValue: 0,
+                                defaultValue: '0',
                                 description: 'Whether to profile internal functions. It is not recommended to profile internal functions if you want to accurately find a time bottleneck.',
                             },
                             {
@@ -123,7 +126,7 @@
                                         }))
                                     ,
                                 },
-                                defaultValue: 'wt,zm',
+                                defaultValue: '',
                                 description: 'List of available metrics to collect in addition to Wall Time and Zend Engine Memory. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
                             },
                         ];
@@ -191,6 +194,7 @@
                         });
 
                         $('#config').on('click blur change', () => {
+                            let cliParameters = ['SPX_REPORT=full'];
                             $.each(parameters, (_, parameter) => {
                                 let value = null;
 
@@ -210,8 +214,15 @@
                                 }
 
                                 setCookieVar(parameter.key, value);
+                                if (value != parameter.defaultValue) {
+                                    cliParameters.push(parameter.key + '=' + value);
+                                }
                             });
+
+                            $('#cli-prefix').val(cliParameters.join(' '));
                         });
+
+                        $('#config').trigger('blur');
 
                         return fetch('data/reports/metadata', {credentials: "same-origin"});
                     })

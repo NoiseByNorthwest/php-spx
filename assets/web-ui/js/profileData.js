@@ -2,7 +2,7 @@ import * as utils from './utils.js';
 import * as fmt from './fmt.js';
 import * as math from './math.js';
 
-class MetricValues {
+class MetricValueSet {
 
     static createFromMetricsAndValue(metrics, value) {
         let values = {};
@@ -10,7 +10,7 @@ class MetricValues {
             values[m] = value;
         }
 
-        return new MetricValues(values);
+        return new MetricValueSet(values);
     }
 
     static lerpByTime(a, b, time) {
@@ -29,7 +29,7 @@ class MetricValues {
             );
         }
 
-        return new MetricValues(values);
+        return new MetricValueSet(values);
     }
 
     constructor(values) {
@@ -42,7 +42,7 @@ class MetricValues {
             copy[i] = this.values[i];
         }
 
-        return new MetricValues(copy);
+        return new MetricValueSet(copy);
     }
 
     getMetrics() {
@@ -76,6 +76,26 @@ class MetricValues {
     sub(other) {
         for (let i in this.values) {
             this.values[i] -= other.values[i];
+        }
+
+        return this;
+    }
+
+    addPos(other) {
+        for (let i in this.values) {
+            if (other.values[i] > 0) {
+                this.values[i] += other.values[i];
+            }
+        }
+
+        return this;
+    }
+
+    addNeg(other) {
+        for (let i in this.values) {
+            if (other.values[i] < 0) {
+                this.values[i] += other.values[i];
+            }
         }
 
         return this;
@@ -136,7 +156,23 @@ class CallListEntry {
             values[metric] = this.getMetricValue(type, metric);
         }
 
-        return new MetricValues(values);
+        return new MetricValueSet(values);
+    }
+
+    getStartMetricValues() {
+        return this.getMetricValues('start');
+    }
+
+    getEndMetricValues() {
+        return this.getMetricValues('end');
+    }
+
+    getIncMetricValues() {
+        return this.getEndMetricValues().copy().sub(this.getStartMetricValues());
+    }
+
+    getExcMetricValues() {
+        return this.getMetricValues('exc');
     }
 
     getStart(metric) {
@@ -216,6 +252,42 @@ class CallListEntry {
     }
 }
 
+class TruncatedCallListEntry extends CallListEntry {
+
+    constructor(call, lowerBound, upperBound) {
+        super(call.list, call.idx);
+
+        this.customMetricValues = {};
+
+        let truncated = false;
+
+        if (lowerBound && lowerBound.getValue('wt') > this.getStart('wt')) {
+            truncated = true;
+            this.customMetricValues['start'] = lowerBound;
+        }
+
+        if (upperBound && upperBound.getValue('wt') < this.getEnd('wt')) {
+            truncated = true;
+            this.customMetricValues['end'] = upperBound;
+        }
+
+        if (truncated) {
+            this.customMetricValues['exc'] = MetricValueSet.createFromMetricsAndValue(
+                this.getMetrics(),
+                0
+            );
+        }
+    }
+
+    getMetricValue(type, metric) {
+        if (type in this.customMetricValues) {
+            return this.customMetricValues[type].getValue(metric);
+        }
+
+        return super.getMetricValue(type, metric);
+    }
+}
+
 class CallList {
 
     constructor(size, functionCount, metrics) {
@@ -227,12 +299,14 @@ class CallList {
             this.metricOffsets[this.metrics[i]] = i;
         }
 
-        // FIXME use float32 to save space ?
         const structure = {
             functionIdx: 'int32',
             parentIdx: 'int32',
         };
 
+        // FIXME use float32 to save space ?
+        // FIXME or add/compute some stats somewhere to find the best type (e.g. compiled
+        //       file count metric could be stored as uint16)
         for (let metric of this.metrics) {
             structure['start_' + metric] = 'float64';
             structure['end_'   + metric] = 'float64';
@@ -280,6 +354,55 @@ class CallList {
     }
 }
 
+class CumCostStats {
+
+    constructor(metrics) {
+        this.min = MetricValueSet.createFromMetricsAndValue(metrics, 0);
+        this.max = MetricValueSet.createFromMetricsAndValue(metrics, 0);
+    }
+
+    merge(other) {
+        this.min.addNeg(other.min);
+        this.max.addPos(other.max);
+    }
+
+    mergeMetricValues(metricValues) {
+        this.min.addNeg(metricValues);
+        this.max.addPos(metricValues);
+    }
+
+    getMin(metric) {
+        return this.min.getValue(metric);
+    }
+
+    getMax(metric) {
+        return this.max.getValue(metric);
+    }
+
+    getRange(metric) {
+        return new math.Range(
+            this.getMin(metric),
+            this.getMax(metric)
+        );
+    }
+
+    getPosRange(metric) {
+        return new math.Range(
+            Math.max(0, this.getMin(metric)),
+            Math.max(0, this.getMax(metric))
+        );
+    }
+
+    getNegRange(metric) {
+        return new math.Range(
+            Math.min(0, this.getMin(metric)),
+            Math.min(0, this.getMax(metric))
+        );
+    }
+}
+
+// fixme rename MetricValueSet -> Sample & MetricValuesList -> SampleList ?
+//       keep in mind that Sample might be to concrete since MetricValueSet can also represent a cost
 class MetricValuesList {
 
     constructor(size, metrics) {
@@ -305,12 +428,47 @@ class MetricValuesList {
         this.array.setElement(idx, elt);
     }
 
+    getCumCostStats(range) {
+        if (range.length() == 0) {
+            return new CumCostStats(this.metrics);
+        }
+
+        let firstIdx = this._findNearestIdx(range.begin);
+        if (firstIdx < this.array.getSize() - 1 && this.array.getElement(firstIdx)['wt'] < range.begin) {
+            firstIdx++;
+        }
+
+        let lastIdx = this._findNearestIdx(range.end);
+        if (lastIdx > 0 && this.array.getElement(lastIdx)['wt'] > range.end) {
+            lastIdx--;
+        }
+
+        if (firstIdx > lastIdx) {
+            firstIdx = lastIdx;
+        }
+
+        const first = this.getMetricValues(range.begin);
+        const last = this.getMetricValues(range.end);
+
+        let previous = first;
+        const cumCost = new CumCostStats(previous.getMetrics());
+        for (let i = firstIdx; i <= lastIdx; i++) {
+            const current = new MetricValueSet(this.array.getElement(i));
+            cumCost.mergeMetricValues(current.copy().sub(previous));
+            previous = current;
+        }
+
+        cumCost.mergeMetricValues(last.copy().sub(previous));
+
+        return cumCost;
+    }
+
     getMetricValues(time) {
         const nearestIdx = this._findNearestIdx(time);
         const nearestRawMetricValues = this.array.getElement(nearestIdx);
 
         if (nearestRawMetricValues['wt'] == time) {
-            return new MetricValues(nearestRawMetricValues);
+            return new MetricValueSet(nearestRawMetricValues);
         }
 
         let lowerRawMetricValues = null;
@@ -324,9 +482,9 @@ class MetricValuesList {
             upperRawMetricValues = nearestRawMetricValues;
         }
 
-        return MetricValues.lerpByTime(
-            new MetricValues(lowerRawMetricValues),
-            new MetricValues(upperRawMetricValues),
+        return MetricValueSet.lerpByTime(
+            new MetricValueSet(lowerRawMetricValues),
+            new MetricValueSet(upperRawMetricValues),
             time
         );
     }
@@ -353,13 +511,16 @@ class MetricValuesList {
     }
 }
 
+/*
+ FIXME remove and do a dead code removal pass
+*/
 class Stats {
 
     constructor(metrics) {
-        this.min = MetricValues.createFromMetricsAndValue(metrics, Number.MAX_VALUE);
-        this.max = MetricValues.createFromMetricsAndValue(metrics, -Number.MAX_VALUE);
-        this.callMin = MetricValues.createFromMetricsAndValue(metrics, Number.MAX_VALUE);
-        this.callMax = MetricValues.createFromMetricsAndValue(metrics, -Number.MAX_VALUE);
+        this.min = MetricValueSet.createFromMetricsAndValue(metrics, Number.MAX_VALUE);
+        this.max = MetricValueSet.createFromMetricsAndValue(metrics, -Number.MAX_VALUE);
+        this.callMin = MetricValueSet.createFromMetricsAndValue(metrics, Number.MAX_VALUE);
+        this.callMax = MetricValueSet.createFromMetricsAndValue(metrics, -Number.MAX_VALUE);
     }
 
     getMin(metric) {
@@ -428,20 +589,19 @@ class Stats {
 
 class FunctionsStats {
 
-    constructor(callRefs, callList, lowerBound, upperBound) {
+    constructor(calls) {
         this.functionsStats = new Map();
 
-        callRefs = callRefs || [];
-        for (let callRef of callRefs) {
-            let call = callList.getCall(callRef);
+        calls = calls || [];
+        for (let call of calls) {
             let stats = this.functionsStats.get(call.getFunctionIdx());
             if (!stats) {
                 stats = {
                     functionName: call.getFunctionName(),
                     maxCycleDepth: 0,
                     called: 0,
-                    inc: MetricValues.createFromMetricsAndValue(call.getMetrics(), 0),
-                    exc: MetricValues.createFromMetricsAndValue(call.getMetrics(), 0),
+                    inc: MetricValueSet.createFromMetricsAndValue(call.getMetrics(), 0),
+                    exc: MetricValueSet.createFromMetricsAndValue(call.getMetrics(), 0),
                 };
 
                 this.functionsStats.set(call.getFunctionIdx(), stats);
@@ -454,24 +614,8 @@ class FunctionsStats {
                 continue;
             }
 
-            let truncated = false;
-
-            let start = call.getMetricValues('start');
-            if (lowerBound && lowerBound.getValue('wt') > start.getValue('wt')) {
-                start = lowerBound;
-                truncated = true;
-            }
-
-            let end = call.getMetricValues('end');
-            if (upperBound && upperBound.getValue('wt') < end.getValue('wt')) {
-                end = upperBound;
-                truncated = true;
-            }
-
-            stats.inc.add(end.copy().sub(start));
-            if (!truncated) {
-                stats.exc.add(call.getMetricValues('exc'));
-            }
+            stats.inc.add(call.getIncMetricValues());
+            stats.exc.add(call.getExcMetricValues());
         }
     }
 
@@ -505,7 +649,7 @@ class FunctionsStats {
     }
 }
 
-class CallGraphStatsNode {
+class CallTreeStatsNode {
 
     constructor(functionName, metrics) {
         this.functionName = functionName;
@@ -513,7 +657,7 @@ class CallGraphStatsNode {
         this.children = {};
         this.minTime = Number.MAX_VALUE;
         this.called = 0;
-        this.inc = MetricValues.createFromMetricsAndValue(metrics, 0);
+        this.inc = MetricValueSet.createFromMetricsAndValue(metrics, 0);
     }
 
     getFunctionName() {
@@ -585,10 +729,10 @@ class CallGraphStatsNode {
         return this;
     }
 
-    addCallStats(start, end) {
-        this.minTime = Math.min(this.minTime, start.getValue('wt'));
+    addCallStats(call) {
+        this.minTime = Math.min(this.minTime, call.getStart('wt'));
         this.called++;
-        this.inc.add(end.copy().sub(start));
+        this.inc.add(call.getIncMetricValues());
 
         return this;
     }
@@ -600,7 +744,7 @@ class CallGraphStatsNode {
 
         for (let i in other.children) {
             if (!(i in this.children)) {
-                this.addChild(new CallGraphStatsNode(
+                this.addChild(new CallTreeStatsNode(
                     other.children[i].getFunctionName(),
                     other.children[i].getInc().getMetrics()
                 ));
@@ -629,15 +773,14 @@ class CallGraphStatsNode {
     }
 }
 
-class CallGraphStats {
+class CallTreeStats {
 
-    constructor(callRefs, callList, lowerBound, upperBound) {
-        this.root = new CallGraphStatsNode(null, callList.getMetrics());
+    constructor(metrics, calls) {
+        this.root = new CallTreeStatsNode(null, metrics);
         this.root.called = 1;
 
-        callRefs = callRefs || [];
-        for (let callRef of callRefs) {
-            const call = callList.getCall(callRef);
+        calls = calls || [];
+        for (let call of calls) {
             const stack = call.getStack();
 
             let node = this.root;
@@ -645,27 +788,17 @@ class CallGraphStats {
                 const functionName = stack[i].getFunctionName();
                 let child = node.children[functionName];
                 if (!child) {
-                    child = new CallGraphStatsNode(functionName, callList.getMetrics());
+                    child = new CallTreeStatsNode(functionName, metrics);
                     node.addChild(child);
                 }
 
                 node = child;
             }
 
-            let start = call.getMetricValues('start');
-            if (lowerBound && lowerBound.getValue('wt') > start.getValue('wt')) {
-                start = lowerBound;
-            }
-
-            let end = call.getMetricValues('end');
-            if (upperBound && upperBound.getValue('wt') < end.getValue('wt')) {
-                end = upperBound;
-            }
-
-            node.addCallStats(start, end);
+            node.addCallStats(call);
             if (node.getDepth() == 1) {
                 node.getParent().getInc().add(
-                    end.copy().sub(start)
+                    call.getIncMetricValues()
                 );
             }
         }
@@ -688,6 +821,38 @@ class CallGraphStats {
     }
 }
 
+class TimeRangeStats {
+
+    constructor(timeRange, functionsStats, callTreeStats, cumCostStats) {
+        this.timeRange = timeRange;
+        this.functionsStats = functionsStats;
+        this.callTreeStats = callTreeStats;
+        this.cumCostStats = cumCostStats;
+    }
+
+    merge(other) {
+        this.functionsStats.merge(other.functionsStats);
+        this.callTreeStats.merge(other.callTreeStats);
+        this.cumCostStats.merge(other.cumCostStats);
+    }
+
+    getTimeRange() {
+        return this.timeRange;
+    }
+
+    getFunctionsStats() {
+        return this.functionsStats;
+    }
+
+    getCallTreeStats() {
+        return this.callTreeStats;
+    }
+
+    getCumCostStats() {
+        return this.cumCostStats;
+    }
+}
+
 class CallRangeTree {
 
     constructor(range, callList, metricValuesList) {
@@ -697,7 +862,8 @@ class CallRangeTree {
         this.callRefs = [];
         this.children = [];
         this.functionsStats = null;
-        this.callGraphStats = null;
+        this.callTreeStats = null;
+        this.cumCostStats = null;
     }
 
     getNodeCount() {
@@ -718,21 +884,25 @@ class CallRangeTree {
         return maxDepth + 1;
     }
 
-    getFunctionsStats(range, lowerBound, upperBound) {
+    getTimeRangeStats(range, lowerBound, upperBound) {
+        range = range || this.range;
+
         if (!this.range.overlaps(range)) {
-            return new FunctionsStats([]);
+            return new TimeRangeStats(
+                range,
+                new FunctionsStats(),
+                new CallTreeStats(this.callList.getMetrics()),
+                new CumCostStats(this.callList.getMetrics())
+            );
         }
 
         if (this.range.isContainedBy(range)) {
-            return this.functionsStats;
-        }
-
-        let callRefs = [];
-        for (let callRef of this.callRefs) {
-            let callTimeRange = this.callList.getCall(callRef).getTimeRange();
-            if (callTimeRange.overlaps(range)) {
-                callRefs.push(callRef);
-            }
+            return new TimeRangeStats(
+                range,
+                this.functionsStats,
+                this.callTreeStats,
+                this.cumCostStats
+            );
         }
 
         if (lowerBound == null && this.range.begin < range.begin) {
@@ -743,57 +913,38 @@ class CallRangeTree {
             upperBound = this.metricValuesList.getMetricValues(range.end);
         }
 
-        let functionsStats = new FunctionsStats(
-            callRefs,
-            this.callList,
-            lowerBound,
-            upperBound
-        );
-
-        for (let child of this.children) {
-            functionsStats.merge(child.getFunctionsStats(range, lowerBound, upperBound));
-        }
-
-        return functionsStats;
-    }
-
-    getCallGraphStats(range, lowerBound, upperBound) {
-        if (!this.range.overlaps(range)) {
-            return new CallGraphStats([], this.callList);
-        }
-
-        if (this.range.isContainedBy(range)) {
-            return this.callGraphStats;
-        }
-
-        let callRefs = [];
-        for (let callRef of this.callRefs) {
-            let callTimeRange = this.callList.getCall(callRef).getTimeRange();
-            if (callTimeRange.overlaps(range)) {
-                callRefs.push(callRef);
+        const calls = [];
+        for (const callRef of this.callRefs) {
+            const callTimeRange = this.callList.getCall(callRef).getTimeRange();
+            if (!callTimeRange.overlaps(range)) {
+                continue;
             }
+
+            calls.push(new TruncatedCallListEntry(
+                this.callList.getCall(callRef),
+                lowerBound,
+                upperBound
+            ));
         }
 
-        if (lowerBound == null && this.range.begin < range.begin) {
-            lowerBound = this.metricValuesList.getMetricValues(range.begin);
-        }
-
-        if (upperBound == null && this.range.end > range.end) {
-            upperBound = this.metricValuesList.getMetricValues(range.end);
-        }
-
-        let callGraphStats = new CallGraphStats(
-            callRefs,
-            this.callList,
-            lowerBound,
-            upperBound
+        const timeRangeStats = new TimeRangeStats(
+            range,
+            new FunctionsStats(calls),
+            new CallTreeStats(this.callList.getMetrics(), calls),
+            new CumCostStats(this.callList.getMetrics())
         );
 
-        for (let child of this.children) {
-            callGraphStats.merge(child.getCallGraphStats(range, lowerBound, upperBound));
+        const remainingRange = this.range.copy().intersect(range);
+        for (const child of this.children) {
+            timeRangeStats.merge(child.getTimeRangeStats(range, lowerBound, upperBound));
+            remainingRange.sub(child.range);
         }
 
-        return callGraphStats;
+        timeRangeStats.getCumCostStats().merge(
+            this.metricValuesList.getCumCostStats(remainingRange)
+        );
+
+        return timeRangeStats;
     }
 
     getCallRefs(range, minDuration, callRefs) {
@@ -831,10 +982,10 @@ class CallRangeTree {
     }
 
     static buildAsync(range, callRefs, callList, metricValuesList, progress, done) {
-        let tree = new CallRangeTree(range, callList, metricValuesList);
+        const tree = new CallRangeTree(range, callList, metricValuesList);
 
-        let lRange = tree.range.subRange(0.5, 0);
-        let rRange = tree.range.subRange(0.5, 1);
+        const lRange = tree.range.subRange(0.5, 0);
+        const rRange = tree.range.subRange(0.5, 1);
 
         let lCallRefs = [];
         let rCallRefs = [];
@@ -846,8 +997,8 @@ class CallRangeTree {
             }
         }
 
-        for (let callRef of callRefs) {
-            let callTimeRange = callList.getCall(callRef).getTimeRange();
+        for (const callRef of callRefs) {
+            const callTimeRange = callList.getCall(callRef).getTimeRange();
 
             if (!tree.range.contains(callTimeRange)) {
                 continue;
@@ -868,7 +1019,7 @@ class CallRangeTree {
             tree.callRefs.push(callRef);
         }
 
-        let minCallsPerNode = 500;
+        const minCallsPerNode = 500;
 
         if (lCallRefs.length < minCallsPerNode) {
             tree.callRefs = tree.callRefs.concat(lCallRefs);
@@ -893,8 +1044,14 @@ class CallRangeTree {
             return a > b ? -1 : 1;
         });
 
-        tree.functionsStats = new FunctionsStats(tree.callRefs, callList);
-        tree.callGraphStats = new CallGraphStats(tree.callRefs, callList);
+        const treeCalls = [];
+        for (const callRef of tree.callRefs) {
+            treeCalls.push(callList.getCall(callRef));
+        }
+
+        tree.functionsStats = new FunctionsStats(treeCalls);
+        tree.callTreeStats = new CallTreeStats(callList.getMetrics(), treeCalls);
+        tree.cumCostStats = new CumCostStats(callList.getMetrics());
 
         utils.processCallChain([
             next => {
@@ -903,6 +1060,7 @@ class CallRangeTree {
             },
             next => {
                 if (lCallRefs.length == 0) {
+                    tree.cumCostStats.merge(metricValuesList.getCumCostStats(lRange));
                     next();
 
                     return;
@@ -916,13 +1074,15 @@ class CallRangeTree {
                     progress,
                     child => {
                         tree.functionsStats.merge(child.functionsStats);
-                        tree.callGraphStats.merge(child.callGraphStats);
+                        tree.callTreeStats.merge(child.callTreeStats);
+                        tree.cumCostStats.merge(child.cumCostStats);
                         next();
                     }
                 ));
             },
             next => {
                 if (rCallRefs.length == 0) {
+                    tree.cumCostStats.merge(metricValuesList.getCumCostStats(rRange));
                     next();
 
                     return;
@@ -936,7 +1096,8 @@ class CallRangeTree {
                     progress,
                     child => {
                         tree.functionsStats.merge(child.functionsStats);
-                        tree.callGraphStats.merge(child.callGraphStats);
+                        tree.callTreeStats.merge(child.callTreeStats);
+                        tree.cumCostStats.merge(child.cumCostStats);
                         next();
                     }
                 ));
@@ -945,7 +1106,7 @@ class CallRangeTree {
                 // prune calls < 1/150th of node range as memory / accuracy trade-off
                 // FIXME /!\ this should be tunable, pruning on time basis only could broke accuracy on other metrics
                 // FIXME /!\ pruning appears to cause popping noise in flamegraph view
-                tree.callGraphStats.prune(range.length() / 150);
+                tree.callTreeStats.prune(range.length() / 150);
                 done(tree);
             }
         ], callRefs.length >= 5000, 0);
@@ -1016,18 +1177,17 @@ class ProfileData {
         );
     }
 
-    getFunctionsStats(range) {
-        console.time('getFunctionsStats');
+    getTimeRangeStats(range) {
+        console.time('getTimeRangeStats');
 
-        const functionsStats = this
+        const timeRangeStats = this
             .callRangeTree
-            .getFunctionsStats(range)
-            .getValues()
+            .getTimeRangeStats(range)
         ;
 
-        console.timeEnd('getFunctionsStats');
+        console.timeEnd('getTimeRangeStats');
 
-        return functionsStats;
+        return timeRangeStats;
     }
 
     getCall(idx) {
@@ -1049,16 +1209,6 @@ class ProfileData {
         console.timeEnd('getCalls');
 
         return calls;
-    }
-
-    getCallGraphStats(range) {
-        console.time('getCallGraphStats');
-
-        const callGraphStats = this.callRangeTree.getCallGraphStats(range);
-
-        console.timeEnd('getCallGraphStats');
-
-        return callGraphStats;
     }
 
     getMetricValues(time) {

@@ -120,15 +120,15 @@ export class Range {
         return lerpDist(this.begin, this.end, value);
     }
 
-    intersection(other) {
+    intersect(other) {
         if (!this.overlaps(other)) {
             throw new Error('Ranges do not overlap');
         }
 
-        return new Range(
-            Math.max(this.begin, other.begin),
-            Math.min(this.end, other.end)
-        );
+        this.begin = Math.max(this.begin, other.begin);
+        this.end = Math.min(this.end, other.end);
+
+        return this;
     }
 
     subRange(ratio, num) {
@@ -181,6 +181,10 @@ export class Range {
         return this;
     }
 
+    containsValue(val) {
+        return this.begin <= val && val <= this.end;
+    }
+
     contains(other) {
         return this.begin <= other.begin && other.end <= this.end;
     }
@@ -191,5 +195,28 @@ export class Range {
 
     overlaps(other) {
         return !(this.end < other.begin || other.end < this.begin);
+    }
+
+    sub(other) {
+        if (other.contains(this)) {
+            this.end = this.begin;
+            return this;
+        }
+
+        if (this.contains(other)) {
+            this.end -= other.length();
+        }
+
+        if (!this.overlaps(other)) {
+            return this;
+        }
+
+        if (this.containsValue(other.begin)) {
+            this.end = other.begin;
+        } else if (this.containsValue(other.end)) {
+            this.begin = other.end;
+        }
+
+        return this;
     }
 }

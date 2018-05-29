@@ -38,8 +38,11 @@ form#config em {
     margin-bottom: 20px; 
 }
 
-form#config input {
+form#config input,
+form#config textarea {
     vertical-align: top;
+    border: 1px solid #044;
+    background-color: #000;
 }
 
 form#config select {
