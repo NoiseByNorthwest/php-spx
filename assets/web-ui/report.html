@@ -26,9 +26,9 @@
             <div id="colorscheme-selector" class="widget" style="flex: 0 0 220px;">
                 <span>Color by: </span><a href="#" id="colorscheme-current-name">Selected metric</a>
                 <div id="colorscheme-panel">
-                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-scale" value="scale" checked />
+                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-scale" value="scale" checked>
                     <label for="colorscheme-mode-scale">Selected metric</label>
-                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-categories" value="categories" />
+                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-categories" value="categories">
                     <label for="colorscheme-mode-categories">Categories</label>
                     <hr />
                     <button id="new-category">Add new category</button>
@@ -258,13 +258,17 @@
                         new widget.FlameGraph($('#flamegraph'), profileData),
                     ];
 
+                    widgets.forEach(widget => widget.render());
+
                     const colSchemeWidgets = [widgets[0], widgets[1]];
 
                     $(window).on('spx-colorscheme-update', (e, newMode=null) => {
                         if (!!newMode && colorMode !== newMode) {
                             colorMode = newMode;
                             colSchemeWidgets.forEach(widget => {
-                                widget.container.toggle();
+                                widget.getContainer().toggle();
+                            });
+                            colSchemeWidgets.forEach(widget => {
                                 widget._fitToContainerSize();
                             });
                         }

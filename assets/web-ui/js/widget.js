@@ -336,6 +336,10 @@ class Widget {
         });
     }
 
+    getContainer() {
+        return this.container;
+    }
+
     onTimeRangeUpdate() {
         this.repaint();
     }
@@ -464,7 +468,7 @@ export class ColorSchemeControls extends Widget {
     <input type="text" name="label" value="${cat.label}"/>
     <button name="push-up">⬆︎</button>
     <button name="push-down">⬇︎</button>
-    <button name="del">╳</button>
+    <button name="del">✖</button>
     <textarea name="patterns">${cat.patterns.map(p => p.source).join('\n')}</textarea>
 </li>`;
         });
