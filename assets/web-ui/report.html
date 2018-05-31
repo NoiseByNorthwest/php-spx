@@ -137,13 +137,23 @@
 
                     return fetch('data/reports/metadata/' + key, {credentials: "same-origin"});
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Cannot load report metadata');
+                    }
+
+                    return response.json();
+                })
                 .then(metadata => {
                     profileDataBuilder.setMetadata(metadata);
 
                     return fetch('data/reports/get/' + key, {credentials: "same-origin"});
                 })
                 .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Cannot load report');
+                    }
+
                     let type = null;
                     let currentFunctionIdx = 0;
                     let lastTruncatedLine = '';
@@ -290,6 +300,7 @@
                     return new Promise(resolve => resolve());
                 })
                 .then(() => initDialog.container.fadeOut(500))
+                .catch(e => initDialog.progressInfo.text(e))
             ;
         });
     </script>
