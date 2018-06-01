@@ -209,9 +209,22 @@
 
                     if (!response.body) {
                         return response.arrayBuffer().then(buffer => {
-                            readBuffer(new Uint8Array(buffer));
+                            const blockSize = 256 * 1024;
+                            const readBlocks = (offset, resolve) => {
+                                if (buffer.byteLength - offset <= blockSize) {
+                                    readBuffer(new Uint8Array(buffer, offset));
 
-                            return new Promise(resolve => resolve());
+                                    return new Promise(() => resolve());
+                                }
+
+                                readBuffer(new Uint8Array(buffer, offset, blockSize));
+
+                                setTimeout(() => readBlocks(offset + blockSize, resolve), 0);
+                            }
+
+                            return new Promise(resolve => {
+                                setTimeout(() => readBlocks(0, resolve), 0);
+                            });
                         });
                     }
 
