@@ -2,9 +2,11 @@
 
 [![Build Status](https://travis-ci.org/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.org/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 7.x](https://img.shields.io/badge/php-5.6,%207.x-blue.svg)
 
-![Showcase](assets/docs/as.gif)
+[Click here for a live demo of the analyze screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20180603_211110-dev-3540-294703905)
 
-![Showcase](assets/docs/fp1.gif)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as.apng)
+
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/fp1.gif)
 
 SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.  
 It differentiates itself from other similar extensions as being:
@@ -73,13 +75,13 @@ _N.B.: It is also required to have your vhost configured to trigger PHP for any 
 
 Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
 
-![Showcase](assets/docs/cp-form.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/cp-form.png)
 
 Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
 
 Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.  
 
-![Showcase](assets/docs/cp-list2.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/cp-list2.png)
 
 Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).  
 
@@ -236,7 +238,9 @@ This is the home page of the web UI, divided into 2 parts:
 
 #### Analysis screen
 
-![Showcase](assets/docs/as.th.png)
+[Click here for a live demo of the analyze screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20180603_211110-dev-3540-294703905)
+
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as.th.png)
 
 ##### Performance, report size & time resolution
 
@@ -248,7 +252,16 @@ See _SPX_FULL_RES_ [parameter](#available-parameters) for command line script.
 
 This is simply a combo box for selecting the currently analyzed metric.
 
-![Showcase](assets/docs/as-ms.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as-ms.png)
+
+##### Color scheme selector
+
+By default, function related blocks in the visualizations are colored according to their cost, with a color scale displayed at the top right of the screen.
+
+You can also define a custom color scheme by clicking on the color scheme mode link, displayed at the top of the screen just after the metric selector.
+A drop-down window will then appear and allow you to switch between `default` and `category` mode and define (add/edit/delete) your categories (color, name, pattern list) for the `category` mode (see the screenshot below).
+
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as-csm.png)
 
 ##### Time line overview
 
@@ -261,7 +274,7 @@ Supported controls:
 - horizontal left click drag: shift the selected time range
 - resize click on selected time range rectangle: shift one of the selected time range boundary
 
-![Showcase](assets/docs/as-ov.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as-ov.png)
 
 ##### Time line focus
 
@@ -276,20 +289,20 @@ Supported controls:
 
 Except for wall time, the current metric is also plotted (current value over time) on a foreground layer.
 
-![Showcase](assets/docs/as-tl.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as-tl.png)
 
 ##### Flat profile
 
 This visualization is the flat profile for the selected time range and the selected metric, displayed as a sortable table.
 
-![Showcase](assets/docs/as-fp.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as-fp.png)
 
 ##### Flame Graph
 
 This visualization, designed by [Brendan Gregg](http://www.brendangregg.com/flamegraphs.html), allows to quickly find the hot code path for the selected time range and the selected metric.  
 Metrics corresponding to releasable resources (memory, objects in use...) are not supported by this visualization.
 
-![Showcase](assets/docs/as-fg.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/master/php-spx/doc/as-fg.png)
 
 ## Security concern
 
