@@ -20,21 +20,9 @@
     <div style="display: flex; flex-direction: column; height: 100%">
         <div style="flex: 0 0 24px; display: flex; flex-direction: row;">
             <div id="metric-selector" class="widget" style="flex: 0 0 120px;">
-                <select>
-                </select>
+                <select></select>
             </div>
-            <div id="colorscheme-selector" class="widget" style="flex: 0 0 220px;">
-                <span>Color by: </span><a href="#" id="colorscheme-current-name">Selected metric</a>
-                <div id="colorscheme-panel">
-                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-scale" value="scale" checked>
-                    <label for="colorscheme-mode-scale">Selected metric</label>
-                    <input type="radio" name="colorscheme-mode" id="colorscheme-mode-categories" value="categories">
-                    <label for="colorscheme-mode-categories">Categories</label>
-                    <hr />
-                    <button id="new-category">Add new category</button>
-                    <ol></ol>
-                </div>
-            </div>
+            <div id="colorscheme-manager" class="widget" style="flex: 0 0 220px;"></div>
             <div id="category-legend" class="widget" style="flex: 1 0 150px;"></div>
             <div id="color-scale" class="widget" style="flex: 1 0 150px;"></div>
         </div>
@@ -59,14 +47,12 @@
     ></script>
 
     <!-- Required workaround for Firefox to fix a "no credentials" issue -->
-    <script type="module" crossorigin src="./js/utils.js"></script>
     <script type="module" crossorigin src="./js/fmt.js"></script>
     <script type="module" crossorigin src="./js/profileData.js"></script>
     <script type="module" crossorigin src="./js/widget.js"></script>
 
     <script type="module" crossorigin>
         import * as fmt from './js/fmt.js';
-        import * as utils from './js/utils.js';
         import {ProfileDataBuilder} from './js/profileData.js';
         import * as widget from './js/widget.js';
 
@@ -99,8 +85,6 @@
 
                 if (!(title in initDialog.data)) {
                     initDialog.data[title] = {
-                        lastCount: current,
-                        lastTime: new Date().getTime() / 1000,
                         startCount: current,
                         startTime: new Date().getTime() / 1000,
                     };
@@ -125,9 +109,6 @@
                     fmt.pct(current / total) + ' (' + fmt.quantity(current) + ')'
                         + ' ETA: ' + remainingTime + 's'
                 );
-
-                initDialog.data[title].lastCount = current;
-                initDialog.data[title].lastTime = currentTime;
             }
 
             fetch('data/metrics', {credentials: "same-origin"})
@@ -256,47 +237,17 @@
                     return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
                 })
                 .then(profileData => {
-
-                    const COLOUR_SCALE = 'scale';
-                    const COLOUR_CATEGORIES = 'categories';
-
-                    let colorMode = COLOUR_SCALE;
-                    let colorChooser = function(profileData, metric, call) {
-                        if (colorMode == COLOUR_SCALE) {
-                            return utils.getCallMetricValueColor(profileData, metric, call.getInc(metric));
-                        } else if (colorMode == COLOUR_CATEGORIES) {
-                            return utils.getCallCategoryColor(call.getFunctionName());
-                        } else {
-                            throw new Error(`Unknown color mode ${colorMode}`);
-                        }
-                    };
-
                     const widgets = [
                         new widget.ColorScale($('#color-scale'), profileData),
                         new widget.CategoryLegend($('#category-legend'), profileData),
-                        new widget.ColorSchemeControls($('#colorscheme-selector'), profileData),
-                        new widget.OverView($('#overview'), profileData, colorChooser),
-                        new widget.TimeLine($('#timeline'), profileData, colorChooser),
+                        new widget.ColorSchemeManager($('#colorscheme-manager'), profileData),
+                        new widget.OverView($('#overview'), profileData),
+                        new widget.TimeLine($('#timeline'), profileData),
                         new widget.FlatProfile($('#flatprofile'), profileData),
                         new widget.FlameGraph($('#flamegraph'), profileData),
                     ];
 
                     widgets.forEach(widget => widget.render());
-
-                    const colSchemeWidgets = [widgets[0], widgets[1]];
-
-                    $(window).on('spx-colorscheme-update', (e, newMode=null) => {
-                        if (!!newMode && colorMode !== newMode) {
-                            colorMode = newMode;
-                            colSchemeWidgets.forEach(widget => {
-                                widget.getContainer().toggle();
-                            });
-                            colSchemeWidgets.forEach(widget => {
-                                widget._fitToContainerSize();
-                            });
-                        }
-                        widgets.forEach(widget => widget.repaint());
-                    });
 
                     const metricSelector = $('#metric-selector select');
                     for (const metric of profileData.getMetadata().enabled_metrics) {
