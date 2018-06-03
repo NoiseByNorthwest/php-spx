@@ -443,10 +443,6 @@ class MetricValuesList {
             lastIdx--;
         }
 
-        if (firstIdx > lastIdx) {
-            firstIdx = lastIdx;
-        }
-
         const first = this.getMetricValues(range.begin);
         const last = this.getMetricValues(range.end);
 
@@ -704,22 +700,17 @@ class CallTreeStatsNode {
         return minInc;
     }
 
-    getMaxCumInc(minInc) {
-        minInc = minInc || this.getMinInc();
-        let maxCumInc = null;
-        for (let i in this.children) {
-            if (maxCumInc == null) {
-                maxCumInc = this.children[i].getMaxCumInc(minInc).copy();
-            } else {
-                maxCumInc.add(this.children[i].getMaxCumInc(minInc));
-            }
+    getMaxCumInc() {
+        const maxCumInc = this.inc.copy().set(0);
+        for (const i in this.children) {
+            maxCumInc.add(this.children[i].getMaxCumInc());
         }
 
-        if (maxCumInc == null) {
-            maxCumInc = this.inc.copy().set(-Number.MAX_VALUE);
+        if (this.getChildren().length == 0) {
+            maxCumInc.set(-Number.MAX_VALUE);
         }
 
-        return maxCumInc.max(this.inc.copy().sub(minInc));
+        return maxCumInc.max(this.inc.copy());
     }
 
     addChild(node) {

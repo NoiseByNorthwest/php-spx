@@ -3,6 +3,49 @@ import * as fmt from './fmt.js';
 import * as math from './math.js';
 import * as svg from './svg.js';
 
+function getCallMetricValueColor(profileData, metric, value) {
+    const metricRange = profileData.getStats().getCallRange(metric);
+
+    let scaleValue = 0;
+
+    // this bounding is required since value can be lower than the lowest sample
+    // (represented by metricRange.begin). It is the case when value is interpolated
+    // from 2 consecutive samples
+    value = Math.max(metricRange.begin, value)
+
+    if (metricRange.length() > 100) {
+        scaleValue =
+            Math.log10(value - metricRange.begin)
+                / Math.log10(metricRange.length())
+        ;
+    } else {
+        scaleValue = metricRange.lerp(value);
+    }
+
+    return math.Vec3.lerpPath(
+        [
+            new math.Vec3(0, 0.3, 0.9),
+            new math.Vec3(0, 0.9, 0.9),
+            new math.Vec3(0, 0.9, 0),
+            new math.Vec3(0.9, 0.9, 0),
+            new math.Vec3(0.9, 0.2, 0),
+        ],
+        scaleValue
+    ).toHTMLColor();
+}
+
+function getFunctionCategoryColor(funcName) {
+    let categories = utils.getCategories(true);
+    for (let category of categories) {
+        for (let pattern of category.patterns) {
+            if (pattern.test(funcName)) {
+                pattern.lastIndex = 0;
+                return `rgb(${category.color[0]},${category.color[1]},${category.color[2]})`;
+            }
+        }
+    }
+}
+
 function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
     const timeRangeNs = timeRangeUs.copy().scale(1000);
     const delta = timeRangeNs.length();
@@ -323,9 +366,19 @@ class Widget {
         this.timeRange = profileData.getTimeRange();
         this.timeRangeStats = profileData.getTimeRangeStats(this.timeRange);
         this.currentMetric = profileData.getMetadata().enabled_metrics[0];
+        this.colorSchemeMode = null;
+        this.functionColorResolver = (functionName, defaultColor) => {
+            switch (this.colorSchemeMode) {
+                case ColorSchemeManager.MODE_CATEGORY:
+                    return getFunctionCategoryColor(functionName);
+
+                default:
+                    return defaultColor;
+            }
+        };
 
         $(window).on('resize', () => {
-            this._fitToContainerSize();
+            this.repaint();
         });
 
         $(window).on('spx-timerange-update', (e, timeRange, timeRangeStats) => {
@@ -334,21 +387,48 @@ class Widget {
 
             this.onTimeRangeUpdate();
         });
-    }
 
-    getContainer() {
-        return this.container;
+        $(window).on('spx-colorscheme-mode-update', (e, colorSchemeMode) => {
+            this.colorSchemeMode = colorSchemeMode;
+
+            this.onColorSchemeModeUpdate();
+        });
+
+        $(window).on('spx-colorscheme-category-update', () => {
+            if (this.colorSchemeMode != ColorSchemeManager.MODE_CATEGORY) {
+                return;
+            }
+
+            this.onColorSchemeCategoryUpdate();
+        });
     }
 
     onTimeRangeUpdate() {
         this.repaint();
     }
 
-    updateTimeRange(timeRange) {
+    onColorSchemeModeUpdate() {
+        this.repaint();
+    }
+
+    onColorSchemeCategoryUpdate() {
+        this.repaint();
+    }
+
+    notifyTimeRangeUpdate(timeRange) {
         this.timeRange = timeRange;
         this.timeRangeStats = this.profileData.getTimeRangeStats(this.timeRange);
 
         $(window).trigger('spx-timerange-update', [this.timeRange, this.timeRangeStats]);
+    }
+
+    notifyColorSchemeModeUpdate(colorSchemeMode) {
+        this.colorSchemeMode = colorSchemeMode;
+        $(window).trigger('spx-colorscheme-mode-update', [this.colorSchemeMode]);
+    }
+
+    notifyColorSchemeCategoryUpdate() {
+        $(window).trigger('spx-colorscheme-category-update');
     }
 
     setCurrentMetric(metric) {
@@ -369,52 +449,53 @@ class Widget {
         this.render();
         console.timeEnd('repaint ' + id);
     }
-
-    _fitToContainerSize() {
-        this.repaint();
-    }
 }
 
-class SVGWidget extends Widget {
+export class ColorSchemeManager extends Widget {
+
+    static get MODE_DEFAULT() { return 'default'; }
+    static get MODE_CATEGORY() { return 'category'; }
 
     constructor(container, profileData) {
         super(container, profileData);
 
-        this.viewPort = new ViewPort(
-            this.container.width(),
-            this.container.height()
+        // FIXME remove DOM dependencies like element ids
+
+        this.container.html(
+            `
+            <span>Color scheme: </span><a href="#" id="colorscheme-current-name">default</a>
+            <div id="colorscheme-panel">
+                <input
+                    type="radio"
+                    name="colorscheme-mode"
+                    id="colorscheme-mode-${ColorSchemeManager.MODE_DEFAULT}"
+                    value="${ColorSchemeManager.MODE_DEFAULT}"
+                    checked
+                >
+                <label for="colorscheme-mode-${ColorSchemeManager.MODE_DEFAULT}">
+                    ${ColorSchemeManager.MODE_DEFAULT}
+                </label>
+                <input
+                    type="radio"
+                    name="colorscheme-mode"
+                    id="colorscheme-mode-${ColorSchemeManager.MODE_CATEGORY}"
+                    value="${ColorSchemeManager.MODE_CATEGORY}"
+                >
+                <label for="colorscheme-mode-${ColorSchemeManager.MODE_CATEGORY}">
+                    ${ColorSchemeManager.MODE_CATEGORY}
+                </label>
+                <hr />
+                <button id="new-category">Add new category</button>
+                <ol></ol>
+            </div>
+            `
         );
-
-        this.container.append(this.viewPort.node);
-
-        setTimeout(() => this._fitToContainerSize(), 0);
-    }
-
-    clear() {
-        this.viewPort.clear();
-    }
-
-    _fitToContainerSize() {
-        this.viewPort.resize(0, 0);
-        this.viewPort.resize(
-            this.container.width(),
-            this.container.height()
-        );
-
-        super._fitToContainerSize();
-    }
-}
-
-export class ColorSchemeControls extends Widget {
-
-    constructor(container, profileData) {
-        super(container, profileData);
 
         this.panelOpen = false;
 
-        this.toggleLink = container.find('#colorscheme-current-name');
-        this.panel = container.find('#colorscheme-panel');
-        this.categoryList = container.find('#colorscheme-panel ol');
+        this.toggleLink = this.container.find('#colorscheme-current-name');
+        this.panel = this.container.find('#colorscheme-panel');
+        this.categoryList = this.container.find('#colorscheme-panel ol');
 
         this.toggleLink.on('click', e => {
             e.preventDefault();
@@ -423,22 +504,27 @@ export class ColorSchemeControls extends Widget {
 
         $('#new-category').on('click', e => {
             e.preventDefault();
-            let cats = utils.getCategories();
+            const cats = utils.getCategories();
             cats.unshift({
                 color: [90, 90, 90],
                 label: 'untitled',
                 patterns: []
-            })
+            });
+
             utils.setCategories(cats);
-            $(window).trigger('spx-colorscheme-update');
-        })
 
-        container.find('input[name="colorscheme-mode"]:radio').on('change', e => {
-            if (!e.target.checked) { return };
+            this.repaint();
+        });
 
-            $(window).trigger('spx-colorscheme-update', [e.target.value]);
-            let label = this.panel.find(`label[for="${e.target.id}"]`);
+        this.container.find('input[name="colorscheme-mode"]:radio').on('change', e => {
+            if (!e.target.checked) {
+                return
+            }
+
+            const label = this.panel.find(`label[for="${e.target.id}"]`);
             this.toggleLink.html(label.html());
+
+            this.notifyColorSchemeModeUpdate(e.target.value);
         });
 
         this.categoryList.on('input', 'textarea', e => {
@@ -446,32 +532,42 @@ export class ColorSchemeControls extends Widget {
             e.target.style.height = e.target.scrollHeight + 'px';
         });
 
-        let editHandler = e => {
+        const editHandler = e => {
             this.onCategoryEdit(e.target);
             e.stopPropagation();
-        }
+        };
+
         this.categoryList.on('change', '.jscolor,input,textarea', editHandler);
         this.categoryList.on('click', 'button', editHandler);
-
-        setTimeout(() => this.repaint(), 0);
     }
 
-    clear() { }
+    onColorSchemeCategoryUpdate() {
+    }
+
+    clear() {
+
+    }
 
     render() {
-        let categories = utils.getCategories();
-        let hex = n => n.toString(16).padStart(2, "0");
-        let items = categories.map((cat, i) => {
+        const categories = utils.getCategories();
+        const hex = n => n.toString(16).padStart(2, "0");
+
+        const items = categories.map((cat, i) => {
             return `
 <li class="category" data-index=${i}>
-    <input name="colorpicker" class="jscolor" value="${hex(cat.color[0])}${hex(cat.color[1])}${hex(cat.color[2])}" />
-    <input type="text" name="label" value="${cat.label}"/>
+    <input
+        name="colorpicker"
+        class="jscolor"
+        value="${hex(cat.color[0])}${hex(cat.color[1])}${hex(cat.color[2])}"
+    >
+    <input type="text" name="label" value="${cat.label}">
     <button name="push-up">⬆︎</button>
     <button name="push-down">⬇︎</button>
     <button name="del">✖</button>
     <textarea name="patterns">${cat.patterns.map(p => p.source).join('\n')}</textarea>
 </li>`;
         });
+
         this.categoryList.html(items.join(''));
         this.categoryList.find('textarea').trigger('input');
         this.categoryList.find('.jscolor').each((i, el) => {
@@ -483,6 +579,7 @@ export class ColorSchemeControls extends Widget {
                 backgroundColor: 'transparent',
                 insetColor: '#000'
             });
+
             if (this.openPicker === i) {
                 this.openPicker = null;
                 el.picker.show();
@@ -502,59 +599,119 @@ export class ColorSchemeControls extends Widget {
     }
 
     listenForPanelClose() {
-        let onOutsideClick = e => {
-            if (!!e.target._jscControlName || e.target.closest('#colorscheme-panel') !== null) { return; }
+        const onOutsideClick = e => {
+            if (
+                !!e.target._jscControlName
+                || e.target.closest('#colorscheme-panel') !== null
+            ) {
+                return;
+            }
+
             e.preventDefault();
-            off()
+            off();
             this.togglePanel();
-        }
-        let onEscKey = e => {
+        };
+
+        const onEscKey = e => {
             if (e.key != 'Escape') { return; }
             off();
             this.togglePanel();
-        }
-        let off = () => {
+        };
+
+        const off = () => {
             $(document).off('mousedown', onOutsideClick);
             $(document).off('keydown', onEscKey);
-        }
+        };
+
         $(document).on('mousedown', onOutsideClick);
         $(document).on('keydown', onEscKey);
     }
 
     onCategoryEdit(elem) {
-        let idx = parseInt(elem.closest('li').dataset['index'], 10);
-        let categories = utils.getCategories();
+        const idx = parseInt(elem.closest('li').dataset['index'], 10);
+        const categories = utils.getCategories();
 
-        let pushTarget = Math.max(idx-1, 0);
+        const pushTarget = Math.max(idx-1, 0);
         switch (elem.name) {
             case 'push-down':
                 pushTarget = Math.min(idx+1, categories.length-1);
             case 'push-up':
                 categories.splice(pushTarget, 0, categories.splice(idx, 1)[0]);
                 break;
+
             case 'del':
                 categories.splice(idx, 1);
                 break;
+
             case 'colorpicker':
                 this.openPicker = idx;
                 categories[idx].color = elem.picker.rgb.map(n => Math.floor(n));
                 break;
+
             case 'label':
                 categories[idx].label = elem.value.trim();
                 break;
+
             case 'patterns':
-                let regexes = elem.value
+                const regexes = elem.value
                     .split(/[\r\n]+/)
                     .map(line => line.trim())
                     .filter(line => line != '')
                     .map(line => new RegExp(line, 'gi'));
+
                 categories[idx].patterns = regexes;
                 break;
+
             default:
                 throw new Error(`Unknown category prop '${elem.name}'`);
         }
+
         utils.setCategories(categories);
-        $(window).trigger('spx-colorscheme-update');
+        this.repaint();
+        this.notifyColorSchemeCategoryUpdate();
+    }
+}
+
+class SVGWidget extends Widget {
+
+    constructor(container, profileData) {
+        super(container, profileData);
+
+        this.viewPort = new ViewPort(
+            this.container.width(),
+            this.container.height()
+        );
+
+        this.container.append(this.viewPort.node);
+    }
+
+    clear() {
+        this.viewPort.clear();
+
+        // save viewPort size before shrinking
+        const viewPortWidth = this.viewPort.width;
+        const viewPortHeight = this.viewPort.height;
+
+        // viewPort internal svg shrinking is first required to let the container get
+        // its correct size
+        this.viewPort.resize(0, 0);
+
+        const resized = 0
+            || viewPortWidth != this.container.width()
+            || viewPortHeight != this.container.height()
+        ;
+
+        this.viewPort.resize(
+            this.container.width(),
+            this.container.height()
+        );
+
+        if (resized) {
+            this.onContainerResize();
+        }
+    }
+
+    onContainerResize() {
     }
 }
 
@@ -565,6 +722,14 @@ export class ColorScale extends SVGWidget {
     }
 
     onTimeRangeUpdate() {
+    }
+
+    onColorSchemeModeUpdate() {
+        if (this.colorSchemeMode == ColorSchemeManager.MODE_DEFAULT) {
+            this.container.show(() => this.repaint());
+        } else {
+            this.container.hide();
+        }
     }
 
     render() {
@@ -588,7 +753,7 @@ export class ColorScale extends SVGWidget {
                 y: 0,
                 width: step,
                 height: this.viewPort.height,
-                fill: utils.getCallMetricValueColor(
+                fill: getCallMetricValueColor(
                     this.profileData,
                     this.currentMetric,
                     getCurrentMetricValue(i)
@@ -617,6 +782,17 @@ export class CategoryLegend extends SVGWidget {
 
     constructor(container, profileData) {
         super(container, profileData);
+    }
+
+    onColorSchemeModeUpdate() {
+        if (this.colorSchemeMode == ColorSchemeManager.MODE_CATEGORY) {
+            this.container.show(() => this.repaint());
+        } else {
+            this.container.hide();
+        }
+    }
+
+    onTimeRangeUpdate() {
     }
 
     render() {
@@ -648,10 +824,9 @@ export class CategoryLegend extends SVGWidget {
 
 export class OverView extends SVGWidget {
 
-    constructor(container, profileData, colorChooser) {
+    constructor(container, profileData) {
         super(container, profileData);
 
-        this.colorChooser = colorChooser;
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
@@ -698,7 +873,7 @@ export class OverView extends SVGWidget {
                     break;
             }
 
-            this.updateTimeRange(this.viewTimeRange.getTimeRange());
+            this.notifyTimeRangeUpdate(this.viewTimeRange.getTimeRange());
         });
     }
 
@@ -714,9 +889,9 @@ export class OverView extends SVGWidget {
         this.timeRangeRect.setAttribute('width', viewRange.length());
     }
 
-    _fitToContainerSize() {
+    onContainerResize() {
         this.viewTimeRange.setViewWidth(this.container.width());
-        super._fitToContainerSize();
+        super.onContainerResize();
     }
 
     render() {
@@ -751,10 +926,13 @@ export class OverView extends SVGWidget {
                 y1: y,
                 x2: x + w,
                 y2: y + h,
-                stroke: this.colorChooser(
-                    this.profileData,
-                    this.currentMetric,
-                    call
+                stroke: this.functionColorResolver(
+                    call.getFunctionName(),
+                    getCallMetricValueColor(
+                        this.profileData,
+                        this.currentMetric,
+                        call.getInc(this.currentMetric)
+                    )
                 ),
             }));
         }
@@ -792,10 +970,9 @@ export class OverView extends SVGWidget {
 
 export class TimeLine extends SVGWidget {
 
-    constructor(container, profileData, colorChooser) {
+    constructor(container, profileData) {
         super(container, profileData);
 
-        this.colorChooser = colorChooser;
         this.viewTimeRange = new ViewTimeRange(
             this.profileData.getTimeRange(),
             this.profileData.getWallTime(),
@@ -816,7 +993,7 @@ export class TimeLine extends SVGWidget {
 
             this.viewTimeRange.zoomScaledViewRange(f, e.clientX);
 
-            this.updateTimeRange(this.viewTimeRange.getTimeRange());
+            this.notifyTimeRangeUpdate(this.viewTimeRange.getTimeRange());
         });
 
         let lastPos = {x: 0, y: 0};
@@ -858,7 +1035,7 @@ export class TimeLine extends SVGWidget {
                     return;
             }
 
-            this.updateTimeRange(this.viewTimeRange.getTimeRange());
+            this.notifyTimeRangeUpdate(this.viewTimeRange.getTimeRange());
         });
 
         this.infoViewPort = null;
@@ -869,7 +1046,7 @@ export class TimeLine extends SVGWidget {
                 return;
             }
 
-            this.updateTimeRange(this.profileData.getCall(callIdx).getTimeRange());
+            this.notifyTimeRangeUpdate(this.profileData.getCall(callIdx).getTimeRange());
         });
 
         $(this.viewPort.node).on('mousemove mouseout', e => {
@@ -939,9 +1116,9 @@ export class TimeLine extends SVGWidget {
         super.onTimeRangeUpdate();
     }
 
-    _fitToContainerSize() {
+    onContainerResize() {
         this.viewTimeRange.setViewWidth(this.container.width());
-        super._fitToContainerSize();
+        super.onContainerResize();
     }
 
     render() {
@@ -992,10 +1169,13 @@ export class TimeLine extends SVGWidget {
                 height: h,
                 stroke: 'none',
                 'stroke-width': 2,
-                fill: this.colorChooser(
-                    this.profileData,
-                    this.currentMetric,
-                    call
+                fill: this.functionColorResolver(
+                    call.getFunctionName(),
+                    getCallMetricValueColor(
+                        this.profileData,
+                        this.currentMetric,
+                        call.getInc(this.currentMetric)
+                    )
                 ),
                 'data-call-idx': call.getIdx(),
             });
@@ -1100,7 +1280,6 @@ export class FlameGraph extends SVGWidget {
 
             this.pointedElement.setAttribute('stroke', '#0ff');
 
-            console.log('dddd');
             this.infoViewPort.appendChild(svg.createNode('rect', {
                 x: 0,
                 y: 0,
@@ -1159,12 +1338,12 @@ export class FlameGraph extends SVGWidget {
 
         this.renderedCgNodes = [];
 
-        const renderNode = (node, minInc, maxCumInc, x, y) => {
+        const renderNode = (node, maxCumInc, x, y) => {
             x = x || 0;
             y = y || this.viewPort.height;
 
             const w = this.viewPort.width
-                * (node.getInc().getValue(this.currentMetric) - minInc)
+                * node.getInc().getValue(this.currentMetric)
                 / (maxCumInc)
                 - 1
             ;
@@ -1178,7 +1357,7 @@ export class FlameGraph extends SVGWidget {
 
             let childrenX = x;
             for (let child of node.getChildren()) {
-                childrenX = renderNode(child, minInc, maxCumInc, childrenX, y);
+                childrenX = renderNode(child, maxCumInc, childrenX, y);
             }
 
             this.renderedCgNodes.push(node);
@@ -1191,15 +1370,18 @@ export class FlameGraph extends SVGWidget {
                 height: h,
                 stroke: 'none',
                 'stroke-width': 2,
-                fill: math.Vec3.lerp(
-                    new math.Vec3(1, 0, 0),
-                    new math.Vec3(1, 1, 0),
-                    0.5
-                        * Math.min(1, node.getDepth() / 20)
-                    + 0.5
-                        * (node.getInc().getValue(this.currentMetric) - minInc)
-                        / (maxCumInc)
-                ).toHTMLColor(),
+                fill: this.functionColorResolver(
+                    node.getFunctionName(),
+                    math.Vec3.lerp(
+                        new math.Vec3(1, 0, 0),
+                        new math.Vec3(1, 1, 0),
+                        0.5
+                            * Math.min(1, node.getDepth() / 20)
+                        + 0.5
+                            * node.getInc().getValue(this.currentMetric)
+                            / (maxCumInc)
+                    ).toHTMLColor()
+                ),
                 'fill-opacity': '1',
                 'data-cg-node-idx': nodeIdx,
             }));
@@ -1226,12 +1408,11 @@ export class FlameGraph extends SVGWidget {
             .getRoot()
         ;
 
-        const minInc = cgRoot.getMinInc().getValue(this.currentMetric);
         const maxCumInc = cgRoot.getMaxCumInc().getValue(this.currentMetric);
 
         let x = 0;
         for (const child of cgRoot.getChildren()) {
-            x = renderNode(child, minInc, maxCumInc, x);
+            x = renderNode(child, maxCumInc, x);
         }
 
         this.pointedElement = null;
@@ -1283,7 +1464,7 @@ export class FlatProfile extends Widget {
 <table width="${this.container.width() - 20}px"><tbody>
         `;
 
-        let functionsStats = this.timeRangeStats.getFunctionsStats().getValues();
+        const functionsStats = this.timeRangeStats.getFunctionsStats().getValues();
 
         functionsStats.sort((a, b) => {
             switch (this.sortCol) {
@@ -1364,7 +1545,19 @@ export class FlatProfile extends Widget {
 
             html += `
 <tr>
-    <td title="${funcName}" style="text-align: left; font-size: 12px">
+    <td
+        title="${funcName}"
+        style="text-align: left; font-size: 12px; color: black; background-color: ${
+            this.functionColorResolver(
+                funcName,
+                getCallMetricValueColor(
+                    this.profileData,
+                    this.currentMetric,
+                    stats.inc.getValue(this.currentMetric)
+                )
+            )
+        }"
+    >
         ${utils.truncateFunctionName(funcName, (this.container.width() - 5 * 90) / 8)}
     </td>
     <td width="80px">${fmt.quantity(stats.called)}</td>

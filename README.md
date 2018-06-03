@@ -67,7 +67,9 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 ### Web page
 
-Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.  
+Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.
+
+_N.B.: It is also required to have your vhost configured to trigger PHP for any non existing file so that PHP is triggered for `/_spx*` request URIs (as long as `_spx` is the configured prefix which is the case by default). This is due to the fact that internally SPX will, if authentication is OK, intercept and stop normal PHP execution for its URIs and serve its content in place. If you are using a framework like Symfony or Laravel, the recommended / standard vhost setup for these frameworks is sufficient._
 
 Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
 
@@ -220,11 +222,11 @@ Well, as you might already noticed in corresponding [basic usage example](#comma
 
 #### Supported browsers
 
-Since the web UI uses advanced JavaScript features, only the following browsers are supported:
+Since the web UI uses advanced JavaScript features, only the following browsers are known to be supported:
 - most recent version of any Chromium-based browser.
 - most recent version of Firefox with `dom.moduleScripts.enabled` preference set to `true`.
 
-_You will have the best user experience with a Chromium-based browser._
+_You will, however, have the best user experience with a Chromium-based browser._
 
 #### Control panel & report list
 

@@ -205,6 +205,9 @@ export class PackedRecordArray {
     }
 }
 
+/*
+    FIXME move all categories related stuff elsewhere (e.g. in a dedicated module)
+*/
 let categCache = null;
 const categStoreKey = 'spx-report-current-categories';
 
@@ -237,42 +240,4 @@ export function setCategories(categories) {
         c.patterns = c.patterns.map(p => p.source)
     });
     window.localStorage.setItem(categStoreKey, JSON.stringify(categories));
-}
-
-export function getCallCategoryColor(funcName) {
-    let categories = getCategories(true);
-    for (let category of categories) {
-        for (let pattern of category.patterns) {
-            if (pattern.test(funcName)) {
-                pattern.lastIndex = 0;
-                return `rgb(${category.color[0]},${category.color[1]},${category.color[2]})`;
-            }
-        }
-    }
-}
-
-export function getCallMetricValueColor(profileData, metric, value) {
-    const metricRange = profileData.getStats().getCallRange(metric);
-
-    let scaleValue = 0;
-
-    if (metricRange.length() > 100) {
-        scaleValue =
-            Math.log10(value - metricRange.begin)
-                / Math.log10(metricRange.length())
-        ;
-    } else {
-        scaleValue = metricRange.lerp(value);
-    }
-
-    return math.Vec3.lerpPath(
-        [
-            new math.Vec3(0, 0.3, 0.9),
-            new math.Vec3(0, 0.9, 0.9),
-            new math.Vec3(0, 0.9, 0),
-            new math.Vec3(0.9, 0.9, 0),
-            new math.Vec3(0.9, 0.2, 0),
-        ],
-        scaleValue
-    ).toHTMLColor();
 }
