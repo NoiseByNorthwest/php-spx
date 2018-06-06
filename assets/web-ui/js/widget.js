@@ -46,9 +46,8 @@ function getFunctionCategoryColor(funcName) {
     }
 }
 
-function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
-    const timeRangeNs = timeRangeUs.copy().scale(1000);
-    const delta = timeRangeNs.length();
+function renderSVGTimeGrid(viewPort, timeRange, detailed) {
+    const delta = timeRange.length();
     let step = Math.pow(10, parseInt(Math.log10(delta)));
     if (delta / step < 4) {
         step /= 5;
@@ -58,10 +57,10 @@ function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
 
     const minorStep = step / 5;
 
-    let tickTime = (parseInt(timeRangeNs.begin / minorStep) + 1) * minorStep;
+    let tickTime = (parseInt(timeRange.begin / minorStep) + 1) * minorStep;
     while (1) {
         const majorTick = tickTime % step == 0;
-        const x = viewPort.width * (tickTime - timeRangeNs.begin) / delta;
+        const x = viewPort.width * (tickTime - timeRange.begin) / delta;
         viewPort.appendChild(svg.createNode('line', {
             x1: x,
             y1: 0,
@@ -74,12 +73,16 @@ function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
         if (majorTick) {
             if (detailed) {
                 const units = ['s', 'ms', 'us', 'ns'];
-                let t = tickTime / 1000;
+                let t = tickTime;
                 let line = 0;
-                while (t > 0) {
+                while (t > 0 && units.length > 0) {
                     const unit = units.pop();
-                    const m = t % 1000;
-                    t = parseInt(t / 1000);
+                    let m = t;
+                    if (units.length > 0) {
+                        m = m % 1000;
+                        t = parseInt(t / 1000);
+                    }
+
                     if (m == 0) {
                         continue;
                     }
@@ -106,13 +109,13 @@ function renderSVGTimeGrid(viewPort, timeRangeUs, detailed) {
                         'font-size': 12,
                         fill: '#aaa',
                     },
-                    node => node.textContent = fmt.time(tickTime / 1000)
+                    node => node.textContent = fmt.time(tickTime)
                 ));
             }
         }
 
         tickTime += minorStep;
-        if (tickTime > timeRangeNs.end) {
+        if (tickTime > timeRange.end) {
             break;
         }
     }
