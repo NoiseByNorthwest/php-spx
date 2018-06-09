@@ -33,4 +33,7 @@ char * spx_utils_json_escape(char * dst, const char * src, size_t limit);
 int spx_utils_str_starts_with(const char * str, const char * prefix);
 int spx_utils_str_ends_with(const char * str, const char * suffix);
 
+#define spx_utils_die(msg) spx_utils_die_(msg, __FILE__, __LINE__)
+void spx_utils_die_(const char * msg, const char * file, size_t line);
+
 #endif /* SPX_UTILS_H_DEFINED */

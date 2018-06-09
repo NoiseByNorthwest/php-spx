@@ -305,7 +305,7 @@ char * spx_php_build_command_line(void)
         goto error;
     }
 
-    spx_str_builder_t * str_builder = spx_str_builder_create(1024);
+    spx_str_builder_t * str_builder = spx_str_builder_create(2 * 1024);
     if (!str_builder) {
         goto error;
     }
@@ -337,7 +337,7 @@ char * spx_php_build_command_line(void)
     return command_line;
 
 error:
-    return strdup("n/a");
+    return NULL;
 }
 
 size_t spx_php_zend_memory_usage(void)

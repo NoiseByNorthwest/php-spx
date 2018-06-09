@@ -8,6 +8,8 @@
 #include "spx_output_stream.h"
 #include "spx_stdio.h"
 #include "spx_thread.h"
+#include "spx_utils.h"
+
 
 typedef struct {
     spx_profiler_reporter_t base;
@@ -166,8 +168,7 @@ static int entry_cmp(const void * a, const void * b)
      *        only have to be thread-safe.
      */
     if (!entry_cmp_reporter) {
-        fprintf(stderr, "entry_cmp_reporter is not set\n");
-        exit(1);
+        spx_utils_die("entry_cmp_reporter is not set\n");
     }
 
     return entry_cmp_r(a, b, entry_cmp_reporter);
