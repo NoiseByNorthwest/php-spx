@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "spx_utils.h"
 
@@ -43,4 +45,15 @@ int spx_utils_str_ends_with(const char * str, const char * suffix)
     }
 
     return 0;
+}
+
+#ifdef ZTS
+/* We just cannot kill other threads */
+#   error "Fair error handling is required for ZTS"
+#endif
+void spx_utils_die_(const char * msg, const char * file, size_t line)
+{
+    fprintf(stderr, "SPX Fatal error at %s:%lu - %s\n", file, line, msg);
+
+    exit(EXIT_FAILURE);
 }

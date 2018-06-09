@@ -6,6 +6,8 @@
 #include "spx_fmt.h"
 #include "spx_profiler.h"
 #include "spx_resource_stats.h"
+#include "spx_utils.h"
+
 
 #define STACK_CAPACITY 2048
 #define FUNC_TABLE_CAPACITY 65536
@@ -114,8 +116,7 @@ spx_profiler_reporter_t * spx_profiler_reporter_create(
     spx_profiler_reporter_destroy_func_t destroy
 ) {
     if (size < sizeof(spx_profiler_reporter_t)) {
-        fprintf(stderr, "Invalid reporter size\n");
-        exit(1);
+        spx_utils_die("Invalid reporter size\n");
     }
 
     spx_profiler_reporter_t * reporter = malloc(size);
@@ -209,9 +210,7 @@ void spx_profiler_destroy(spx_profiler_t * profiler)
         spx_profiler_func_table_entry_t * entry = &profiler->func_table.entries[i];
 
         free((char *)entry->function.func_name);
-        if (*entry->function.class_name) {
-            free((char *)entry->function.class_name);
-        }
+        free((char *)entry->function.class_name);
     }
 
     if (profiler->func_table.hset) {
@@ -511,12 +510,7 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
         );
 
         if (!hset_entry) {
-            /*
-             *  FIXME: this kind of error handling (present in some other places) is
-             *  quite unfair, especially in ZTS context.
-             */
-            fprintf(stderr, "SPX: Function table hash index failure\n");
-            exit(1);
+            spx_utils_die("Function table hash index failure\n");
         }
     }
 
@@ -537,12 +531,17 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
 
     /*
      *  Review needed: workaround for a lifespan issue, see related comments in spx_php.c
+     *  FIXME: get the explanation and remove these memory allocations
      */
     entry->function.func_name = strdup(entry->function.func_name);
-    if (*entry->function.class_name) {
-        entry->function.class_name = strdup(entry->function.class_name);
+    entry->function.class_name = strdup(entry->function.class_name);
+    if (
+        !entry->function.func_name
+        || !entry->function.class_name
+    ) {
+        spx_utils_die("Cannot dup function / class name\n");
     }
-    
+
     entry->stats.called = 0;
     entry->stats.max_cycle_depth = 0;
     METRIC_VALUES_ZERO(entry->stats.inc);

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "spx_fmt.h"
+#include "spx_utils.h"
 
 #define ROW_MAX_CELLS 16
 
@@ -97,9 +98,7 @@ void spx_fmt_row_add_tcell(
     const char * text
 ) {
     if (row->cell_count == ROW_MAX_CELLS) {
-        fprintf(stderr, "ROW_MAX_CELLS exceeded\n");
-
-        exit(EXIT_FAILURE);
+        spx_utils_die("ROW_MAX_CELLS exceeded\n");
     }
 
     row->cells[row->cell_count].span = span;
@@ -116,9 +115,7 @@ void spx_fmt_row_add_ncell(
     double value
 ) {
     if (row->cell_count == ROW_MAX_CELLS) {
-        fprintf(stderr, "ROW_MAX_CELLS exceeded\n");
-
-        exit(EXIT_FAILURE);
+        spx_utils_die("ROW_MAX_CELLS exceeded\n");
     }
 
     row->cells[row->cell_count].span = span;

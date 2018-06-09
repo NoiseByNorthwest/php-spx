@@ -345,6 +345,15 @@ static metadata_t * metadata_create()
         return NULL;
     }
 
+    metadata->key = NULL;
+    metadata->hostname = NULL;
+    metadata->process_pwd = NULL;
+
+    metadata->cli_command_line = NULL;
+    metadata->http_request_uri = NULL;
+    metadata->http_method = NULL;
+    metadata->http_host = NULL;
+
     metadata->exec_ts = time(NULL);
 
     char hostname[256];
@@ -353,6 +362,10 @@ static metadata_t * metadata_create()
         metadata->hostname = strdup(hostname);
     } else {
         metadata->hostname = strdup("n/a");
+    }
+
+    if (!metadata->hostname) {
+        goto error;
     }
 
     metadata->process_pid = getpid();
@@ -385,26 +398,53 @@ static metadata_t * metadata_create()
     );
 
     metadata->key = strdup(key);
+    if (!metadata->key) {
+        goto error;
+    }
 
     char pwd[8 * 1024];
     metadata->process_pwd = strdup(getcwd(pwd, sizeof(pwd)) ? pwd : "n/a");
+    if (!metadata->process_pwd) {
+        goto error;
+    }
 
     metadata->cli = spx_php_is_cli_sapi();
     metadata->cli_command_line = spx_php_build_command_line();
+    if (!metadata->cli_command_line) {
+        metadata->cli_command_line = strdup("n/a");
+    }
+
+    if (!metadata->cli_command_line) {
+        goto error;
+    }
 
     const char * http_request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
     metadata->http_request_uri = strdup(http_request_uri ? http_request_uri : "n/a");
+    if (!metadata->http_request_uri) {
+        goto error;
+    }
 
     const char * http_method = spx_php_global_array_get("_SERVER", "REQUEST_METHOD");
     metadata->http_method = strdup(http_method ? http_method : "n/a");
+    if (!metadata->http_method) {
+        goto error;
+    }
 
     const char * http_host = spx_php_global_array_get("_SERVER", "HTTP_HOST");
     metadata->http_host = strdup(http_host ? http_host : "n/a");
+    if (!metadata->http_host) {
+        goto error;
+    }
 
     metadata->call_count = 0;
     metadata->recorded_call_count = 0;
 
     return metadata;
+
+error:
+    metadata_destroy(metadata);
+
+    return NULL;
 }
 
 static void metadata_destroy(metadata_t * metadata)
