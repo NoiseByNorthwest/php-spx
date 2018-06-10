@@ -10,13 +10,12 @@ typedef struct {
     const char * enabled_str;
     const char * key_str;
 
+    const char * sampling_period_str;
     const char * builtins_str;
     const char * depth_str;
     const char * metrics_str;
 
     const char * report_str;
-
-    const char * full_res_str;
 
     const char * fp_focus_str;
     const char * fp_inc_str;
@@ -90,6 +89,7 @@ static void init_config(spx_config_t * config, int cli)
     config->enabled = 0;
     config->key = NULL;
 
+    config->sampling_period = 0;
     config->builtins = 0;
     config->max_depth = 0;
 
@@ -101,8 +101,6 @@ static void init_config(spx_config_t * config, int cli)
     config->enabled_metrics[SPX_METRIC_ZE_MEMORY] = 1;
 
     config->report = cli ? SPX_CONFIG_REPORT_FLAT_PROFILE : SPX_CONFIG_REPORT_FULL;
-
-    config->full_res = 0;
 
     config->fp_focus = SPX_METRIC_WALL_TIME;
     config->fp_inc = 0;
@@ -132,20 +130,20 @@ static void fix_config(spx_config_t * config, int cli)
 
 static void source_data_get(source_data_t * source_data, source_handler_t handler)
 {
-    source_data->enabled_str     = handler("SPX_ENABLED");
-    source_data->key_str         = handler("SPX_KEY");
-    source_data->builtins_str    = handler("SPX_BUILTINS");
-    source_data->depth_str       = handler("SPX_DEPTH");
-    source_data->metrics_str     = handler("SPX_METRICS");
-    source_data->report_str      = handler("SPX_REPORT");
-    source_data->full_res_str    = handler("SPX_FULL_RES");
-    source_data->fp_focus_str    = handler("SPX_FP_FOCUS");
-    source_data->fp_inc_str      = handler("SPX_FP_INC");
-    source_data->fp_rel_str      = handler("SPX_FP_REL");
-    source_data->fp_limit_str    = handler("SPX_FP_LIMIT");
-    source_data->fp_live_str     = handler("SPX_FP_LIVE");
-    source_data->trace_file      = handler("SPX_TRACE_FILE");
-    source_data->trace_safe_str  = handler("SPX_TRACE_SAFE");
+    source_data->enabled_str          = handler("SPX_ENABLED");
+    source_data->key_str              = handler("SPX_KEY");
+    source_data->sampling_period_str  = handler("SPX_SAMPLING_PERIOD");
+    source_data->builtins_str         = handler("SPX_BUILTINS");
+    source_data->depth_str            = handler("SPX_DEPTH");
+    source_data->metrics_str          = handler("SPX_METRICS");
+    source_data->report_str           = handler("SPX_REPORT");
+    source_data->fp_focus_str         = handler("SPX_FP_FOCUS");
+    source_data->fp_inc_str           = handler("SPX_FP_INC");
+    source_data->fp_rel_str           = handler("SPX_FP_REL");
+    source_data->fp_limit_str         = handler("SPX_FP_LIMIT");
+    source_data->fp_live_str          = handler("SPX_FP_LIVE");
+    source_data->trace_file           = handler("SPX_TRACE_FILE");
+    source_data->trace_safe_str       = handler("SPX_TRACE_SAFE");
 }
 
 static void source_data_to_config(const source_data_t * source_data, spx_config_t * config)
@@ -156,6 +154,10 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
 
     if (source_data->key_str) {
         config->key = source_data->key_str;
+    }
+
+    if (source_data->sampling_period_str) {
+        config->sampling_period = atoi(source_data->sampling_period_str);
     }
 
     if (source_data->builtins_str) {
@@ -187,10 +189,6 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
         } else if (0 == strcmp(source_data->report_str, "trace")) {
             config->report = SPX_CONFIG_REPORT_TRACE;
         }
-    }
-
-    if (source_data->full_res_str) {
-        config->full_res = atoi(source_data->full_res_str);
     }
 
     if (source_data->fp_focus_str) {

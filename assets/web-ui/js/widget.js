@@ -53,7 +53,8 @@ function renderSVGTimeGrid(viewPort, timeRange, detailed) {
         step /= 5;
     }
 
-    step = Math.max(step, 10);
+    // 5 as min value so that minor step is lower bounded to 1
+    step = Math.max(step, 5);
 
     const minorStep = step / 5;
 

@@ -46,20 +46,22 @@ if test "$PHP_SPX" = "yes"; then
     fi
 
     PHP_NEW_EXTENSION(spx,
-        src/php_spx.c              \
-        src/spx_profiler.c         \
-        src/spx_reporter_full.c    \
-        src/spx_reporter_fp.c      \
-        src/spx_reporter_trace.c   \
-        src/spx_metric.c           \
-        src/spx_resource_stats.c   \
-        src/spx_hset.c             \
-        src/spx_str_builder.c      \
-        src/spx_output_stream.c    \
-        src/spx_php.c              \
-        src/spx_stdio.c            \
-        src/spx_config.c           \
-        src/spx_utils.c            \
+        src/php_spx.c               \
+        src/spx_profiler.c          \
+        src/spx_profiler_tracer.c   \
+        src/spx_profiler_sampler.c  \
+        src/spx_reporter_full.c     \
+        src/spx_reporter_fp.c       \
+        src/spx_reporter_trace.c    \
+        src/spx_metric.c            \
+        src/spx_resource_stats.c    \
+        src/spx_hset.c              \
+        src/spx_str_builder.c       \
+        src/spx_output_stream.c     \
+        src/spx_php.c               \
+        src/spx_stdio.c             \
+        src/spx_config.c            \
+        src/spx_utils.c             \
         src/spx_fmt.c,
         $ext_shared)
 

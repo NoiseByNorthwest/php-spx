@@ -18,7 +18,8 @@
 #include "spx_utils.h"
 #include "spx_metric.h"
 #include "spx_resource_stats.h"
-#include "spx_profiler.h"
+#include "spx_profiler_tracer.h"
+#include "spx_profiler_sampler.h"
 #include "spx_reporter_fp.h"
 #include "spx_reporter_full.h"
 #include "spx_reporter_trace.h"
@@ -110,7 +111,7 @@ static PHP_RINIT_FUNCTION(spx);
 static PHP_RSHUTDOWN_FUNCTION(spx);
 static PHP_MINFO_FUNCTION(spx);
 
-static int check_access();
+static int check_access(void);
 
 static void profiling_handler_init(void);
 static void profiling_handler_shutdown(void);
@@ -259,7 +260,7 @@ static PHP_MINFO_FUNCTION(spx)
     DISPLAY_INI_ENTRIES();
 }
 
-static int check_access()
+static int check_access(void)
 {
     TSRMLS_FETCH();
 
@@ -368,7 +369,7 @@ static void profiling_handler_init(void)
     switch (context.config.report) {
         default:
         case SPX_CONFIG_REPORT_FULL:
-            context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir), context.config.full_res);
+            context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir));
 
             break;
 
@@ -396,7 +397,7 @@ static void profiling_handler_init(void)
         goto error;
     }
 
-    context.profiling_handler.profiler = spx_profiler_create(
+    context.profiling_handler.profiler = spx_profiler_tracer_create(
         context.config.max_depth,
         context.config.enabled_metrics,
         context.profiling_handler.reporter
@@ -404,6 +405,19 @@ static void profiling_handler_init(void)
 
     if (!context.profiling_handler.profiler) {
         goto error;
+    }
+
+    if (context.config.sampling_period > 0) {
+        spx_profiler_t * sampling_profiler = spx_profiler_sampler_create(
+            context.profiling_handler.profiler,
+            context.config.sampling_period
+        );
+
+        if (!sampling_profiler) {
+            goto error;
+        }
+
+        context.profiling_handler.profiler = sampling_profiler;
     }
 
     return;
@@ -417,8 +431,8 @@ static void profiling_handler_shutdown(void)
     spx_php_hooks_finalize();
 
     if (context.profiling_handler.profiler) {
-        spx_profiler_finalize(context.profiling_handler.profiler);
-        spx_profiler_destroy(context.profiling_handler.profiler);
+        context.profiling_handler.profiler->finalize(context.profiling_handler.profiler);
+        context.profiling_handler.profiler->destroy(context.profiling_handler.profiler);
         context.profiling_handler.profiler = NULL;
     }
 
@@ -473,7 +487,10 @@ static void profiling_handler_ex_hook_before(void)
     context.profiling_handler.sig_handling.probing = 1;
 #endif
 
-    spx_profiler_call_start(context.profiling_handler.profiler);
+    spx_php_function_t function;
+    spx_php_current_function(&function);
+
+    context.profiling_handler.profiler->call_start(context.profiling_handler.profiler, &function);
 
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.probing = 0;
@@ -489,7 +506,7 @@ static void profiling_handler_ex_hook_after(void)
     context.profiling_handler.sig_handling.probing = 1;
 #endif
 
-    spx_profiler_call_end(context.profiling_handler.profiler);
+    context.profiling_handler.profiler->call_end(context.profiling_handler.profiler);
 
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.probing = 0;

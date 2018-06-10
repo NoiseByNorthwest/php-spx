@@ -59,42 +59,23 @@ typedef enum {
     SPX_PROFILER_REPORTER_COST_HEAVY,
 } spx_profiler_reporter_cost_t;
 
-
-struct spx_profiler_reporter_t;
-
-typedef spx_profiler_reporter_cost_t (*spx_profiler_reporter_notify_func_t) (
-    struct spx_profiler_reporter_t * reporter,
-    const spx_profiler_event_t * event
-);
-
-typedef void (*spx_profiler_reporter_destroy_func_t) (struct spx_profiler_reporter_t * reporter);
-
 typedef struct spx_profiler_reporter_t {
-    spx_profiler_reporter_notify_func_t notify;
-    spx_profiler_reporter_destroy_func_t destroy;
-} spx_profiler_reporter_t;
+    spx_profiler_reporter_cost_t (*notify) (
+        struct spx_profiler_reporter_t * reporter,
+        const spx_profiler_event_t * event
+    );
 
-spx_profiler_reporter_t * spx_profiler_reporter_create(
-    size_t size,
-    spx_profiler_reporter_notify_func_t notify,
-    spx_profiler_reporter_destroy_func_t destroy
-);
+    void (*destroy) (struct spx_profiler_reporter_t * reporter);
+} spx_profiler_reporter_t;
 
 void spx_profiler_reporter_destroy(spx_profiler_reporter_t * reporter);
 
-typedef struct spx_profiler_t spx_profiler_t;
+typedef struct spx_profiler_t {
+    void (*call_start)(struct spx_profiler_t * profiler, const spx_php_function_t * function);
+    void (*call_end)(struct spx_profiler_t * profiler);
 
-spx_profiler_t * spx_profiler_create(
-    size_t max_depth,
-    const int * enabled_metrics,
-    spx_profiler_reporter_t * reporter
-);
-
-void spx_profiler_destroy(spx_profiler_t * profiler);
-
-void spx_profiler_call_start(spx_profiler_t * profiler);
-void spx_profiler_call_end(spx_profiler_t * profiler);
-
-void spx_profiler_finalize(spx_profiler_t * profiler);
+    void (*finalize)(struct spx_profiler_t * profiler);
+    void (*destroy)(struct spx_profiler_t * profiler);
+} spx_profiler_t;
 
 #endif /* SPX_PROFILER_H_DEFINED */
