@@ -8,11 +8,6 @@
 
 
 typedef struct {
-    size_t size;
-    spx_php_function_t frames[STACK_CAPACITY];
-} stack_t;
-
-typedef struct {
     spx_profiler_t base;
     spx_profiler_t * sampled_profiler;
 
@@ -20,8 +15,10 @@ typedef struct {
     size_t last_sample_time_ns;
 
     struct {
-        stack_t previous;
-        stack_t current;
+        struct {
+            size_t size;
+            spx_php_function_t frames[STACK_CAPACITY];
+        } previous, current;
     } stack;
 } sampling_profiler_t;
 
