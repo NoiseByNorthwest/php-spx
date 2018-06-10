@@ -50,15 +50,13 @@ static void print_row(
 
 spx_profiler_reporter_t * spx_reporter_trace_create(const char * file_name, int safe)
 {
-    trace_reporter_t * reporter = (trace_reporter_t *) spx_profiler_reporter_create(
-        sizeof(*reporter),
-        trace_notify,
-        trace_destroy
-    );
-
+    trace_reporter_t * reporter = malloc(sizeof(*reporter));
     if (!reporter) {
         return NULL;
     }
+
+    reporter->base.notify = trace_notify;
+    reporter->base.destroy = trace_destroy;
 
     reporter->file_name = file_name ? file_name : "spx_trace.txt.gz";
 

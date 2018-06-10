@@ -13,7 +13,9 @@ do {                                                              \
         if (*c_ == 0 || *c_ == delim_) {                          \
             token[i_] = 0;                                        \
                                                                   \
-            block                                                 \
+            do {                                                  \
+                block                                             \
+            } while(0);                                           \
                                                                   \
             if (*c_ == 0) {                                       \
                 break;                                            \

@@ -70,7 +70,7 @@ static void full_destroy(spx_profiler_reporter_t * reporter);
 static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics);
 static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * event);
 
-static metadata_t * metadata_create();
+static metadata_t * metadata_create(void);
 static void metadata_destroy(metadata_t * metadata);
 static int metadata_save(const metadata_t * metadata, const char * file_name);
 
@@ -140,15 +140,13 @@ int spx_reporter_full_get_file_name(
 
 spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir, size_t time_res_us)
 {
-    full_reporter_t * reporter = (full_reporter_t *) spx_profiler_reporter_create(
-        sizeof(*reporter),
-        full_notify,
-        full_destroy
-    );
-
+    full_reporter_t * reporter = malloc(sizeof(*reporter));
     if (!reporter) {
         return NULL;
     }
+
+    reporter->base.notify = full_notify;
+    reporter->base.destroy = full_destroy;
 
     reporter->metadata = NULL;
     reporter->output = NULL;
@@ -338,7 +336,7 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
     metadata_save(reporter->metadata, reporter->metadata_file_name);
 }
 
-static metadata_t * metadata_create()
+static metadata_t * metadata_create(void)
 {
     metadata_t * metadata = malloc(sizeof(*metadata));
     if (!metadata) {

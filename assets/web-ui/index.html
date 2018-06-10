@@ -63,6 +63,29 @@
                                 description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
                             },
                             {
+                                key: 'SPX_SAMPLING_PERIOD',
+                                label: 'Sampling',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: [
+                                        {key: '0',    label: 'Disabled'},
+                                        {key: '5',    label: '5us'},
+                                        {key: '10',   label: '10us'},
+                                        {key: '20',   label: '20us'},
+                                        {key: '50',   label: '50us'},
+                                        {key: '100',  label: '100us'},
+                                        {key: '200',  label: '200us'},
+                                        {key: '500',  label: '500us'},
+                                        {key: '1000', label: '1ms'},
+                                        {key: '2000', label: '2ms'},
+                                        {key: '5000', label: '5ms'},
+                                    ],
+                                },
+                                defaultValue: '0',
+                                description: 'Whether to collect data for the current call stack at regular intervals according to the specified sampling period. The result will usually be less accurate but in some cases it will be far more by not over-evaluating small functions called many times. It is recommended to enable sampling if you want to accurately find a time bottleneck.',
+                            },
+                            {
                                 key: 'SPX_BUILTINS',
                                 label: 'Profile internal functions',
                                 type: 'switch',
@@ -110,7 +133,7 @@
                                     ],
                                 },
                                 defaultValue: '0',
-                                description: 'When profiling a long running request, this option will allow you to contain report size and thus keeping it small enough to be exploitable.',
+                                description: 'Minimum execution time of function call to collect. When profiling a long running request, this option will allow you to contain report size and thus keeping it small enough to be exploitable. Note that sampling mode will have similar effect on report size and that it is not usually necessary to combine these 2 parameters.',
                             },
                             {
                                 key: 'SPX_METRICS',

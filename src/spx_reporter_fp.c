@@ -47,15 +47,13 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
     size_t limit,
     int live
 ) {
-    fp_reporter_t * reporter = (fp_reporter_t *) spx_profiler_reporter_create(
-        sizeof(*reporter),
-        fp_notify,
-        fp_destroy
-    );
-
+    fp_reporter_t * reporter = malloc(sizeof(*reporter));
     if (!reporter) {
         return NULL;
     }
+
+    reporter->base.notify = fp_notify;
+    reporter->base.destroy = fp_destroy;
 
     reporter->focus = focus;
     reporter->inc = inc;

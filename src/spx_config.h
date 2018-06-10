@@ -14,6 +14,7 @@ typedef struct {
     int enabled;
     const char * key;
 
+    size_t sampling_period;
     int builtins;
     size_t max_depth;
     int enabled_metrics[SPX_METRIC_COUNT];
