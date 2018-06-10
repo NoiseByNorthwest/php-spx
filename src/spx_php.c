@@ -45,6 +45,12 @@ typedef uint zend_write_len_t;
 #endif
 
 static struct {
+#if ZEND_MODULE_API_NO >= 20151012
+    void * (*malloc) (size_t size);
+    void (*free) (void * ptr);
+    void * (*realloc) (void * ptr, size_t size);
+#endif
+
     zend_write_func_t zend_write;
 
     void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
@@ -74,6 +80,7 @@ static struct {
         va_list args
     );
 } ze_hook = {
+    NULL, NULL, NULL,
     NULL,
     NULL, NULL,
     NULL, NULL,
@@ -118,6 +125,15 @@ static SPX_THREAD_TLS struct {
 #endif
     } fastcgi_finish_request;
 } context;
+
+
+static void * ze_malloc(size_t size);
+static void ze_free(void * ptr);
+static void * ze_realloc(void * ptr, size_t size);
+
+static void * hook_malloc(size_t size);
+static void hook_free(void * ptr);
+static void * hook_realloc(void * ptr, size_t size);
 
 static int hook_zend_write(const char * str, zend_write_len_t len);
 
@@ -447,6 +463,41 @@ size_t spx_php_zend_error_count(void)
 
 void spx_php_hooks_init(void)
 {
+#if ZEND_MODULE_API_NO >= 20151012
+    zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
+
+    zend_mm_get_custom_handlers(
+        ze_mm_heap,
+        &ze_hook.malloc,
+        &ze_hook.free,
+        &ze_hook.realloc
+    );
+
+    if (
+        !ze_hook.malloc
+        || !ze_hook.free
+        || !ze_hook.realloc
+    ) {
+        /*
+         *  This is the least worst option. From this point we cannot recover the heap's
+         *  "use_custom_heap" state without an ugly trick which would break the strict
+         *  aliasing rule and the zend_mm_heap ADT encapsulation.
+         *  The trade-off is to set back later (at shutdown) the Zend Engine allocators
+         *  as custom handlers (ze_* functions defined in this TU are just wrappers).
+         */
+        ze_hook.malloc = ze_malloc;
+        ze_hook.free = ze_free;
+        ze_hook.realloc = ze_realloc;
+    }
+
+    zend_mm_set_custom_handlers(
+        ze_mm_heap,
+        hook_malloc,
+        hook_free,
+        hook_realloc
+    );
+#endif
+
     ze_hook.zend_write = zend_write;
     zend_write = hook_zend_write;
 
@@ -486,6 +537,27 @@ void spx_php_hooks_finalize(void)
 
 void spx_php_hooks_shutdown(void)
 {
+#if ZEND_MODULE_API_NO >= 20151012
+    if (
+        ze_hook.malloc
+        && ze_hook.free
+        && ze_hook.realloc
+    ) {
+        zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
+
+        zend_mm_set_custom_handlers(
+            ze_mm_heap,
+            ze_hook.malloc,
+            ze_hook.free,
+            ze_hook.realloc
+        );
+
+        ze_hook.malloc = NULL;
+        ze_hook.free = NULL;
+        ze_hook.realloc = NULL;
+    }
+#endif
+
     if (ze_hook.zend_write) {
         zend_write = ze_hook.zend_write;
         ze_hook.zend_write = NULL;
@@ -656,6 +728,36 @@ void spx_php_log_notice(const char * fmt, ...)
     zend_error(E_NOTICE, "SPX: %s", buf);
 
     free(buf);
+}
+
+static void * ze_malloc(size_t size)
+{
+    return zend_mm_alloc(zend_mm_get_heap(), size);
+}
+
+static void ze_free(void * ptr)
+{
+    zend_mm_free(zend_mm_get_heap(), ptr);
+}
+
+static void * ze_realloc(void * ptr, size_t size)
+{
+    return zend_mm_realloc(zend_mm_get_heap(), ptr, size);
+}
+
+static void * hook_malloc(size_t size)
+{
+    return ze_hook.malloc(size);
+}
+
+static void hook_free(void * ptr)
+{
+    ze_hook.free(ptr);
+}
+
+static void * hook_realloc(void * ptr, size_t size)
+{
+    return ze_hook.realloc(ptr, size);
 }
 
 static int hook_zend_write(const char * str, zend_write_len_t len)
