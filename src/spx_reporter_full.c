@@ -42,7 +42,6 @@ typedef struct {
     size_t called_function_count;
     size_t call_count;
     size_t recorded_call_count;
-    size_t time_res_us;
     int enabled_metrics[SPX_METRIC_COUNT];
 } metadata_t;
 
@@ -52,8 +51,6 @@ typedef struct {
     char metadata_file_name[512];
     metadata_t * metadata;
     spx_output_stream_t * output;
-
-    size_t time_res_us;
 
     size_t buffer_size;
     buffer_entry_t buffer[BUFFER_CAPACITY];
@@ -138,7 +135,7 @@ int spx_reporter_full_get_file_name(
     );
 }
 
-spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir, size_t time_res_us)
+spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
 {
     full_reporter_t * reporter = malloc(sizeof(*reporter));
     if (!reporter) {
@@ -183,7 +180,6 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir, size_t
         goto error;
     }
 
-    reporter->time_res_us = time_res_us;
     reporter->buffer_size = 0;
 
     spx_output_stream_print(reporter->output, "[events]\n");
@@ -207,27 +203,6 @@ static spx_profiler_reporter_cost_t full_notify(
     }
 
     if (event->type != SPX_PROFILER_EVENT_FINALIZE) {
-        const buffer_entry_t * previous = NULL;
-        if (reporter->buffer_size > 0) {
-            previous = &reporter->buffer[reporter->buffer_size - 1];
-        }
-
-        if (
-            reporter->time_res_us > 0
-            && previous
-            && previous->start
-            && event->type == SPX_PROFILER_EVENT_CALL_END
-            && (
-                event->cum->values[SPX_METRIC_WALL_TIME]
-                    - previous->metric_values.values[SPX_METRIC_WALL_TIME]
-                < 1000 * reporter->time_res_us
-            )
-        ) {
-            reporter->buffer_size--;
-
-            return SPX_PROFILER_REPORTER_COST_LIGHT;
-        }
-
         if (event->type == SPX_PROFILER_EVENT_CALL_END) {
             reporter->metadata->recorded_call_count++;
         }
@@ -328,7 +303,6 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
     reporter->metadata->wall_time_ms = event->cum->values[SPX_METRIC_WALL_TIME] / 1000;
 
     reporter->metadata->called_function_count = event->func_table.size;
-    reporter->metadata->time_res_us = reporter->time_res_us;
     SPX_METRIC_FOREACH(i, {
         reporter->metadata->enabled_metrics[i] = event->enabled_metrics[i];
     });
@@ -580,13 +554,6 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
         "  \"%s\": %lu,\n",
         "recorded_call_count",
         metadata->recorded_call_count
-    );
-
-    fprintf(
-        fp,
-        "  \"%s\": %lu,\n",
-        "time_res_us",
-        metadata->time_res_us
     );
 
     fprintf(fp, "  \"enabled_metrics\": [\n");

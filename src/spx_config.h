@@ -21,8 +21,6 @@ typedef struct {
 
     spx_config_report_t report;
 
-    size_t full_res;
-
     spx_metric_t fp_focus;
     int fp_inc;
     int fp_rel;

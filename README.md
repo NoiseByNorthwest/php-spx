@@ -205,6 +205,7 @@ Here is the list below:
 | _SPX_ENABLED_ | `0` | Whether to enable SPX profiler (i.e. triggering profiling). When disabled there is no performance impact on your application. |
 | _SPX_BUILTINS_ | `0` | Whether to profile internal functions, script compilations, GC runs and request shutdown. |
 | _SPX_DEPTH_ | `0` | The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls). 0 (default value) means unlimited. |
+| _SPX_SAMPLING_PERIOD_ | `0` | Whether to collect data for the current call stack at regular intervals according to the specified sampling period (`0` means no sampling). The result will usually be less accurate but in some cases it could be far more accurate by not over-evaluating small functions called many times. It is recommended to try sampling (with different periods) if you want to accurately find a time bottleneck. When profiling a long running & CPU intensive script, this option will allow you to contain report size and thus keeping it small enough to be exploitable by the [web UI](#web-ui). See [here](#performance-report-size--sampling) for more details. |
 | _SPX_METRICS_ | `wt,zm` | Comma separated list of [available metric keys](#available-metrics) to collect. All report types take advantage of multi-metric profiling. |
 | _SPX_REPORT_ | `fp` | Selected [report key](#available-report-types). |
 | _SPX_FP_FOCUS_ | `wt` | [Metric key](#available-metrics) for flat profile sort. |
@@ -212,7 +213,6 @@ Here is the list below:
 | _SPX_FP_REL_ | `0` | Whether to display metric values as relative (i.e. percentage) in flat profile. |
 | _SPX_FP_LIMIT_ | `10` | The flat profile size (i.e. top N shown functions). |
 | _SPX_FP_LIVE_ | `0` | Whether to enabled flat profile live refresh. Since it uses ANSI escape sequences, it uses STDOUT as output, replacing script output (both STDOUT & STDERR). |
-| _SPX_FULL_RES_ | `0` | The time resolution for full report in micro seconds (0 means unlimited). When profiling a long running & CPU intensive script, this option will allow you to contain report size and thus keeping it small enough to be exploitable by the [web UI](#web-ui). See [here](#performance-report-size--time-resolution) for more details. |
 | _SPX_TRACE_SAFE_ | `0` | The trace file is by default written in a way to enforce accuracy, but in case of process crash (e.g. segfault) some logs could be lost. If you want to enforce durability (e.g. to find the last event before a crash) you just have to set this parameter to 1. |
 | _SPX_TRACE_FILE_ |  | Custom trace file name. If not specified it will be generated in `/tmp` and displayed on STDERR at the end of the script. |
 
@@ -242,11 +242,11 @@ This is the home page of the web UI, divided into 2 parts:
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as.th.png)
 
-##### Performance, report size & time resolution
+##### Performance, report size & sampling
 
 The analysis screen can nicely handle profile reports with up to several (5+) millions of recorded function calls with Chromium on my i5 @ 3.3GHz / 8GB desktop.  
-In case you want to profile a long running, CPU intensive, script which tends to generate giant reports, you can change the time resolution of the report to skip the shortest function calls (i.e. those with execution time below the given resolution).  
-See _SPX_FULL_RES_ [parameter](#available-parameters) for command line script.
+In case you want to profile a long running, CPU intensive, script which tends to generate giant reports, you can enable sampling mode with the suitable sampling period.  
+See _SPX_SAMPLING_PERIOD_ [parameter](#available-parameters) for command line script.
 
 ##### Metric selector
 
@@ -323,7 +323,7 @@ Thus a client can profile your application via a web page only if **its IP addre
 
 ## Notes on accuracy
 
-Being a tracing profiler, SPX is subject to accuracy issues for time related metrics when the measured function execution time is:
+In tracing mode (default), SPX is subject to accuracy issues for time related metrics when the measured function execution time is:
 - close or lower than the timer precision
 - close or lower than SPX's own per function overhead
 
@@ -334,6 +334,7 @@ The second issue is mitigated by taking in account SPX time (wall / cpu) overhea
 However, whatever the platform, if you want to maximize accuracy to find a time bottleneck, you should also:
 - avoid profiling internal functions.
 - avoid collecting additional metrics.
+- try sampling mode with different sampling periods.
 - try to play with maximum depth parameter to stop profiling at a given depth.
 
 ## Examples

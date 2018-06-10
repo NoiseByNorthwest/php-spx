@@ -22,6 +22,6 @@ int spx_reporter_full_get_file_name(
     size_t size
 );
 
-spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir, size_t res);
+spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir);
 
 #endif /* SPX_REPORTER_FULL_H_DEFINED */

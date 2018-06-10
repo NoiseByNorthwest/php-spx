@@ -17,8 +17,6 @@ typedef struct {
 
     const char * report_str;
 
-    const char * full_res_str;
-
     const char * fp_focus_str;
     const char * fp_inc_str;
     const char * fp_rel_str;
@@ -104,8 +102,6 @@ static void init_config(spx_config_t * config, int cli)
 
     config->report = cli ? SPX_CONFIG_REPORT_FLAT_PROFILE : SPX_CONFIG_REPORT_FULL;
 
-    config->full_res = 0;
-
     config->fp_focus = SPX_METRIC_WALL_TIME;
     config->fp_inc = 0;
     config->fp_rel = 0;
@@ -141,7 +137,6 @@ static void source_data_get(source_data_t * source_data, source_handler_t handle
     source_data->depth_str            = handler("SPX_DEPTH");
     source_data->metrics_str          = handler("SPX_METRICS");
     source_data->report_str           = handler("SPX_REPORT");
-    source_data->full_res_str         = handler("SPX_FULL_RES");
     source_data->fp_focus_str         = handler("SPX_FP_FOCUS");
     source_data->fp_inc_str           = handler("SPX_FP_INC");
     source_data->fp_rel_str           = handler("SPX_FP_REL");
@@ -194,10 +189,6 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
         } else if (0 == strcmp(source_data->report_str, "trace")) {
             config->report = SPX_CONFIG_REPORT_TRACE;
         }
-    }
-
-    if (source_data->full_res_str) {
-        config->full_res = atoi(source_data->full_res_str);
     }
 
     if (source_data->fp_focus_str) {
