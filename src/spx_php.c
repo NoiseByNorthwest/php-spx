@@ -818,9 +818,6 @@ static void * hook_realloc(void * ptr, size_t size)
         } else {
             context.allocated_bytes += new_size - old_size;
         }
-    } else if (ptr) {
-        context.free_count++;
-        context.freed_bytes += old_size;
     } else if (new) {
         context.alloc_count++;
         context.allocated_bytes += new_size;
