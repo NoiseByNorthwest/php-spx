@@ -124,6 +124,7 @@ static SPX_THREAD_TLS struct {
     const char * active_function_name;
 } context;
 
+#if ZEND_MODULE_API_NO >= 20151012
 static size_t ze_mm_block_size(void * ptr);
 static size_t ze_mm_custom_block_size(void * ptr);
 static void * ze_mm_malloc(size_t size);
@@ -133,6 +134,7 @@ static void * ze_mm_realloc(void * ptr, size_t size);
 static void * hook_malloc(size_t size);
 static void hook_free(void * ptr);
 static void * hook_realloc(void * ptr, size_t size);
+#endif
 
 static int hook_zend_write(const char * str, zend_write_len_t len);
 
@@ -753,6 +755,7 @@ void spx_php_log_notice(const char * fmt, ...)
     free(buf);
 }
 
+#if ZEND_MODULE_API_NO >= 20151012
 static size_t ze_mm_block_size(void * ptr)
 {
     return zend_mm_block_size(zend_mm_get_heap(), ptr);
@@ -825,6 +828,7 @@ static void * hook_realloc(void * ptr, size_t size)
 
     return new;
 }
+#endif
 
 static int hook_zend_write(const char * str, zend_write_len_t len)
 {
