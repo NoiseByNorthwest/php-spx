@@ -50,6 +50,7 @@ static struct {
     void * (*malloc) (size_t size);
     void (*free) (void * ptr);
     void * (*realloc) (void * ptr, size_t size);
+    size_t (*block_size) (void * ptr);
 #endif
 
     zend_write_func_t zend_write;
@@ -113,24 +114,19 @@ static SPX_THREAD_TLS struct {
     size_t file_opcode_count;
     size_t error_count;
 
-    const char * active_function_name;
+    size_t alloc_count;
+    size_t free_count;
+    size_t allocated_bytes;
+    size_t freed_bytes;
 
-    struct {
-        void (*handler) (INTERNAL_FUNCTION_PARAMETERS);
-#if ZEND_MODULE_API_NO >= 20151012
-        zend_internal_arg_info * arg_info;
-        uint32_t num_args;
-        uint32_t fn_flags;
-#else
-        zend_arg_info * arg_info;
-#endif
-    } fastcgi_finish_request;
+    const char * active_function_name;
 } context;
 
-
-static void * ze_malloc(size_t size);
-static void ze_free(void * ptr);
-static void * ze_realloc(void * ptr, size_t size);
+static size_t ze_mm_block_size(void * ptr);
+static size_t ze_mm_custom_block_size(void * ptr);
+static void * ze_mm_malloc(size_t size);
+static void ze_mm_free(void * ptr);
+static void * ze_mm_realloc(void * ptr, size_t size);
 
 static void * hook_malloc(size_t size);
 static void hook_free(void * ptr);
@@ -474,14 +470,17 @@ void spx_php_hooks_init(void)
         &ze_hook.realloc
     );
 
+    ze_hook.block_size = ze_mm_custom_block_size;
+
     if (
         !ze_hook.malloc
         || !ze_hook.free
         || !ze_hook.realloc
     ) {
-        ze_hook.malloc = ze_malloc;
-        ze_hook.free = ze_free;
-        ze_hook.realloc = ze_realloc;
+        ze_hook.malloc = ze_mm_malloc;
+        ze_hook.free = ze_mm_free;
+        ze_hook.realloc = ze_mm_realloc;
+        ze_hook.block_size = ze_mm_block_size;
     }
 
     zend_mm_set_custom_handlers(
@@ -541,10 +540,10 @@ void spx_php_hooks_shutdown(void)
 
         if (
             /*
-             * ze_hook.malloc was defaulted to ze_malloc only if there were no
-             * previous custom handlers.
-             */
-            ze_hook.malloc != ze_malloc
+            * ze_hook.malloc was defaulted to ze_mm_malloc only if there were no
+            * previous custom handlers.
+            */
+            ze_hook.malloc != ze_mm_malloc
         ) {
             zend_mm_set_custom_handlers(
                 ze_mm_heap,
@@ -631,6 +630,11 @@ void spx_php_execution_init(void)
     context.opcode_count = 0;
     context.file_opcode_count = 0;
     context.error_count = 0;
+
+    context.alloc_count = 0;
+    context.free_count = 0;
+    context.allocated_bytes = 0;
+    context.freed_bytes = 0;
 }
 
 void spx_php_execution_shutdown(void)
@@ -747,34 +751,77 @@ void spx_php_log_notice(const char * fmt, ...)
     free(buf);
 }
 
-static void * ze_malloc(size_t size)
+static size_t ze_mm_block_size(void * ptr)
+{
+    return zend_mm_block_size(zend_mm_get_heap(), ptr);
+}
+
+static size_t ze_mm_custom_block_size(void * ptr)
+{
+    return 0;
+}
+
+static void * ze_mm_malloc(size_t size)
 {
     return zend_mm_alloc(zend_mm_get_heap(), size);
 }
 
-static void ze_free(void * ptr)
+static void ze_mm_free(void * ptr)
 {
     zend_mm_free(zend_mm_get_heap(), ptr);
 }
 
-static void * ze_realloc(void * ptr, size_t size)
+static void * ze_mm_realloc(void * ptr, size_t size)
 {
     return zend_mm_realloc(zend_mm_get_heap(), ptr, size);
 }
 
 static void * hook_malloc(size_t size)
 {
-    return ze_hook.malloc(size);
+    void * ptr = ze_hook.malloc(size);
+
+    if (ptr) {
+        context.alloc_count++;
+        context.allocated_bytes += ze_hook.block_size(ptr);
+    }
+
+    return ptr;
 }
 
 static void hook_free(void * ptr)
 {
+    if (ptr) {
+        context.free_count++;
+        context.freed_bytes += ze_hook.block_size(ptr);
+    }
+
     ze_hook.free(ptr);
 }
 
 static void * hook_realloc(void * ptr, size_t size)
 {
-    return ze_hook.realloc(ptr, size);
+    const size_t old_size = ptr ? ze_hook.block_size(ptr) : 0;
+    void * new = ze_hook.realloc(ptr, size);
+    const size_t new_size = new ? ze_hook.block_size(new) : 0;
+
+    if (ptr && new) {
+        if (ptr != new) {
+            context.free_count++;
+            context.freed_bytes += old_size;
+            context.alloc_count++;
+            context.allocated_bytes += new_size;
+        } else {
+            context.allocated_bytes += new_size - old_size;
+        }
+    } else if (ptr) {
+        context.free_count++;
+        context.freed_bytes += old_size;
+    } else if (new) {
+        context.alloc_count++;
+        context.allocated_bytes += new_size;
+    }
+
+    return new;
 }
 
 static int hook_zend_write(const char * str, zend_write_len_t len)
