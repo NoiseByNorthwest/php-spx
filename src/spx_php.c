@@ -542,9 +542,9 @@ void spx_php_hooks_shutdown(void)
 
         if (
             /*
-            * ze_hook.malloc was defaulted to ze_mm_malloc only if there were no
-            * previous custom handlers.
-            */
+             * ze_hook.malloc was defaulted to ze_mm_malloc only if there were no
+             * previous custom handlers.
+             */
             ze_hook.malloc != ze_mm_malloc
         ) {
             zend_mm_set_custom_handlers(
