@@ -8,6 +8,7 @@
 #include "spx_php.h"
 #include "spx_thread.h"
 #include "spx_str_builder.h"
+#include "spx_utils.h"
 
 #if ZEND_MODULE_API_NO >= 20151012
 #   define ZE_HASHTABLE_FOREACH(ht, entry, block)               \
@@ -478,13 +479,6 @@ void spx_php_hooks_init(void)
         || !ze_hook.free
         || !ze_hook.realloc
     ) {
-        /*
-         *  This is the least worst option. From this point we cannot recover the heap's
-         *  "use_custom_heap" state without an ugly trick which would break the strict
-         *  aliasing rule and the zend_mm_heap ADT encapsulation.
-         *  The trade-off is to set back later (at shutdown) the Zend Engine allocators
-         *  as custom handlers (ze_* functions defined in this TU are just wrappers).
-         */
         ze_hook.malloc = ze_malloc;
         ze_hook.free = ze_free;
         ze_hook.realloc = ze_realloc;
@@ -545,12 +539,35 @@ void spx_php_hooks_shutdown(void)
     ) {
         zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
 
-        zend_mm_set_custom_handlers(
-            ze_mm_heap,
-            ze_hook.malloc,
-            ze_hook.free,
-            ze_hook.realloc
-        );
+        if (
+            /*
+             * ze_hook.malloc was defaulted to ze_malloc only if there were no
+             * previous custom handlers.
+             */
+            ze_hook.malloc != ze_malloc
+        ) {
+            zend_mm_set_custom_handlers(
+                ze_mm_heap,
+                ze_hook.malloc,
+                ze_hook.free,
+                ze_hook.realloc
+            );
+        } else {
+            /*
+             *  This ugly hack, breaking strict aliasing rule and zend_mm_heap ADT
+             *  encapsulation, is the only way to restore internal state of heap
+             *  (prior to spx_php_hooks_init()).
+             *  It supposes "use_custom_heap" is an int and the first field of
+             *  zend_mm_heap type.
+             *  Setting back original allocator handlers (wrapped in this TU by
+             *  ze_(*alloc|free) functions) does not work as it causes SIGSEV
+             *  at module shutdown (in a child of zend_unregister_functions()).
+             */
+            *((int *) ze_mm_heap) = 0;
+            if (!is_zend_mm()) {
+                spx_utils_die("Zend MM heap corrupted");
+            }
+        }
 
         ze_hook.malloc = NULL;
         ze_hook.free = NULL;
