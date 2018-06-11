@@ -82,7 +82,9 @@ static struct {
         va_list args
     );
 } ze_hook = {
-    NULL, NULL, NULL,
+#if ZEND_MODULE_API_NO >= 20151012
+    NULL, NULL, NULL, NULL,
+#endif
     NULL,
     NULL, NULL,
     NULL, NULL,
