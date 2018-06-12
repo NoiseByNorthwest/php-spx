@@ -75,7 +75,7 @@ _N.B.: It is also required to have your vhost configured to trigger PHP for any 
 
 Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
 
-![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/0e2ac6f66d89e661ce58a8a969e056d573667976/php-spx/doc/cp-form.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/93baabbcba04223586d06756dbcecfbd6ec1293d/php-spx/doc/cp-form.png)
 
 Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
 
