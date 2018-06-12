@@ -33,12 +33,40 @@ const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
         SPX_FMT_TIME,
         0,
     },
-    ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY) {
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_USAGE) {
         "zm",
-        "ZE memory",
+        "ZE memory usage",
         "Zend Engine memory usage",
         SPX_FMT_MEMORY,
         1,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_ALLOC_COUNT) {
+        "zmac",
+        "ZE alloc count",
+        "Zend Engine allocation count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_ALLOC_BYTES) {
+        "zmab",
+        "ZE alloc bytes",
+        "Zend Engine allocated bytes",
+        SPX_FMT_MEMORY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_FREE_COUNT) {
+        "zmfc",
+        "ZE free count",
+        "Zend Engine free count",
+        SPX_FMT_QUANTITY,
+        0,
+    },
+    ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_FREE_BYTES) {
+        "zmfb",
+        "ZE free bytes",
+        "Zend Engine freed bytes",
+        SPX_FMT_MEMORY,
+        0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_GC_RUNS) {
         "zgr",
@@ -272,8 +300,24 @@ static void collect_raw_values(const int * enabled_metrics, double * current_val
         }
     }
 
-    if (enabled_metrics[SPX_METRIC_ZE_MEMORY]) {
-        current_values[SPX_METRIC_ZE_MEMORY] = spx_php_zend_memory_usage();
+    if (enabled_metrics[SPX_METRIC_ZE_MEMORY_USAGE]) {
+        current_values[SPX_METRIC_ZE_MEMORY_USAGE] = spx_php_zend_memory_usage();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_MEMORY_ALLOC_COUNT]) {
+        current_values[SPX_METRIC_ZE_MEMORY_ALLOC_COUNT] = spx_php_zend_memory_alloc_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_MEMORY_ALLOC_BYTES]) {
+        current_values[SPX_METRIC_ZE_MEMORY_ALLOC_BYTES] = spx_php_zend_memory_alloc_bytes();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_MEMORY_FREE_COUNT]) {
+        current_values[SPX_METRIC_ZE_MEMORY_FREE_COUNT] = spx_php_zend_memory_free_count();
+    }
+
+    if (enabled_metrics[SPX_METRIC_ZE_MEMORY_FREE_BYTES]) {
+        current_values[SPX_METRIC_ZE_MEMORY_FREE_BYTES] = spx_php_zend_memory_free_bytes();
     }
 
     if (enabled_metrics[SPX_METRIC_ZE_GC_RUNS]) {

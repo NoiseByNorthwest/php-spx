@@ -18,11 +18,11 @@ Global stats:
   Distinct functions  :        1
 
   Wall Time           :  %s
-  ZE memory           :  %s
+  ZE memory usage     :  %s
 
 Flat profile:
 
- Wall Time           | ZE memory           |
+ Wall Time           | ZE memory usage     |
  Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
  %s | %s | %s | %s |        1 | %s/spx_006.php

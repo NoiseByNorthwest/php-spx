@@ -21,7 +21,11 @@ echo 'Normal output';
 {"key": "wt","short_name": "Wall Time","name": "Wall Time","type": "time","releasable": 0}
 ,{"key": "ct","short_name": "CPU Time","name": "CPU Time","type": "time","releasable": 0}
 ,{"key": "it","short_name": "Idle Time","name": "Idle Time","type": "time","releasable": 0}
-,{"key": "zm","short_name": "ZE memory","name": "Zend Engine memory usage","type": "memory","releasable": 1}
+,{"key": "zm","short_name": "ZE memory usage","name": "Zend Engine memory usage","type": "memory","releasable": 1}
+,{"key": "zmac","short_name": "ZE alloc count","name": "Zend Engine allocation count","type": "quantity","releasable": 0}
+,{"key": "zmab","short_name": "ZE alloc bytes","name": "Zend Engine allocated bytes","type": "memory","releasable": 0}
+,{"key": "zmfc","short_name": "ZE free count","name": "Zend Engine free count","type": "quantity","releasable": 0}
+,{"key": "zmfb","short_name": "ZE free bytes","name": "Zend Engine freed bytes","type": "memory","releasable": 0}
 ,{"key": "zgr","short_name": "ZE GC runs","name": "Zend Engine GC run count","type": "quantity","releasable": 0}
 ,{"key": "zgb","short_name": "ZE GC root buffer","name": "Zend Engine GC root buffer length","type": "quantity","releasable": 1}
 ,{"key": "zgc","short_name": "ZE GC collected","name": "Zend Engine GC collected cycle count","type": "quantity","releasable": 0}

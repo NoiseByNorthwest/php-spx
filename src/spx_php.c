@@ -117,9 +117,9 @@ static SPX_THREAD_TLS struct {
     size_t error_count;
 
     size_t alloc_count;
+    size_t alloc_bytes;
     size_t free_count;
-    size_t allocated_bytes;
-    size_t freed_bytes;
+    size_t free_bytes;
 
     const char * active_function_name;
 } context;
@@ -362,6 +362,27 @@ size_t spx_php_zend_memory_usage(void)
     TSRMLS_FETCH();
 
     return zend_memory_usage(0 TSRMLS_CC);
+}
+
+
+size_t spx_php_zend_memory_alloc_count(void)
+{
+    return context.alloc_count;
+}
+
+size_t spx_php_zend_memory_alloc_bytes(void)
+{
+    return context.alloc_bytes;
+}
+
+size_t spx_php_zend_memory_free_count(void)
+{
+    return context.free_count;
+}
+
+size_t spx_php_zend_memory_free_bytes(void)
+{
+    return context.free_bytes;
 }
 
 size_t spx_php_zend_gc_run_count(void)
@@ -636,9 +657,9 @@ void spx_php_execution_init(void)
     context.error_count = 0;
 
     context.alloc_count = 0;
+    context.alloc_bytes = 0;
     context.free_count = 0;
-    context.allocated_bytes = 0;
-    context.freed_bytes = 0;
+    context.free_bytes = 0;
 }
 
 void spx_php_execution_shutdown(void)
@@ -787,7 +808,7 @@ static void * hook_malloc(size_t size)
 
     if (ptr) {
         context.alloc_count++;
-        context.allocated_bytes += ze_hook.block_size(ptr);
+        context.alloc_bytes += ze_hook.block_size(ptr);
     }
 
     return ptr;
@@ -797,7 +818,7 @@ static void hook_free(void * ptr)
 {
     if (ptr) {
         context.free_count++;
-        context.freed_bytes += ze_hook.block_size(ptr);
+        context.free_bytes += ze_hook.block_size(ptr);
     }
 
     ze_hook.free(ptr);
@@ -812,15 +833,16 @@ static void * hook_realloc(void * ptr, size_t size)
     if (ptr && new) {
         if (ptr != new) {
             context.free_count++;
-            context.freed_bytes += old_size;
+            context.free_bytes += old_size;
             context.alloc_count++;
-            context.allocated_bytes += new_size;
+            context.alloc_bytes += new_size;
         } else {
-            context.allocated_bytes += new_size - old_size;
+            const int diff = new_size - old_size;
+            context.alloc_bytes += diff > 0 ? diff : 0;
         }
     } else if (new) {
         context.alloc_count++;
-        context.allocated_bytes += new_size;
+        context.alloc_bytes += new_size;
     }
 
     return new;
