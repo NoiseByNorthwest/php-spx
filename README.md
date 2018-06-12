@@ -103,12 +103,12 @@ Global stats:
   Called functions    :    27.5K
   Distinct functions  :      714
 
-  Wall Time           :    7.39s
+  Wall time           :    7.39s
   ZE memory           :   62.6MB
 
 Flat profile:
 
- Wall Time           | ZE memory           |
+ Wall time           | ZE memory           |
  Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
   101.6ms |  101.6ms |   41.8MB |   41.8MB |       12 | Composer\Json\JsonFile::parseJson
@@ -161,13 +161,13 @@ And then access to the web UI at `http(s)://<your application host>/_spx?SPX_KEY
 
 ### Available metrics
 
-Here is the list of available metrics to collect. By default only _Wall Time_ and _Zend Engine memory_ are collected.
+Here is the list of available metrics to collect. By default only _Wall time_ and _Zend Engine memory usage_ are collected.
 
 | Key (command line) | Name | Description |
 | ---- | ---------------- | ------ |
-| _wt_ | Wall Time | The absolute elapsed time. |
-| _ct_ | CPU Time | The time spent while running on CPU. |
-| _it_ | Idle Time | The time spent off-CPU, that means waiting for CPU, I/O completion, a lock acquisition... or explicitly sleeping. |
+| _wt_ | Wall time | The absolute elapsed time. |
+| _ct_ | CPU time | The time spent while running on CPU. |
+| _it_ | Idle time | The time spent off-CPU, that means waiting for CPU, I/O completion, a lock acquisition... or explicitly sleeping. |
 | _zm_ | Zend Engine memory usage | Equivalent to `memory_get_usage(false)`. |
 | _zmac_ | Zend Engine allocation count | Number of memory allocation (i.e. allocated blocks) performed. |
 | _zmab_ | Zend Engine allocated bytes<b>*</b> | Number of allocated bytes. |
@@ -353,7 +353,7 @@ The following command will trace all (user) function calls of _./bin/console_ sc
 $ SPX_ENABLED=1 SPX_REPORT=trace SPX_TRACE_FILE=trace.txt ./bin/console > /dev/null && head -20 trace.txt && echo ... && tail -20 trace.txt
 
 SPX trace file: trace.txt
- Wall Time                      | ZE memory                      |
+ Wall time                      | ZE memory usage                |
  Cum.     | Inc.     | Exc.     | Cum.     | Inc.     | Exc.     | Depth    | Function
 ----------+----------+----------+----------+----------+----------+----------+----------
       0ns |      0ns |      0ns |       0B |       0B |       0B |        1 | +/var/www/sfapp/bin/console

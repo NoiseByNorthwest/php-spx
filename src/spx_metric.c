@@ -14,22 +14,22 @@
 const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT] = {
     ARRAY_INIT_INDEX(SPX_METRIC_WALL_TIME) {
         "wt",
-        "Wall Time",
-        "Wall Time",
+        "Wall time",
+        "Wall time",
         SPX_FMT_TIME,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_CPU_TIME) {
         "ct",
-        "CPU Time",
-        "CPU Time",
+        "CPU time",
+        "CPU time",
         SPX_FMT_TIME,
         0,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IDLE_TIME) {
         "it",
-        "Idle Time",
-        "Idle Time",
+        "Idle time",
+        "Idle time",
         SPX_FMT_TIME,
         0,
     },
