@@ -8,6 +8,7 @@
 #include "spx_php.h"
 #include "spx_thread.h"
 #include "spx_str_builder.h"
+#include "spx_utils.h"
 
 #if ZEND_MODULE_API_NO >= 20151012
 #   define ZE_HASHTABLE_FOREACH(ht, entry, block)               \
@@ -45,6 +46,13 @@ typedef uint zend_write_len_t;
 #endif
 
 static struct {
+#if ZEND_MODULE_API_NO >= 20151012
+    void * (*malloc) (size_t size);
+    void (*free) (void * ptr);
+    void * (*realloc) (void * ptr, size_t size);
+    size_t (*block_size) (void * ptr);
+#endif
+
     zend_write_func_t zend_write;
 
     void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
@@ -74,6 +82,9 @@ static struct {
         va_list args
     );
 } ze_hook = {
+#if ZEND_MODULE_API_NO >= 20151012
+    NULL, NULL, NULL, NULL,
+#endif
     NULL,
     NULL, NULL,
     NULL, NULL,
@@ -105,19 +116,25 @@ static SPX_THREAD_TLS struct {
     size_t file_opcode_count;
     size_t error_count;
 
-    const char * active_function_name;
+    size_t alloc_count;
+    size_t alloc_bytes;
+    size_t free_count;
+    size_t free_bytes;
 
-    struct {
-        void (*handler) (INTERNAL_FUNCTION_PARAMETERS);
-#if ZEND_MODULE_API_NO >= 20151012
-        zend_internal_arg_info * arg_info;
-        uint32_t num_args;
-        uint32_t fn_flags;
-#else
-        zend_arg_info * arg_info;
-#endif
-    } fastcgi_finish_request;
+    const char * active_function_name;
 } context;
+
+#if ZEND_MODULE_API_NO >= 20151012
+static size_t ze_mm_block_size(void * ptr);
+static size_t ze_mm_custom_block_size(void * ptr);
+static void * ze_mm_malloc(size_t size);
+static void ze_mm_free(void * ptr);
+static void * ze_mm_realloc(void * ptr, size_t size);
+
+static void * hook_malloc(size_t size);
+static void hook_free(void * ptr);
+static void * hook_realloc(void * ptr, size_t size);
+#endif
 
 static int hook_zend_write(const char * str, zend_write_len_t len);
 
@@ -347,6 +364,27 @@ size_t spx_php_zend_memory_usage(void)
     return zend_memory_usage(0 TSRMLS_CC);
 }
 
+
+size_t spx_php_zend_memory_alloc_count(void)
+{
+    return context.alloc_count;
+}
+
+size_t spx_php_zend_memory_alloc_bytes(void)
+{
+    return context.alloc_bytes;
+}
+
+size_t spx_php_zend_memory_free_count(void)
+{
+    return context.free_count;
+}
+
+size_t spx_php_zend_memory_free_bytes(void)
+{
+    return context.free_bytes;
+}
+
 size_t spx_php_zend_gc_run_count(void)
 {
     TSRMLS_FETCH();
@@ -447,6 +485,37 @@ size_t spx_php_zend_error_count(void)
 
 void spx_php_hooks_init(void)
 {
+#if ZEND_MODULE_API_NO >= 20151012
+    zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
+
+    zend_mm_get_custom_handlers(
+        ze_mm_heap,
+        &ze_hook.malloc,
+        &ze_hook.free,
+        &ze_hook.realloc
+    );
+
+    ze_hook.block_size = ze_mm_custom_block_size;
+
+    if (
+        !ze_hook.malloc
+        || !ze_hook.free
+        || !ze_hook.realloc
+    ) {
+        ze_hook.malloc = ze_mm_malloc;
+        ze_hook.free = ze_mm_free;
+        ze_hook.realloc = ze_mm_realloc;
+        ze_hook.block_size = ze_mm_block_size;
+    }
+
+    zend_mm_set_custom_handlers(
+        ze_mm_heap,
+        hook_malloc,
+        hook_free,
+        hook_realloc
+    );
+#endif
+
     ze_hook.zend_write = zend_write;
     zend_write = hook_zend_write;
 
@@ -486,6 +555,50 @@ void spx_php_hooks_finalize(void)
 
 void spx_php_hooks_shutdown(void)
 {
+#if ZEND_MODULE_API_NO >= 20151012
+    if (
+        ze_hook.malloc
+        && ze_hook.free
+        && ze_hook.realloc
+    ) {
+        zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
+
+        if (
+            /*
+             * ze_hook.malloc was defaulted to ze_mm_malloc only if there were no
+             * previous custom handlers.
+             */
+            ze_hook.malloc != ze_mm_malloc
+        ) {
+            zend_mm_set_custom_handlers(
+                ze_mm_heap,
+                ze_hook.malloc,
+                ze_hook.free,
+                ze_hook.realloc
+            );
+        } else {
+            /*
+             *  This ugly hack, breaking strict aliasing rule and zend_mm_heap ADT
+             *  encapsulation, is the only way to restore internal state of heap
+             *  (prior to spx_php_hooks_init()).
+             *  It supposes "use_custom_heap" is an int and the first field of
+             *  zend_mm_heap type.
+             *  Setting back original allocator handlers (wrapped in this TU by
+             *  ze_(*alloc|free) functions) does not work as it causes SIGSEV
+             *  at module shutdown (in a child of zend_unregister_functions()).
+             */
+            *((int *) ze_mm_heap) = 0;
+            if (!is_zend_mm()) {
+                spx_utils_die("Zend MM heap corrupted");
+            }
+        }
+
+        ze_hook.malloc = NULL;
+        ze_hook.free = NULL;
+        ze_hook.realloc = NULL;
+    }
+#endif
+
     if (ze_hook.zend_write) {
         zend_write = ze_hook.zend_write;
         ze_hook.zend_write = NULL;
@@ -542,6 +655,11 @@ void spx_php_execution_init(void)
     context.opcode_count = 0;
     context.file_opcode_count = 0;
     context.error_count = 0;
+
+    context.alloc_count = 0;
+    context.alloc_bytes = 0;
+    context.free_count = 0;
+    context.free_bytes = 0;
 }
 
 void spx_php_execution_shutdown(void)
@@ -657,6 +775,79 @@ void spx_php_log_notice(const char * fmt, ...)
 
     free(buf);
 }
+
+#if ZEND_MODULE_API_NO >= 20151012
+static size_t ze_mm_block_size(void * ptr)
+{
+    return zend_mm_block_size(zend_mm_get_heap(), ptr);
+}
+
+static size_t ze_mm_custom_block_size(void * ptr)
+{
+    return 0;
+}
+
+static void * ze_mm_malloc(size_t size)
+{
+    return zend_mm_alloc(zend_mm_get_heap(), size);
+}
+
+static void ze_mm_free(void * ptr)
+{
+    zend_mm_free(zend_mm_get_heap(), ptr);
+}
+
+static void * ze_mm_realloc(void * ptr, size_t size)
+{
+    return zend_mm_realloc(zend_mm_get_heap(), ptr, size);
+}
+
+static void * hook_malloc(size_t size)
+{
+    void * ptr = ze_hook.malloc(size);
+
+    if (ptr) {
+        context.alloc_count++;
+        context.alloc_bytes += ze_hook.block_size(ptr);
+    }
+
+    return ptr;
+}
+
+static void hook_free(void * ptr)
+{
+    if (ptr) {
+        context.free_count++;
+        context.free_bytes += ze_hook.block_size(ptr);
+    }
+
+    ze_hook.free(ptr);
+}
+
+static void * hook_realloc(void * ptr, size_t size)
+{
+    const size_t old_size = ptr ? ze_hook.block_size(ptr) : 0;
+    void * new = ze_hook.realloc(ptr, size);
+    const size_t new_size = new ? ze_hook.block_size(new) : 0;
+
+    if (ptr && new) {
+        if (ptr != new) {
+            context.free_count++;
+            context.free_bytes += old_size;
+            context.alloc_count++;
+            context.alloc_bytes += new_size;
+        } else {
+            const int diff = new_size - old_size;
+            context.alloc_bytes += diff > 0 ? diff : 0;
+        }
+    } else if (new) {
+        context.alloc_count++;
+        context.alloc_bytes += new_size;
+    }
+
+    return new;
+}
+#endif
 
 static int hook_zend_write(const char * str, zend_write_len_t len)
 {

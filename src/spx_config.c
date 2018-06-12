@@ -98,7 +98,7 @@ static void init_config(spx_config_t * config, int cli)
     });
 
     config->enabled_metrics[SPX_METRIC_WALL_TIME] = 1;
-    config->enabled_metrics[SPX_METRIC_ZE_MEMORY] = 1;
+    config->enabled_metrics[SPX_METRIC_ZE_MEMORY_USAGE] = 1;
 
     config->report = cli ? SPX_CONFIG_REPORT_FLAT_PROFILE : SPX_CONFIG_REPORT_FULL;
 
@@ -120,7 +120,7 @@ static void fix_config(spx_config_t * config, int cli)
 
     if (config->report == SPX_CONFIG_REPORT_FULL) {
         config->enabled_metrics[SPX_METRIC_WALL_TIME] = 1;
-        config->enabled_metrics[SPX_METRIC_ZE_MEMORY] = 1;
+        config->enabled_metrics[SPX_METRIC_ZE_MEMORY_USAGE] = 1;
     }
 
     if (config->report == SPX_CONFIG_REPORT_FLAT_PROFILE) {

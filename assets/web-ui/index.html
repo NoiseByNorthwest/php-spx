@@ -127,7 +127,7 @@
                                     ,
                                 },
                                 defaultValue: '',
-                                description: 'List of available metrics to collect in addition to Wall Time and Zend Engine Memory. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
+                                description: 'List of available metrics to collect in addition to Wall time and Zend Engine memory usage. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
                             },
                         ];
 
@@ -256,7 +256,7 @@
                                         value: 'host_name',
                                     },
                                     {
-                                        label: 'Wall Time',
+                                        label: 'Wall time',
                                         value: 'wall_time_ms',
                                         format: value => fmt.time(value * 1000),
                                     },

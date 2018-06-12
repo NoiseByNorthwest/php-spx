@@ -14,7 +14,7 @@ It differentiates itself from other similar extensions as being:
 * very simple to use: just set an environment variable (command line) or switch on a radio button (web page) to profile your script. Thus, you are free of:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
-* [multi metrics](#available-metrics) capable: 17 currently supported (various time metrics, memory, included files, objects in use, I/O...).
+* [multi metrics](#available-metrics) capable: 21 currently supported (various time metrics, memory, included files, objects in use, I/O...).
 * able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
@@ -75,7 +75,7 @@ _N.B.: It is also required to have your vhost configured to trigger PHP for any 
 
 Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
 
-![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/0e2ac6f66d89e661ce58a8a969e056d573667976/php-spx/doc/cp-form.png)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/93baabbcba04223586d06756dbcecfbd6ec1293d/php-spx/doc/cp-form.png)
 
 Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
 
@@ -103,12 +103,12 @@ Global stats:
   Called functions    :    27.5K
   Distinct functions  :      714
 
-  Wall Time           :    7.39s
+  Wall time           :    7.39s
   ZE memory           :   62.6MB
 
 Flat profile:
 
- Wall Time           | ZE memory           |
+ Wall time           | ZE memory           |
  Inc.     | *Exc.    | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------
   101.6ms |  101.6ms |   41.8MB |   41.8MB |       12 | Composer\Json\JsonFile::parseJson
@@ -161,14 +161,18 @@ And then access to the web UI at `http(s)://<your application host>/_spx?SPX_KEY
 
 ### Available metrics
 
-Here is the list of available metrics to collect. By default only _Wall Time_ and _Zend Engine memory_ are collected.
+Here is the list of available metrics to collect. By default only _Wall time_ and _Zend Engine memory usage_ are collected.
 
 | Key (command line) | Name | Description |
 | ---- | ---------------- | ------ |
-| _wt_ | Wall Time | The absolute elapsed time. |
-| _ct_ | CPU Time | The time spent while running on CPU. |
-| _it_ | Idle Time | The time spent off-CPU, that means waiting for CPU, I/O completion, a lock acquisition... or explicitly sleeping. |
-| _zm_ | Zend Engine memory | Zend Engine memory usage. Equivalent to `memory_get_usage(false)`. |
+| _wt_ | Wall time | The absolute elapsed time. |
+| _ct_ | CPU time | The time spent while running on CPU. |
+| _it_ | Idle time | The time spent off-CPU, that means waiting for CPU, I/O completion, a lock acquisition... or explicitly sleeping. |
+| _zm_ | Zend Engine memory usage | Equivalent to `memory_get_usage(false)`. |
+| _zmac_ | Zend Engine allocation count | Number of memory allocation (i.e. allocated blocks) performed. |
+| _zmab_ | Zend Engine allocated bytes<b>*</b> | Number of allocated bytes. |
+| _zmfc_ | Zend Engine free count | Number of memory release (i.e. freed blocks) performed. |
+| _zmfb_ | Zend Engine freed bytes<b>*</b> | Number of freed bytes. |
 | _zgr_ | Zend Engine GC run count | Number of times the GC (cycle collector) have been triggered (either manually or automatically). |
 | _zgb_ | Zend Engine GC root buffer length | Root buffer length, see explanation [here](http://php.net/manual/en/features.gc.collecting-cycles.php). It could be helpful to track pressure on garbage collector. |
 | _zgc_ | Zend Engine GC collected cycle count | Total number of collected cycles through all GC runs. |
@@ -179,11 +183,13 @@ Here is the list of available metrics to collect. By default only _Wall Time_ an
 | _zuo_ | Zend Engine user opcode count | Number of included userland opcodes (sum of all userland file/function/method opcodes). |
 | _zo_ | Zend Engine object count | Number of objects currently held by user code. |
 | _ze_ | Zend Engine error count | Number of raised PHP errors. |
-| _io_ | I/O (reads + writes) | Bytes read or written while performing I/O. |
-| _ior_ | I/O (reads) | Bytes read while performing I/O. |
-| _iow_ | I/O (writes) | Bytes written while performing I/O. |
+| _io_ | I/O (reads + writes)**\*\*** | Bytes read or written while performing I/O. |
+| _ior_ | I/O (reads)**\*\*** | Bytes read while performing I/O. |
+| _iow_ | I/O (writes)**\*\*** | Bytes written while performing I/O. |
 
-_N.B.: I/O metrics are not supported on macOS._
+_\*: Allocated and freed byte counts will not be collected if you use a custom allocator or if you force the libc one through the `USE_ZEND_ALLOC` environment variable set to `0`._
+
+_\*\*: I/O metrics are not supported on macOS._
 
 ### Command line script
 
@@ -347,7 +353,7 @@ The following command will trace all (user) function calls of _./bin/console_ sc
 $ SPX_ENABLED=1 SPX_REPORT=trace SPX_TRACE_FILE=trace.txt ./bin/console > /dev/null && head -20 trace.txt && echo ... && tail -20 trace.txt
 
 SPX trace file: trace.txt
- Wall Time                      | ZE memory                      |
+ Wall time                      | ZE memory usage                |
  Cum.     | Inc.     | Exc.     | Cum.     | Inc.     | Exc.     | Depth    | Function
 ----------+----------+----------+----------+----------+----------+----------+----------
       0ns |      0ns |      0ns |       0B |       0B |       0B |        1 | +/var/www/sfapp/bin/console

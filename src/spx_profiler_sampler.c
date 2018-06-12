@@ -129,7 +129,7 @@ static void sampling_profiler_handle_sample(spx_profiler_t * base_profiler, int 
         profiler->sampled_profiler->call_start(profiler->sampled_profiler, &profiler->stack.current.frames[i]);
     }
 
-    /* copy current frame to previous (for next sample) */
+    /* copy the current stack to the previous (for next sample) */
 
     for (i = 0; i < profiler->stack.current.size; i++) {
         profiler->stack.previous.frames[i] = profiler->stack.current.frames[i];

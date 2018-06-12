@@ -18,9 +18,9 @@ Global stats:
   Called functions    :        1
   Distinct functions  :        1
 
-  Wall Time           : %s
-  CPU Time            : %s
-  Idle Time           : %s
+  Wall time           : %s
+  CPU time            : %s
+  Idle time           : %s
   ZE GC root buffer   : %s
   ZE object count     : %s
   I/O Bytes           : %s
@@ -28,7 +28,7 @@ Global stats:
 
 Flat profile:
 
- Wall Time           | CPU Time            | Idle Time           | ZE GC root buffer   | ZE object count     | I/O Bytes           | I/O Read Bytes      |
+ Wall time           | CPU time            | Idle time           | ZE GC root buffer   | ZE object count     | I/O Bytes           | I/O Read Bytes      |
  Inc.     | *Exc.    | Inc.     | Exc.     | Inc.     | Exc.     | Inc.     | Exc.     | Inc.     | Exc.     | Inc.     | Exc.     | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------+----------
  %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |        1 | %s/spx_007.php

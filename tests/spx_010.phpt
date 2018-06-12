@@ -45,13 +45,13 @@ Global stats:
   Called functions    :      311
   Distinct functions  :        3
 
-  Wall Time           : %s
+  Wall time           : %s
   ZE object count     :      310
   ZE error count      :      300
 
 Flat profile:
 
- Wall Time           | ZE object count     | ZE error count      |
+ Wall time           | ZE object count     | ZE error count      |
  Inc.     | *Exc.    | Inc.     | Exc.     | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------+----------+----------
  %s | %s |      300 |      300 |      300 |      300 |      300 | foo
