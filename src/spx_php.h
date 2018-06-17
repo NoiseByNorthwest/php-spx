@@ -36,14 +36,16 @@ size_t spx_php_zend_opcode_count(void);
 size_t spx_php_zend_object_count(void);
 size_t spx_php_zend_error_count(void);
 
-void spx_php_hooks_init(void);
-void spx_php_hooks_finalize(void);
-void spx_php_hooks_shutdown(void);
+void spx_php_global_hooks_set(void);
+void spx_php_global_hooks_unset(void);
+void spx_php_global_hooks_disable(void);
 
 void spx_php_execution_init(void);
 void spx_php_execution_shutdown(void);
+
 void spx_php_execution_disable(void);
 void spx_php_execution_hook(void (*before)(void), void (*after)(void), int internal);
+void spx_php_execution_finalize(void);
 
 void spx_php_output_add_header_line(const char * header_line);
 void spx_php_output_add_header_linef(const char * fmt, ...);

@@ -39,12 +39,6 @@ do {                                                     \
 } while (0)
 #endif
 
-#if ZEND_MODULE_API_NO >= 20151012
-typedef size_t zend_write_len_t;
-#else
-typedef uint zend_write_len_t;
-#endif
-
 static struct {
 #if ZEND_MODULE_API_NO >= 20151012
     void * (*malloc) (size_t size);
@@ -52,8 +46,6 @@ static struct {
     void * (*realloc) (void * ptr, size_t size);
     size_t (*block_size) (void * ptr);
 #endif
-
-    zend_write_func_t zend_write;
 
     void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
     void (*execute_internal) (
@@ -81,11 +73,10 @@ static struct {
         const char *format,
         va_list args
     );
-} ze_hook = {
+} ze_hooked_func = {
 #if ZEND_MODULE_API_NO >= 20151012
     NULL, NULL, NULL, NULL,
 #endif
-    NULL,
     NULL, NULL,
     NULL, NULL,
 #if ZEND_MODULE_API_NO >= 20151012
@@ -102,6 +93,7 @@ static SPX_THREAD_TLS struct {
         } user, internal;
     } ex_hook;
 
+    int global_hooks_enabled;
     int execution_disabled;
 
     size_t user_depth;
@@ -124,6 +116,8 @@ static SPX_THREAD_TLS struct {
     const char * active_function_name;
 } context;
 
+static void reset_context(void);
+
 #if ZEND_MODULE_API_NO >= 20151012
 static size_t ze_mm_block_size(void * ptr);
 static size_t ze_mm_custom_block_size(void * ptr);
@@ -131,15 +125,13 @@ static void * ze_mm_malloc(size_t size);
 static void ze_mm_free(void * ptr);
 static void * ze_mm_realloc(void * ptr, size_t size);
 
-static void * hook_malloc(size_t size);
-static void hook_free(void * ptr);
-static void * hook_realloc(void * ptr, size_t size);
+static void * tls_hook_malloc(size_t size);
+static void tls_hook_free(void * ptr);
+static void * tls_hook_realloc(void * ptr, size_t size);
 #endif
 
-static int hook_zend_write(const char * str, zend_write_len_t len);
-
-static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
-static void hook_execute_internal(
+static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
+static void global_hook_execute_internal(
     zend_execute_data * execute_data,
 #if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
@@ -150,14 +142,14 @@ static void hook_execute_internal(
     TSRMLS_DC
 );
 
-static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC);
-static zend_op_array * hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC);
+static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC);
+static zend_op_array * global_hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC);
 
 #if ZEND_MODULE_API_NO >= 20151012
-static int hook_gc_collect_cycles(void);
+static int global_hook_gc_collect_cycles(void);
 #endif
 
-static void hook_zend_error_cb(
+static void global_hook_zend_error_cb(
     int type,
     const char *error_filename,
     const uint error_lineno,
@@ -483,64 +475,70 @@ size_t spx_php_zend_error_count(void)
     return context.error_count;
 }
 
-void spx_php_hooks_init(void)
+void spx_php_global_hooks_set(void)
 {
-#if ZEND_MODULE_API_NO >= 20151012
-    zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
+    ze_hooked_func.execute_ex = execute_ex;
+    zend_execute_ex = global_hook_execute_ex;
 
-    zend_mm_get_custom_handlers(
-        ze_mm_heap,
-        &ze_hook.malloc,
-        &ze_hook.free,
-        &ze_hook.realloc
-    );
+    ze_hooked_func.execute_internal = execute_internal;
+    zend_execute_internal = global_hook_execute_internal;
 
-    ze_hook.block_size = ze_mm_custom_block_size;
+    ze_hooked_func.zend_compile_file = zend_compile_file;
+    zend_compile_file = global_hook_zend_compile_file;
 
-    if (
-        !ze_hook.malloc
-        || !ze_hook.free
-        || !ze_hook.realloc
-    ) {
-        ze_hook.malloc = ze_mm_malloc;
-        ze_hook.free = ze_mm_free;
-        ze_hook.realloc = ze_mm_realloc;
-        ze_hook.block_size = ze_mm_block_size;
-    }
-
-    zend_mm_set_custom_handlers(
-        ze_mm_heap,
-        hook_malloc,
-        hook_free,
-        hook_realloc
-    );
-#endif
-
-    ze_hook.zend_write = zend_write;
-    zend_write = hook_zend_write;
-
-    ze_hook.execute_ex = execute_ex;
-    zend_execute_ex = hook_execute_ex;
-
-    ze_hook.execute_internal = execute_internal;
-    zend_execute_internal = hook_execute_internal;
-
-    ze_hook.zend_compile_file = zend_compile_file;
-    zend_compile_file = hook_zend_compile_file;
-
-    ze_hook.zend_compile_string = zend_compile_string;
-    zend_compile_string = hook_zend_compile_string;
+    ze_hooked_func.zend_compile_string = zend_compile_string;
+    zend_compile_string = global_hook_zend_compile_string;
 
 #if ZEND_MODULE_API_NO >= 20151012
-    ze_hook.gc_collect_cycles = gc_collect_cycles;
-    gc_collect_cycles = hook_gc_collect_cycles;
+    ze_hooked_func.gc_collect_cycles = gc_collect_cycles;
+    gc_collect_cycles = global_hook_gc_collect_cycles;
 #endif
 
-    ze_hook.zend_error_cb = zend_error_cb;
-    zend_error_cb = hook_zend_error_cb;
+    ze_hooked_func.zend_error_cb = zend_error_cb;
+    zend_error_cb = global_hook_zend_error_cb;
 }
 
-void spx_php_hooks_finalize(void)
+void spx_php_global_hooks_unset(void)
+{
+    if (ze_hooked_func.execute_ex) {
+        zend_execute_ex = ze_hooked_func.execute_ex;
+        ze_hooked_func.execute_ex = NULL;
+    }
+
+    if (ze_hooked_func.execute_internal) {
+        zend_execute_internal = ze_hooked_func.execute_internal;
+        ze_hooked_func.execute_internal = NULL;
+    }
+
+    if (ze_hooked_func.zend_compile_file) {
+        zend_compile_file = ze_hooked_func.zend_compile_file;
+        ze_hooked_func.zend_compile_file = NULL;
+    }
+
+    if (ze_hooked_func.zend_compile_string) {
+        zend_compile_string = ze_hooked_func.zend_compile_string;
+        ze_hooked_func.zend_compile_string = NULL;
+    }
+
+#if ZEND_MODULE_API_NO >= 20151012
+    if (ze_hooked_func.gc_collect_cycles) {
+        gc_collect_cycles = ze_hooked_func.gc_collect_cycles;
+        ze_hooked_func.gc_collect_cycles = NULL;
+    }
+#endif
+
+    if (ze_hooked_func.zend_error_cb) {
+        zend_error_cb = ze_hooked_func.zend_error_cb;
+        ze_hooked_func.zend_error_cb = NULL;
+    }
+}
+
+void spx_php_global_hooks_disable(void)
+{
+    context.global_hooks_enabled = 0;
+}
+
+void spx_php_execution_finalize(void)
 {
     if (!context.request_shutdown) {
         return;
@@ -553,34 +551,70 @@ void spx_php_hooks_finalize(void)
     }
 }
 
-void spx_php_hooks_shutdown(void)
+void spx_php_execution_init(void)
+{
+    reset_context();
+
+#if ZEND_MODULE_API_NO >= 20151012
+    zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
+
+    zend_mm_get_custom_handlers(
+        ze_mm_heap,
+        &ze_hooked_func.malloc,
+        &ze_hooked_func.free,
+        &ze_hooked_func.realloc
+    );
+
+    ze_hooked_func.block_size = ze_mm_custom_block_size;
+
+    if (
+        !ze_hooked_func.malloc
+        || !ze_hooked_func.free
+        || !ze_hooked_func.realloc
+    ) {
+        ze_hooked_func.malloc = ze_mm_malloc;
+        ze_hooked_func.free = ze_mm_free;
+        ze_hooked_func.realloc = ze_mm_realloc;
+        ze_hooked_func.block_size = ze_mm_block_size;
+    }
+
+    zend_mm_set_custom_handlers(
+        ze_mm_heap,
+        tls_hook_malloc,
+        tls_hook_free,
+        tls_hook_realloc
+    );
+#endif
+}
+
+void spx_php_execution_shutdown(void)
 {
 #if ZEND_MODULE_API_NO >= 20151012
     if (
-        ze_hook.malloc
-        && ze_hook.free
-        && ze_hook.realloc
+        ze_hooked_func.malloc
+        && ze_hooked_func.free
+        && ze_hooked_func.realloc
     ) {
         zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
 
         if (
             /*
-             * ze_hook.malloc was defaulted to ze_mm_malloc only if there were no
+             * ze_hooked_func.malloc was defaulted to ze_mm_malloc only if there were no
              * previous custom handlers.
              */
-            ze_hook.malloc != ze_mm_malloc
+            ze_hooked_func.malloc != ze_mm_malloc
         ) {
             zend_mm_set_custom_handlers(
                 ze_mm_heap,
-                ze_hook.malloc,
-                ze_hook.free,
-                ze_hook.realloc
+                ze_hooked_func.malloc,
+                ze_hooked_func.free,
+                ze_hooked_func.realloc
             );
         } else {
             /*
              *  This ugly hack, breaking strict aliasing rule and zend_mm_heap ADT
              *  encapsulation, is the only way to restore internal state of heap
-             *  (prior to spx_php_hooks_init()).
+             *  (prior to spx_php_execution_init()).
              *  It supposes "use_custom_heap" is an int and the first field of
              *  zend_mm_heap type.
              *  Setting back original allocator handlers (wrapped in this TU by
@@ -593,78 +627,13 @@ void spx_php_hooks_shutdown(void)
             }
         }
 
-        ze_hook.malloc = NULL;
-        ze_hook.free = NULL;
-        ze_hook.realloc = NULL;
+        ze_hooked_func.malloc = NULL;
+        ze_hooked_func.free = NULL;
+        ze_hooked_func.realloc = NULL;
     }
 #endif
 
-    if (ze_hook.zend_write) {
-        zend_write = ze_hook.zend_write;
-        ze_hook.zend_write = NULL;
-    }
-
-    if (ze_hook.execute_ex) {
-        zend_execute_ex = ze_hook.execute_ex;
-        ze_hook.execute_ex = NULL;
-    }
-
-    if (ze_hook.execute_internal) {
-        zend_execute_internal = ze_hook.execute_internal;
-        ze_hook.execute_internal = NULL;
-    }
-
-    if (ze_hook.zend_compile_file) {
-        zend_compile_file = ze_hook.zend_compile_file;
-        ze_hook.zend_compile_file = NULL;
-    }
-
-    if (ze_hook.zend_compile_string) {
-        zend_compile_string = ze_hook.zend_compile_string;
-        ze_hook.zend_compile_string = NULL;
-    }
-
-#if ZEND_MODULE_API_NO >= 20151012
-    if (ze_hook.gc_collect_cycles) {
-        gc_collect_cycles = ze_hook.gc_collect_cycles;
-        ze_hook.gc_collect_cycles = NULL;
-    }
-#endif
-
-    if (ze_hook.zend_error_cb) {
-        zend_error_cb = ze_hook.zend_error_cb;
-        ze_hook.zend_error_cb = NULL;
-    }
-}
-
-void spx_php_execution_init(void)
-{
-    context.ex_hook.user.before = NULL;
-    context.ex_hook.user.after = NULL;
-    context.ex_hook.internal.before = NULL;
-    context.ex_hook.internal.after = NULL;
-
-    context.execution_disabled = 0;
-    context.user_depth = 0;
-    context.request_shutdown = 0;
-    context.collect_userland_stats = 0;
-    context.file_count = 0;
-    context.line_count = 0;
-    context.class_count = 0;
-    context.function_count = 0;
-    context.opcode_count = 0;
-    context.file_opcode_count = 0;
-    context.error_count = 0;
-
-    context.alloc_count = 0;
-    context.alloc_bytes = 0;
-    context.free_count = 0;
-    context.free_bytes = 0;
-}
-
-void spx_php_execution_shutdown(void)
-{
-    spx_php_execution_init();
+    reset_context();
 }
 
 void spx_php_execution_disable(void)
@@ -776,6 +745,32 @@ void spx_php_log_notice(const char * fmt, ...)
     free(buf);
 }
 
+static void reset_context(void)
+{
+    context.ex_hook.user.before = NULL;
+    context.ex_hook.user.after = NULL;
+    context.ex_hook.internal.before = NULL;
+    context.ex_hook.internal.after = NULL;
+
+    context.global_hooks_enabled = 1;
+    context.execution_disabled = 0;
+    context.user_depth = 0;
+    context.request_shutdown = 0;
+    context.collect_userland_stats = 0;
+    context.file_count = 0;
+    context.line_count = 0;
+    context.class_count = 0;
+    context.function_count = 0;
+    context.opcode_count = 0;
+    context.file_opcode_count = 0;
+    context.error_count = 0;
+
+    context.alloc_count = 0;
+    context.alloc_bytes = 0;
+    context.free_count = 0;
+    context.free_bytes = 0;
+}
+
 #if ZEND_MODULE_API_NO >= 20151012
 static size_t ze_mm_block_size(void * ptr)
 {
@@ -802,33 +797,33 @@ static void * ze_mm_realloc(void * ptr, size_t size)
     return zend_mm_realloc(zend_mm_get_heap(), ptr, size);
 }
 
-static void * hook_malloc(size_t size)
+static void * tls_hook_malloc(size_t size)
 {
-    void * ptr = ze_hook.malloc(size);
+    void * ptr = ze_hooked_func.malloc(size);
 
     if (ptr) {
         context.alloc_count++;
-        context.alloc_bytes += ze_hook.block_size(ptr);
+        context.alloc_bytes += ze_hooked_func.block_size(ptr);
     }
 
     return ptr;
 }
 
-static void hook_free(void * ptr)
+static void tls_hook_free(void * ptr)
 {
     if (ptr) {
         context.free_count++;
-        context.free_bytes += ze_hook.block_size(ptr);
+        context.free_bytes += ze_hooked_func.block_size(ptr);
     }
 
-    ze_hook.free(ptr);
+    ze_hooked_func.free(ptr);
 }
 
-static void * hook_realloc(void * ptr, size_t size)
+static void * tls_hook_realloc(void * ptr, size_t size)
 {
-    const size_t old_size = ptr ? ze_hook.block_size(ptr) : 0;
-    void * new = ze_hook.realloc(ptr, size);
-    const size_t new_size = new ? ze_hook.block_size(new) : 0;
+    const size_t old_size = ptr ? ze_hooked_func.block_size(ptr) : 0;
+    void * new = ze_hooked_func.realloc(ptr, size);
+    const size_t new_size = new ? ze_hooked_func.block_size(new) : 0;
 
     if (ptr && new) {
         if (ptr != new) {
@@ -849,13 +844,14 @@ static void * hook_realloc(void * ptr, size_t size)
 }
 #endif
 
-static int hook_zend_write(const char * str, zend_write_len_t len)
+static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
 {
-    return ze_hook.zend_write(str, len);
-}
+    if (!context.global_hooks_enabled) {
+        ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
 
-static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
-{
+        return;
+    }
+
     if (context.execution_disabled) {
         return;
     }
@@ -866,7 +862,7 @@ static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
         context.ex_hook.user.before();
     }
 
-    ze_hook.execute_ex(execute_data TSRMLS_CC);
+    ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
 
     if (context.ex_hook.user.after) {
         context.ex_hook.user.after();
@@ -888,7 +884,7 @@ static void hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
     }
 }
 
-static void hook_execute_internal(
+static void global_hook_execute_internal(
     zend_execute_data * execute_data,
 #if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
@@ -898,6 +894,21 @@ static void hook_execute_internal(
 #endif
     TSRMLS_DC
 ) {
+    if (!context.global_hooks_enabled) {
+        ze_hooked_func.execute_internal(
+            execute_data,
+    #if ZEND_MODULE_API_NO >= 20151012
+            return_value
+    #else
+            fci,
+            ret
+    #endif
+            TSRMLS_CC
+        );
+
+        return;
+    }
+
     if (context.execution_disabled) {
         return;
     }
@@ -906,7 +917,7 @@ static void hook_execute_internal(
         context.ex_hook.internal.before();
     }
 
-    ze_hook.execute_internal(
+    ze_hooked_func.execute_internal(
         execute_data,
 #if ZEND_MODULE_API_NO >= 20151012
         return_value
@@ -922,15 +933,23 @@ static void hook_execute_internal(
     }
 }
 
-static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC)
+static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC)
 {
+    if (!context.global_hooks_enabled) {
+        return ze_hooked_func.zend_compile_file(file_handle, type TSRMLS_CC);
+    }
+
+    if (context.execution_disabled) {
+        return NULL;
+    }
+
     context.active_function_name = "::zend_compile_file";
 
     if (context.ex_hook.internal.before) {
         context.ex_hook.internal.before();
     }
 
-    zend_op_array * op_array = ze_hook.zend_compile_file(file_handle, type TSRMLS_CC);
+    zend_op_array * op_array = ze_hooked_func.zend_compile_file(file_handle, type TSRMLS_CC);
 
     if (op_array) {
         context.file_count++;
@@ -955,15 +974,23 @@ static zend_op_array * hook_zend_compile_file(zend_file_handle * file_handle, in
     return op_array;
 }
 
-static zend_op_array * hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC)
+static zend_op_array * global_hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC)
 {
+    if (!context.global_hooks_enabled) {
+        return ze_hooked_func.zend_compile_string(source_string, filename TSRMLS_CC);
+    }
+
+    if (context.execution_disabled) {
+        return NULL;
+    }
+
     context.active_function_name = "::zend_compile_string";
 
     if (context.ex_hook.internal.before) {
         context.ex_hook.internal.before();
     }
 
-    zend_op_array * op_array = ze_hook.zend_compile_string(source_string, filename TSRMLS_CC);
+    zend_op_array * op_array = ze_hooked_func.zend_compile_string(source_string, filename TSRMLS_CC);
 
     if (op_array) {
         context.file_opcode_count += op_array->last - 1;
@@ -991,8 +1018,12 @@ static zend_op_array * hook_zend_compile_string(zval * source_string, char * fil
 }
 
 #if ZEND_MODULE_API_NO >= 20151012
-static int hook_gc_collect_cycles(void)
+static int global_hook_gc_collect_cycles(void)
 {
+    if (!context.global_hooks_enabled) {
+        return ze_hooked_func.gc_collect_cycles();
+    }
+
     if (context.execution_disabled) {
         return 0;
     }
@@ -1003,7 +1034,7 @@ static int hook_gc_collect_cycles(void)
         context.ex_hook.internal.before();
     }
 
-    const int count = ze_hook.gc_collect_cycles();
+    const int count = ze_hooked_func.gc_collect_cycles();
 
     if (context.ex_hook.internal.after) {
         context.ex_hook.internal.after();
@@ -1015,15 +1046,25 @@ static int hook_gc_collect_cycles(void)
 }
 #endif
 
-static void hook_zend_error_cb(
+static void global_hook_zend_error_cb(
     int type,
     const char *error_filename,
     const uint error_lineno,
     const char *format,
     va_list args
 ) {
+    if (!context.global_hooks_enabled) {
+        ze_hooked_func.zend_error_cb(type, error_filename, error_lineno, format, args);
+
+        return;
+    }
+
+    if (context.execution_disabled) {
+        return;
+    }
+
     context.error_count++;
-    ze_hook.zend_error_cb(type, error_filename, error_lineno, format, args);
+    ze_hooked_func.zend_error_cb(type, error_filename, error_lineno, format, args);
 }
 
 static void update_userland_stats(void)
