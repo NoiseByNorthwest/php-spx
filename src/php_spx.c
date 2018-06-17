@@ -173,7 +173,7 @@ ZEND_GET_MODULE(spx)
 static PHP_MINIT_FUNCTION(spx)
 {
 #ifdef ZTS
-    spx_php_hooks_init();
+    spx_php_global_hooks_set();
 #endif
 
     REGISTER_INI_ENTRIES();
@@ -184,7 +184,7 @@ static PHP_MINIT_FUNCTION(spx)
 static PHP_MSHUTDOWN_FUNCTION(spx)
 {
 #ifdef ZTS
-    spx_php_hooks_shutdown();
+    spx_php_global_hooks_unset();
 #endif
 
     UNREGISTER_INI_ENTRIES();
@@ -194,6 +194,10 @@ static PHP_MSHUTDOWN_FUNCTION(spx)
 
 static PHP_RINIT_FUNCTION(spx)
 {
+#ifdef ZTS
+    spx_php_global_hooks_disable();
+#endif
+
     context.execution_handler = NULL;
     context.cli_sapi = spx_php_is_cli_sapi();
 
@@ -244,6 +248,10 @@ static PHP_RSHUTDOWN_FUNCTION(spx)
     if (context.execution_handler) {
         context.execution_handler->shutdown();
     }
+
+#ifdef ZTS
+    spx_php_global_hooks_disable();
+#endif
 
     return SUCCESS;
 }
@@ -428,7 +436,7 @@ error:
 
 static void profiling_handler_shutdown(void)
 {
-    spx_php_hooks_finalize();
+    spx_php_execution_finalize();
 
     if (context.profiling_handler.profiler) {
         context.profiling_handler.profiler->finalize(context.profiling_handler.profiler);
@@ -447,16 +455,26 @@ static void profiling_handler_shutdown(void)
 static void profiling_handler_ex_set_context(void)
 {
 #ifndef ZTS
-    spx_php_hooks_init();
+    spx_php_global_hooks_set();
 #endif
 
     spx_php_execution_init();
-    spx_resource_stats_init();
 
-    spx_php_execution_hook(profiling_handler_ex_hook_before, profiling_handler_ex_hook_after, 0);
+    spx_php_execution_hook(
+        profiling_handler_ex_hook_before,
+        profiling_handler_ex_hook_after,
+        0
+    );
+
     if (context.config.builtins) {
-        spx_php_execution_hook(profiling_handler_ex_hook_before, profiling_handler_ex_hook_after, 1);
+        spx_php_execution_hook(
+            profiling_handler_ex_hook_before,
+            profiling_handler_ex_hook_after,
+            1
+        );
     }
+
+    spx_resource_stats_init();
 
 #ifdef USE_SIGNAL
     if (context.cli_sapi) {
@@ -477,7 +495,7 @@ static void profiling_handler_ex_unset_context(void)
     spx_php_execution_shutdown();
 
 #ifndef ZTS
-    spx_php_hooks_shutdown();
+    spx_php_global_hooks_unset();
 #endif
 }
 
@@ -574,7 +592,7 @@ static void profiling_handler_sig_unset_handler(void)
 static void http_ui_handler_init(void)
 {
 #ifndef ZTS
-    spx_php_hooks_init();
+    spx_php_global_hooks_set();
 #endif
 
     spx_php_execution_init();
@@ -584,7 +602,6 @@ static void http_ui_handler_init(void)
 static void http_ui_handler_shutdown(void)
 {
     TSRMLS_FETCH();
-    spx_php_execution_shutdown();
 
     const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
     if (!request_uri) {
@@ -646,10 +663,11 @@ error_404:
     spx_php_output_direct_print("File not found.\n");
 
 finish:
+    spx_php_execution_shutdown();
+
 #ifndef ZTS
-    spx_php_hooks_shutdown();
+    spx_php_global_hooks_unset();
 #endif
-    ;
 }
 
 static int http_ui_handler_data(const char * data_dir, const char *relative_path)
