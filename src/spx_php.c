@@ -175,9 +175,6 @@ void spx_php_current_function(spx_php_function_t * function)
         function->call_type = "";
         function->func_name = context.active_function_name;
     } else {
-        function->file_name = zend_get_executed_filename(TSRMLS_C);
-        function->line = zend_get_executed_lineno(TSRMLS_C);
-
         function->class_name = get_active_class_name(&function->call_type TSRMLS_CC);
         function->func_name = get_active_function_name(TSRMLS_C);
 
@@ -203,7 +200,7 @@ void spx_php_current_function(spx_php_function_t * function)
         if (!function->func_name) {
             function->class_name = "";
             function->call_type = "";
-            function->func_name = function->file_name;
+            function->func_name = zend_get_executed_filename(TSRMLS_C);
         }
     }
 

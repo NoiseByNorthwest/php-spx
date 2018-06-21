@@ -408,7 +408,7 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
     spx_profiler_reporter_t * const orig_reporter = profiler->reporter;
     profiler->reporter = &null_reporter;
 
-    const size_t iter_count = 1000000;
+    const size_t iter_count = 50000;
     int i;
     size_t start, avg_noise;
 

@@ -207,6 +207,7 @@ void spx_metric_collector_destroy(spx_metric_collector_t * collector)
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values)
 {
     double current_values[SPX_METRIC_COUNT];
+
     collect_raw_values(collector->enabled_metrics, current_values);
 
     /*
@@ -228,8 +229,11 @@ void spx_metric_collector_collect(spx_metric_collector_t * collector, double * v
     }
 
     SPX_METRIC_FOREACH(i, {
-        /* FIXME this branch should concern all non releasable metrics */
-        if (i == SPX_METRIC_WALL_TIME || i == SPX_METRIC_CPU_TIME) {
+        if (!collector->enabled_metrics[i]) {
+            continue;
+        }
+
+        if (!spx_metrics_info[i].releasable) {
             const double diff = current_values[i] - collector->last_values[i];
             if (collector->current_fixed_noise[i] > diff) {
                 collector->current_fixed_noise[i] = diff;

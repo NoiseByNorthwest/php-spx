@@ -3,9 +3,6 @@
 
 typedef struct {
     unsigned long hash_code;
-    
-    const char * file_name;
-    int line;
 
     const char * func_name;
     const char * call_type;
