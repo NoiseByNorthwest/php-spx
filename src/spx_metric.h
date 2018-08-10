@@ -3,6 +3,14 @@
 
 #include "spx_fmt.h"
 
+#define SPX_METRIC_FOREACH(it, block)            \
+do {                                             \
+    size_t it;                                   \
+    for (it = 0; it < SPX_METRIC_COUNT; it++) {  \
+        block                                    \
+    }                                            \
+} while (0)
+
 typedef enum {
     SPX_METRIC_WALL_TIME,
     SPX_METRIC_CPU_TIME,
@@ -32,23 +40,16 @@ typedef enum {
     SPX_METRIC_NONE,
 } spx_metric_t;
 
-#define SPX_METRIC_FOREACH(it, block)            \
-do {                                             \
-    size_t it;                                   \
-    for (it = 0; it < SPX_METRIC_COUNT; it++) {  \
-        block                                    \
-    }                                            \
-} while (0)
-
 typedef struct {
     const char * key;
     const char * short_name;
     const char * name;
     spx_fmt_value_type_t type;
     int releasable;
+    size_t (*handler)(void);
 } spx_metric_info_t;
 
-extern const spx_metric_info_t spx_metrics_info[SPX_METRIC_COUNT];
+extern const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT];
 
 spx_metric_t spx_metric_get_by_key(const char * key);
 

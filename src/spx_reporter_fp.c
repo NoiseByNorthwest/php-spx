@@ -273,10 +273,10 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
             continue;
         }
 
-        spx_output_stream_printf(reporter->output, "  %-20s: ", spx_metrics_info[i].short_name);
+        spx_output_stream_printf(reporter->output, "  %-20s: ", spx_metric_info[i].short_name);
         spx_fmt_print_value(
             reporter->output,
-            spx_metrics_info[i].type,
+            spx_metric_info[i].type,
             event->max->values[i]
         );
 
@@ -294,7 +294,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
             continue;
         }
 
-        spx_fmt_row_add_tcell(fmt_row, 2, spx_metrics_info[i].short_name);
+        spx_fmt_row_add_tcell(fmt_row, 2, spx_metric_info[i].short_name);
     });
 
     spx_fmt_row_print(fmt_row, reporter->output);
@@ -337,7 +337,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
             double inc = entry->stats.inc.values[i];
             double exc = entry->stats.exc.values[i];
-            spx_fmt_value_type_t type = spx_metrics_info[i].type;
+            spx_fmt_value_type_t type = spx_metric_info[i].type;
 
             if (reporter->rel) {
                 type = SPX_FMT_PERCENTAGE;

@@ -575,7 +575,7 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
         fprintf(
             fp,
             "\"%s\"\n",
-            spx_metrics_info[i].key
+            spx_metric_info[i].key
         );
     });
 
