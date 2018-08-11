@@ -9,7 +9,7 @@ if test "$PHP_SPX" = "yes"; then
 
     AC_DEFINE(HAVE_SPX, 1, [spx])
 
-    CFLAGS="$CFLAGS -Werror -Wfatal-errors -Wall"
+    CFLAGS="$CFLAGS -Werror -Wall"
     if test "$CONTINUOUS_INTEGRATION" = "true"
     then
         CFLAGS="$CFLAGS -DCONTINUOUS_INTEGRATION"
