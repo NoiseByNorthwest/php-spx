@@ -614,7 +614,12 @@ static void http_ui_handler_shutdown(void)
     }
 
     char relative_path[512];
-    strncpy(relative_path, request_uri + strlen(SPX_G(http_ui_uri_prefix)), sizeof(relative_path));
+    snprintf(
+        relative_path,
+        sizeof(relative_path),
+        "%s",
+        request_uri + strlen(SPX_G(http_ui_uri_prefix))
+    );
 
     char * query_string = strchr(relative_path, '?');
     if (relative_path[0] != '/') {
@@ -635,7 +640,11 @@ static void http_ui_handler_shutdown(void)
     }
 
     if (0 == strcmp(relative_path, "/")) {
-        strncpy(relative_path, "/index.html", sizeof(relative_path));
+        snprintf(
+            relative_path,
+            sizeof(relative_path),
+            "/index.html"
+        );
     }
 
     if (0 == http_ui_handler_data(SPX_G(data_dir), relative_path)) {
@@ -686,12 +695,12 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
 
             spx_php_output_direct_print("{");
 
-            spx_php_output_direct_printf("\"key\": \"%s\",", spx_metrics_info[i].key);
-            spx_php_output_direct_printf("\"short_name\": \"%s\",", spx_metrics_info[i].short_name);
-            spx_php_output_direct_printf("\"name\": \"%s\",", spx_metrics_info[i].name);
+            spx_php_output_direct_printf("\"key\": \"%s\",", spx_metric_info[i].key);
+            spx_php_output_direct_printf("\"short_name\": \"%s\",", spx_metric_info[i].short_name);
+            spx_php_output_direct_printf("\"name\": \"%s\",", spx_metric_info[i].name);
 
             spx_php_output_direct_print("\"type\": \"");
-            switch (spx_metrics_info[i].type) {
+            switch (spx_metric_info[i].type) {
                 case SPX_FMT_TIME:
                     spx_php_output_direct_print("time");
                     break;
@@ -710,7 +719,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
 
             spx_php_output_direct_print("\",");
 
-            spx_php_output_direct_printf("\"releasable\": %d", spx_metrics_info[i].releasable);
+            spx_php_output_direct_printf("\"releasable\": %d", spx_metric_info[i].releasable);
 
             spx_php_output_direct_print("}\n");
         });
@@ -790,13 +799,12 @@ static int http_ui_handler_output_file(const char * file_name)
 
     char suffix[32];
     int suffix_offset = strlen(file_name) - (sizeof(suffix) - 1);
-    strncpy(
+    snprintf(
         suffix,
-        file_name + (suffix_offset < 0 ? 0 : suffix_offset),
-        sizeof(suffix)
+        sizeof(suffix),
+        "%s",
+        file_name + (suffix_offset < 0 ? 0 : suffix_offset)
     );
-
-    suffix[sizeof(suffix) - 1] = 0;
 
     const int compressed = spx_utils_str_ends_with(suffix, ".gz");
     if (compressed) {

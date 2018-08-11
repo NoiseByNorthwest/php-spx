@@ -162,7 +162,7 @@ static void print_header(spx_output_stream_t * output, const int * enabled_metri
             continue;
         }
 
-        spx_fmt_row_add_tcell(fmt_row, 3, spx_metrics_info[i].short_name);
+        spx_fmt_row_add_tcell(fmt_row, 3, spx_metric_info[i].short_name);
     });
 
     spx_fmt_row_print(fmt_row, output);
@@ -206,7 +206,7 @@ static void print_row(
         spx_fmt_row_add_ncell(
             fmt_row,
             1,
-            spx_metrics_info[i].type,
+            spx_metric_info[i].type,
             cum_metric_values->values[i]
         );
 
@@ -214,7 +214,7 @@ static void print_row(
         spx_fmt_row_add_ncell(
             fmt_row,
             1,
-            spx_metrics_info[i].type,
+            spx_metric_info[i].type,
             inc
         );
 
@@ -222,7 +222,7 @@ static void print_row(
         spx_fmt_row_add_ncell(
             fmt_row,
             1,
-            spx_metrics_info[i].type,
+            spx_metric_info[i].type,
             exc
         );
     });
