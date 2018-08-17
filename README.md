@@ -216,7 +216,8 @@ Here is the list below:
 | _SPX_FP_INC_ | `0` | Whether to sort functions by inclusive value instead of exclusive value in flat profile. |
 | _SPX_FP_REL_ | `0` | Whether to display metric values as relative (i.e. percentage) in flat profile. |
 | _SPX_FP_LIMIT_ | `10` | The flat profile size (i.e. top N shown functions). |
-| _SPX_FP_LIVE_ | `0` | Whether to enabled flat profile live refresh. Since it uses ANSI escape sequences, it uses STDOUT as output, replacing script output (both STDOUT & STDERR). |
+| _SPX_FP_LIVE_ | `0` | Whether to enable flat profile live refresh. Since it plays with cursor position through ANSI escape sequences, it uses STDOUT as output, replacing script output (both STDOUT & STDERR). |
+| _SPX_FP_COLOR_ | `1` | Whether to enable flat profile color mode. |
 | _SPX_TRACE_SAFE_ | `0` | The trace file is by default written in a way to enforce accuracy, but in case of process crash (e.g. segfault) some logs could be lost. If you want to enforce durability (e.g. to find the last event before a crash) you just have to set this parameter to 1. |
 | _SPX_TRACE_FILE_ |  | Custom trace file name. If not specified it will be generated in `/tmp` and displayed on STDERR at the end of the script. |
 

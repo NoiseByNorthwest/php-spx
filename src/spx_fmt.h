@@ -42,6 +42,14 @@ void spx_fmt_row_add_ncell(
     double value
 );
 
+void spx_fmt_row_add_ncellf(
+    spx_fmt_row_t * row,
+    size_t span,
+    spx_fmt_value_type_t type,
+    double value,
+    const char * ansi_fmt
+);
+
 void spx_fmt_row_print(const spx_fmt_row_t * row, spx_output_stream_t * output);
 void spx_fmt_row_print_sep(const spx_fmt_row_t * row, spx_output_stream_t * output);
 

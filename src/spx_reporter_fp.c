@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <unistd.h>
 
@@ -19,6 +20,7 @@ typedef struct {
     int rel;
     size_t limit;
     int live;
+    int color;
 
     spx_output_stream_t * output;
     struct {
@@ -39,13 +41,15 @@ static void fp_destroy(spx_profiler_reporter_t * reporter);
 static int entry_cmp(const void * a, const void * b);
 static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * reporter);
 static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t * event);
+static const char * get_value_ansi_fmt(double v);
 
 spx_profiler_reporter_t * spx_reporter_fp_create(
     spx_metric_t focus,
     int inc,
     int rel,
     size_t limit,
-    int live
+    int live,
+    int color
 ) {
     fp_reporter_t * reporter = malloc(sizeof(*reporter));
     if (!reporter) {
@@ -60,6 +64,7 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
     reporter->rel = rel;
     reporter->limit = limit;
     reporter->live = live && isatty(STDOUT_FILENO);
+    reporter->color = color && isatty(STDOUT_FILENO);
 
     reporter->fd_backup.stdout_fd = -1;
     reporter->fd_backup.stderr_fd = -1;
@@ -345,8 +350,21 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
                 exc /= event->max->values[i];
             }
 
-            spx_fmt_row_add_ncell(fmt_row, 1, type, inc);
-            spx_fmt_row_add_ncell(fmt_row, 1, type, exc);
+            const char * inc_ansi_fmt = NULL;
+            const char * exc_ansi_fmt = NULL;
+
+            if (reporter->color) {
+                inc_ansi_fmt = get_value_ansi_fmt(
+                    entry->stats.inc.values[i] / event->max->values[i]
+                );
+
+                exc_ansi_fmt = get_value_ansi_fmt(
+                    entry->stats.exc.values[i] / event->max->values[i]
+                );
+            }
+
+            spx_fmt_row_add_ncellf(fmt_row, 1, type, inc, inc_ansi_fmt);
+            spx_fmt_row_add_ncellf(fmt_row, 1, type, exc, exc_ansi_fmt);
         });
 
         spx_fmt_row_add_ncell(fmt_row, 1, SPX_FMT_QUANTITY, entry->stats.called);
@@ -389,4 +407,29 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     line_count++;
 
     return line_count;
+}
+
+static const char * get_value_ansi_fmt(double v)
+{
+    static const char * colors[] = {
+        "32",
+        "92",
+        "92;1",
+        "93;1",
+        "93",
+        "33",
+        "31",
+        "91",
+        "91;1",
+    };
+
+    if (v < 0) {
+        v = 0;
+    }
+
+    if (v > 1) {
+        v = 1;
+    }
+
+    return colors[(size_t) round(v * (sizeof(colors) / sizeof(*colors) - 1))];
 }

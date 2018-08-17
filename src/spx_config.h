@@ -28,6 +28,7 @@ typedef struct {
     int fp_rel;
     size_t fp_limit;
     int fp_live;
+    int fp_color;
 
     const char * trace_file;
     int trace_safe;

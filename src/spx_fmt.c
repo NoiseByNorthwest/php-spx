@@ -10,6 +10,7 @@ struct spx_fmt_row_t {
     size_t cell_count;
     struct {
         size_t span;
+        const char * ansi_fmt;
         const char * text;
         int num;
         double num_value;
@@ -102,6 +103,7 @@ void spx_fmt_row_add_tcell(
     }
 
     row->cells[row->cell_count].span = span;
+    row->cells[row->cell_count].ansi_fmt = NULL;
     row->cells[row->cell_count].num = 0;
     row->cells[row->cell_count].text = text;
 
@@ -114,11 +116,22 @@ void spx_fmt_row_add_ncell(
     spx_fmt_value_type_t type,
     double value
 ) {
+    spx_fmt_row_add_ncellf(row, span, type, value, NULL);
+}
+
+void spx_fmt_row_add_ncellf(
+    spx_fmt_row_t * row,
+    size_t span,
+    spx_fmt_value_type_t type,
+    double value,
+    const char * ansi_fmt
+) {
     if (row->cell_count == ROW_MAX_CELLS) {
         spx_utils_die("ROW_MAX_CELLS exceeded\n");
     }
 
     row->cells[row->cell_count].span = span;
+    row->cells[row->cell_count].ansi_fmt = ansi_fmt;
     row->cells[row->cell_count].num = 1;
     row->cells[row->cell_count].num_type = type;
     row->cells[row->cell_count].num_value = value;
@@ -158,6 +171,10 @@ void spx_fmt_row_print(const spx_fmt_row_t * row, spx_output_stream_t * output)
             (row->cells[i].span - 1) * 3
         ;
 
+        if (row->cells[i].ansi_fmt) {
+            spx_output_stream_printf(output, "\e[%sm", row->cells[i].ansi_fmt);
+        }
+
         snprintf(
             format,
             sizeof(format),
@@ -167,6 +184,10 @@ void spx_fmt_row_print(const spx_fmt_row_t * row, spx_output_stream_t * output)
         );
 
         spx_output_stream_printf(output, format, text);
+
+        if (row->cells[i].ansi_fmt) {
+            spx_output_stream_print(output, "\e[0m");
+        }
 
         spx_output_stream_print(output, " |");
     }
