@@ -1,6 +1,6 @@
-import * as utils from './utils.js';
-import * as fmt from './fmt.js';
-import * as math from './math.js';
+import * as utils from './?SPX_UI_URI=/js/utils.js';
+import * as fmt from './?SPX_UI_URI=/js/fmt.js';
+import * as math from './?SPX_UI_URI=/js/math.js';
 
 class MetricValueSet {
 

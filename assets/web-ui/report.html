@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>SPX Report</title>
-    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="?SPX_UI_URI=/css/main.css">
 </head>
 <body>
     <div id="init-report">
@@ -47,14 +47,14 @@
     ></script>
 
     <!-- Required workaround for Firefox to fix a "no credentials" issue -->
-    <script type="module" crossorigin src="./js/fmt.js"></script>
-    <script type="module" crossorigin src="./js/profileData.js"></script>
-    <script type="module" crossorigin src="./js/widget.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/js/fmt.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/js/profileData.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/js/widget.js"></script>
 
     <script type="module" crossorigin>
-        import * as fmt from './js/fmt.js';
-        import {ProfileDataBuilder} from './js/profileData.js';
-        import * as widget from './js/widget.js';
+        import * as fmt from './?SPX_UI_URI=/js/fmt.js';
+        import {ProfileDataBuilder} from './?SPX_UI_URI=/js/profileData.js';
+        import * as widget from './?SPX_UI_URI=/js/widget.js';
 
         $(() => {
             const m = window.location.href.match(/\bkey=([^&]+)/);
@@ -111,12 +111,12 @@
                 );
             }
 
-            fetch('data/metrics', {credentials: "same-origin"})
+            fetch('?SPX_UI_URI=/data/metrics', {credentials: "same-origin"})
                 .then(response => response.json())
                 .then(response => {
                     profileDataBuilder = new ProfileDataBuilder(response.results);
 
-                    return fetch('data/reports/metadata/' + key, {credentials: "same-origin"});
+                    return fetch('?SPX_UI_URI=/data/reports/metadata/' + key, {credentials: "same-origin"});
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -128,7 +128,7 @@
                 .then(metadata => {
                     profileDataBuilder.setMetadata(metadata);
 
-                    return fetch('data/reports/get/' + key, {credentials: "same-origin"});
+                    return fetch('?SPX_UI_URI=/data/reports/get/' + key, {credentials: "same-origin"});
                 })
                 .then(response => {
                     if (!response.ok) {

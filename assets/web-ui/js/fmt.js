@@ -1,5 +1,5 @@
 
-import {round} from './math.js';
+import {round} from './?SPX_UI_URI=/js/math.js';
 
 export function lpad(str, len, char) {
     str = str + '';

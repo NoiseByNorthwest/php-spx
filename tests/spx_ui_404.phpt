@@ -8,10 +8,10 @@ spx.http_ip_whitelist="127.0.0.1"
 --ENV--
 return <<<END
 REMOTE_ADDR=127.0.0.1
-REQUEST_URI=/_spx/foo
+REQUEST_URI=/
 END;
 --GET--
-SPX_KEY=dev
+SPX_KEY=dev&SPX_UI_URI=/foo
 --FILE--
 <?php
 echo 'Normal output';

@@ -1,4 +1,4 @@
-import * as math from './math.js';
+import * as math from './?SPX_UI_URI=/js/math.js';
 
 export function getCookieVar(name) {
     let m = document.cookie.match(new RegExp('(^|\\b)' + name + '=([^;]+)'));

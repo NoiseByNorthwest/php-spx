@@ -14,6 +14,8 @@ typedef struct {
     int enabled;
     const char * key;
 
+    const char * ui_uri;
+
     size_t sampling_period;
     int builtins;
     size_t max_depth;

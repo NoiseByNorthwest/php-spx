@@ -9,10 +9,10 @@ log_errors=on
 --ENV--
 return <<<END
 REMOTE_ADDR=127.0.0.2
-REQUEST_URI=/_spx/data/metrics
+REQUEST_URI=/
 END;
 --GET--
-SPX_KEY=dev
+SPX_KEY=dev&SPX_UI_URI=/data/metrics
 --FILE--
 <?php
 echo 'Normal output';

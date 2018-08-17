@@ -10,6 +10,8 @@ typedef struct {
     const char * enabled_str;
     const char * key_str;
 
+    const char * ui_uri_str;
+
     const char * sampling_period_str;
     const char * builtins_str;
     const char * depth_str;
@@ -89,6 +91,8 @@ static void init_config(spx_config_t * config, int cli)
     config->enabled = 0;
     config->key = NULL;
 
+    config->ui_uri = NULL;
+
     config->sampling_period = 0;
     config->builtins = 0;
     config->max_depth = 0;
@@ -114,6 +118,10 @@ static void init_config(spx_config_t * config, int cli)
 
 static void fix_config(spx_config_t * config, int cli)
 {
+    if (cli) {
+        config->ui_uri = NULL;
+    }
+
     if (!cli) {
         config->report = SPX_CONFIG_REPORT_FULL;
     }
@@ -132,6 +140,7 @@ static void source_data_get(source_data_t * source_data, source_handler_t handle
 {
     source_data->enabled_str          = handler("SPX_ENABLED");
     source_data->key_str              = handler("SPX_KEY");
+    source_data->ui_uri_str           = handler("SPX_UI_URI");
     source_data->sampling_period_str  = handler("SPX_SAMPLING_PERIOD");
     source_data->builtins_str         = handler("SPX_BUILTINS");
     source_data->depth_str            = handler("SPX_DEPTH");
@@ -154,6 +163,10 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
 
     if (source_data->key_str) {
         config->key = source_data->key_str;
+    }
+
+    if (source_data->ui_uri_str) {
+        config->ui_uri = source_data->ui_uri_str;
     }
 
     if (source_data->sampling_period_str) {
