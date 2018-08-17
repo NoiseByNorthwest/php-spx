@@ -71,9 +71,7 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.
 
-_N.B.: It is also required to have your vhost configured to trigger PHP for any non existing file so that PHP is triggered for `/_spx*` request URIs (as long as `_spx` is the configured prefix which is the case by default). This is due to the fact that internally SPX will, if authentication is OK, intercept and stop normal PHP execution for its URIs and serve its content in place. If you are using a framework like Symfony or Laravel, the recommended / standard vhost setup for these frameworks is sufficient._
-
-Just open with your browser the following URL: `http://localhost/_spx?SPX_KEY=dev` to access to the web UI [control panel](#control-panel). You will see the following form:
+Just open with your browser the following URL: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access to the web UI [control panel](#control-panel). You will see the following form:
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/93baabbcba04223586d06756dbcecfbd6ec1293d/php-spx/doc/cp-form.png)
 
@@ -145,7 +143,7 @@ SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 | spx.http_ip_var       | `REMOTE_ADDR` | PHP_INI_SYSTEM | The `$_SERVER` key holding the client IP address used for authentication (see [security concern](#security-concern) for more details). Overriding the default value is required when your application is behind a reverse proxy. |
 | spx.http_ip_whitelist |  | PHP_INI_SYSTEM | The IP address white list used for authentication as a comma separated list of IP addresses. |
 | spx.http_ui_assets_dir | `/usr/local/share/misc/php-spx/assets/web-ui` | PHP_INI_SYSTEM | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
-| spx.http_ui_uri_prefix | `/_spx` | PHP_INI_SYSTEM | The request-URI prefix to access to the [web UI](#web-ui). You may change it for various reasons (additional security factor, conflict with existing URI, ...). |
+
 
 #### Private environment
 
@@ -157,7 +155,7 @@ spx.http_key="dev"
 spx.http_ip_whitelist="127.0.0.1"
 ```
 
-And then access to the web UI at `http(s)://<your application host>/_spx?SPX_KEY=dev`.
+And then access to the web UI at `http(s)://<your application host>/?SPX_KEY=dev&SPX_UI_URI=/`.
 
 ### Available metrics
 

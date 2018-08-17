@@ -63,7 +63,6 @@ ZEND_BEGIN_MODULE_GLOBALS(spx)
     const char * http_ip_var;
     const char * http_ip_whitelist;
     const char * http_ui_assets_dir;
-    const char * http_ui_uri_prefix;
 ZEND_END_MODULE_GLOBALS(spx)
 
 ZEND_DECLARE_MODULE_GLOBALS(spx)
@@ -98,10 +97,6 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(
         "spx.http_ui_assets_dir", SPX_HTTP_UI_ASSETS_DIR, PHP_INI_SYSTEM,
         OnUpdateString, http_ui_assets_dir, zend_spx_globals, spx_globals
-    )
-    STD_PHP_INI_ENTRY(
-        "spx.http_ui_uri_prefix", "/_spx", PHP_INI_SYSTEM,
-        OnUpdateString, http_ui_uri_prefix, zend_spx_globals, spx_globals
     )
 PHP_INI_END()
 
@@ -214,15 +209,7 @@ static PHP_RINIT_FUNCTION(spx)
         );
     }
 
-    int web_ui_url = 0;
-    if (!context.cli_sapi) {
-        const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
-        if (request_uri) {
-            web_ui_url = spx_utils_str_starts_with(request_uri, SPX_G(http_ui_uri_prefix));
-        }
-    }
-
-    if (!web_ui_url && !context.config.enabled) {
+    if (!context.config.ui_uri && !context.config.enabled) {
         return SUCCESS;
     }
 
@@ -230,7 +217,7 @@ static PHP_RINIT_FUNCTION(spx)
         return SUCCESS;
     }
 
-    if (web_ui_url) {
+    if (context.config.ui_uri) {
         context.execution_handler = &http_ui_handler;
     } else if (context.config.enabled) {
         context.execution_handler = &profiling_handler;
@@ -603,51 +590,19 @@ static void http_ui_handler_shutdown(void)
 {
     TSRMLS_FETCH();
 
-    const char * request_uri = spx_php_global_array_get("_SERVER", "REQUEST_URI");
-    if (!request_uri) {
+    if (!context.config.ui_uri) {
         goto error_404;
     }
 
-    const char * prefix_pos = strstr(request_uri, SPX_G(http_ui_uri_prefix));
-    if (prefix_pos != request_uri) {
-        goto error_404;
+    const char * ui_uri = context.config.ui_uri;
+    if (
+        ui_uri[0] == 0
+        || 0 == strcmp(ui_uri, "/")
+    ) {
+        ui_uri = "/index.html";
     }
 
-    char relative_path[512];
-    snprintf(
-        relative_path,
-        sizeof(relative_path),
-        "%s",
-        request_uri + strlen(SPX_G(http_ui_uri_prefix))
-    );
-
-    char * query_string = strchr(relative_path, '?');
-    if (relative_path[0] != '/') {
-        spx_php_output_add_header_line("HTTP/1.1 301 Moved Permanently");
-        spx_php_output_add_header_linef(
-            "Location: %s/index.html%s",
-            SPX_G(http_ui_uri_prefix),
-            query_string ? query_string : ""
-        );
-
-        spx_php_output_send_headers();
-
-        goto finish;
-    }
-
-    if (query_string) {
-        *query_string = 0;
-    }
-
-    if (0 == strcmp(relative_path, "/")) {
-        snprintf(
-            relative_path,
-            sizeof(relative_path),
-            "/index.html"
-        );
-    }
-
-    if (0 == http_ui_handler_data(SPX_G(data_dir), relative_path)) {
+    if (0 == http_ui_handler_data(SPX_G(data_dir), ui_uri)) {
         goto finish;
     }
 
@@ -657,7 +612,7 @@ static void http_ui_handler_shutdown(void)
         sizeof(local_file_name),
         "%s%s",
         SPX_G(http_ui_assets_dir),
-        relative_path
+        ui_uri
     );
 
     if (0 == http_ui_handler_output_file(local_file_name)) {

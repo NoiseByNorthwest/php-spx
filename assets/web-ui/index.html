@@ -12,10 +12,10 @@
 
             document.cookie = 'SPX_KEY=' + m[1] + '; expires=Thu, 31 Dec 2037 23:59:59 UTC; path=/';
 
-            window.location.replace(window.location.href.replace(/\?.*/, ''));
+            window.location.replace(window.location.href.replace(/\?.*/, '?SPX_UI_URI=/'));
         })();
         </script>
-        <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="?SPX_UI_URI=/css/main.css">
     </head>
     <body>
         <h1>SPX Control Panel</h1>
@@ -39,17 +39,17 @@
         ></script>
 
         <!-- Required workaround for Firefox to fix a "no credentials" issue -->
-        <script type="module" crossorigin src="./js/dataTable.js"></script>
-        <script type="module" crossorigin src="./js/utils.js"></script>
-        <script type="module" crossorigin src="./js/fmt.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/js/dataTable.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/js/utils.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/js/fmt.js"></script>
 
         <script type="module" crossorigin>
-            import {makeDataTable} from './js/dataTable.js';
-            import {getCookieVar, setCookieVar} from './js/utils.js';
-            import * as fmt from './js/fmt.js';
+            import {makeDataTable} from './?SPX_UI_URI=/js/dataTable.js';
+            import {getCookieVar, setCookieVar} from './?SPX_UI_URI=/js/utils.js';
+            import * as fmt from './?SPX_UI_URI=/js/fmt.js';
 
             $(() => {
-                fetch('data/metrics', {credentials: "same-origin"})
+                fetch('?SPX_UI_URI=/data/metrics', {credentials: "same-origin"})
                     .then(response => response.json())
                     .then(response => {
                         const metrics = response.results;
@@ -224,14 +224,14 @@
 
                         $('#config').trigger('blur');
 
-                        return fetch('data/reports/metadata', {credentials: "same-origin"});
+                        return fetch('?SPX_UI_URI=/data/reports/metadata', {credentials: "same-origin"});
                     })
                     .then(response => response.json())
                     .then(data => {
                         makeDataTable(
                             'reports',
                             {
-                                makeRowUrl: row => 'report.html?key=' + row.key,
+                                makeRowUrl: row => '?SPX_UI_URI=/report.html&key=' + row.key,
                                 columns: [
                                     {
                                         label: 'Date',
