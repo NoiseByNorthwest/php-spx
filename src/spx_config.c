@@ -24,6 +24,7 @@ typedef struct {
     const char * fp_rel_str;
     const char * fp_limit_str;
     const char * fp_live_str;
+    const char * fp_color_str;
 
     const char * trace_file;
     const char * trace_safe_str;
@@ -111,6 +112,7 @@ static void init_config(spx_config_t * config, int cli)
     config->fp_rel = 0;
     config->fp_limit = 10;
     config->fp_live = 0;
+    config->fp_color = 1;
 
     config->trace_file = NULL;
     config->trace_safe = 0;
@@ -151,6 +153,7 @@ static void source_data_get(source_data_t * source_data, source_handler_t handle
     source_data->fp_rel_str           = handler("SPX_FP_REL");
     source_data->fp_limit_str         = handler("SPX_FP_LIMIT");
     source_data->fp_live_str          = handler("SPX_FP_LIVE");
+    source_data->fp_color_str         = handler("SPX_FP_COLOR");
     source_data->trace_file           = handler("SPX_TRACE_FILE");
     source_data->trace_safe_str       = handler("SPX_TRACE_SAFE");
 }
@@ -225,6 +228,10 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
 
     if (source_data->fp_live_str) {
         config->fp_live = *source_data->fp_live_str == '1' ? 1 : 0;
+    }
+
+    if (source_data->fp_color_str) {
+        config->fp_color = *source_data->fp_color_str == '1' ? 1 : 0;
     }
 
     if (source_data->trace_file) {

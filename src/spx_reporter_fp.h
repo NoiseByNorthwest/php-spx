@@ -8,7 +8,8 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
     int inc,
     int rel,
     size_t limit,
-    int live
+    int live,
+    int color
 );
 
 #endif /* SPX_REPORTER_FP_H_DEFINED */

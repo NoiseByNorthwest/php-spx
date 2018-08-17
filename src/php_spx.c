@@ -374,7 +374,8 @@ static void profiling_handler_init(void)
                 context.config.fp_inc,
                 context.config.fp_rel,
                 context.config.fp_limit,
-                context.config.fp_live
+                context.config.fp_live,
+                context.config.fp_color
             );
 
             break;
