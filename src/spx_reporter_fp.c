@@ -412,15 +412,24 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 static const char * get_value_ansi_fmt(double v)
 {
     static const char * colors[] = {
-        "32",
-        "92",
-        "92;1",
-        "93;1",
-        "93",
-        "33",
-        "31",
-        "91",
-        "91;1",
+        "102;30",
+        "42;30",
+        "42;33",
+        "42;93",
+        "42;93;1",
+        "43;92;1",
+        "43;92",
+        "43;32",
+        "103;30",
+        "43;30",
+        "43;31",
+        "43;91",
+        "43;91;1",
+        "41;93;1",
+        "41;93",
+        "41;33",
+        "41",
+        "101",
     };
 
     if (v < 0) {
