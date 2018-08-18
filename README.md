@@ -6,7 +6,7 @@
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as.apng)
 
-![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/fp1.gif)
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/43e3ffe185a1dcec70e7c8ced36acfdf316bae65/php-spx/doc/fp1.gif)
 
 SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.  
 It differentiates itself from other similar extensions as being:
