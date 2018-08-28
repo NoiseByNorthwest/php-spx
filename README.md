@@ -167,9 +167,9 @@ Here is the list of available metrics to collect. By default only _Wall time_ an
 | _ct_ | CPU time | The time spent while running on CPU. |
 | _it_ | Idle time | The time spent off-CPU, that means waiting for CPU, I/O completion, a lock acquisition... or explicitly sleeping. |
 | _zm_ | Zend Engine memory usage | Equivalent to `memory_get_usage(false)`. |
-| _zmac_ | Zend Engine allocation count | Number of memory allocation (i.e. allocated blocks) performed. |
+| _zmac_ | Zend Engine allocation count | Number of memory allocations (i.e. allocated blocks) performed. |
 | _zmab_ | Zend Engine allocated bytes<b>*</b> | Number of allocated bytes. |
-| _zmfc_ | Zend Engine free count | Number of memory release (i.e. freed blocks) performed. |
+| _zmfc_ | Zend Engine free count | Number of memory releases (i.e. freed blocks) performed. |
 | _zmfb_ | Zend Engine freed bytes<b>*</b> | Number of freed bytes. |
 | _zgr_ | Zend Engine GC run count | Number of times the GC (cycle collector) have been triggered (either manually or automatically). |
 | _zgb_ | Zend Engine GC root buffer length | Root buffer length, see explanation [here](http://php.net/manual/en/features.gc.collecting-cycles.php). It could be helpful to track pressure on garbage collector. |
