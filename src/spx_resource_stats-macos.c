@@ -4,6 +4,9 @@
 
 #include "spx_resource_stats.h"
 
+static inline size_t spx_resource_stats_wall_time_coarse(void);
+static inline size_t spx_resource_stats_cpu_time_coarse(void);
+
 void spx_resource_stats_init(void)
 {
 }
