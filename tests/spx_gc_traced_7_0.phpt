@@ -3,8 +3,8 @@ GC is traced (PHP 7.0 - 7.1)
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '7.0.0') < 0
-    || version_compare(PHP_VERSION, '7.2.0') >= 0
+    version_compare(PHP_VERSION, '7.0') < 0
+    || version_compare(PHP_VERSION, '7.2') >= 0
 ) {
     die('skip this test is for PHP 7.0 & 7.1 only');
 }

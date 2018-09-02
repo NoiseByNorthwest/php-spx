@@ -13,8 +13,8 @@
 #   error "Only x86-64 architecture is supported"
 #endif
 
-#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20170718
-#   error "Only the following PHP versions are supported: 5.6 to 7.2"
+#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20180731
+#   error "Only the following PHP versions are supported: 5.6 to 7.3"
 #endif
 
 #if defined(ZTS) && !defined(CONTINUOUS_INTEGRATION)

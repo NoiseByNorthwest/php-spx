@@ -376,13 +376,26 @@ size_t spx_php_zend_memory_free_bytes(void)
 
 size_t spx_php_zend_gc_run_count(void)
 {
+#if ZEND_MODULE_API_NO >= 20180731
+    zend_gc_status status;
+    zend_gc_get_status(&status);
+
+    return status.runs;
+#else
     TSRMLS_FETCH();
 
     return GC_G(gc_runs);
+#endif
 }
 
 size_t spx_php_zend_gc_root_buffer_length(void)
 {
+#if ZEND_MODULE_API_NO >= 20180731
+    zend_gc_status status;
+    zend_gc_get_status(&status);
+
+    return status.num_roots;
+#else
     TSRMLS_FETCH();
 
     size_t length = 0;
@@ -394,13 +407,21 @@ size_t spx_php_zend_gc_root_buffer_length(void)
     }
 
     return length;
+#endif
 }
 
 size_t spx_php_zend_gc_collected_count(void)
 {
+#if ZEND_MODULE_API_NO >= 20180731
+    zend_gc_status status;
+    zend_gc_get_status(&status);
+
+    return status.collected;
+#else
     TSRMLS_FETCH();
 
     return GC_G(collected);
+#endif
 }
 
 size_t spx_php_zend_included_file_count(void)
