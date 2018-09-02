@@ -4,7 +4,9 @@ php:
   - 7.0
   - 7.1
   - 7.2
-  - 7.3
+# FIXME uncomment it once possibe
+# see https://github.com/travis-ci/travis-ci/issues/9717
+#  - 7.3
 matrix:
   include:
     # `php: ..` in here is just descriptive/for UI, they don't affect installed ver.
