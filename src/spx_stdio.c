@@ -5,10 +5,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "spx_thread.h"
-
-static SPX_THREAD_TLS FILE * null_output;
-static SPX_THREAD_TLS int null_output_initialized;
+static FILE * null_output;
+static int null_output_initialized;
 
 int spx_stdio_disable(int fd)
 {
