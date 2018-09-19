@@ -55,7 +55,7 @@ if test "$PHP_SPX" = "yes"; then
         src/spx_reporter_trace.c    \
         src/spx_metric.c            \
         src/spx_resource_stats.c    \
-        src/spx_hset.c              \
+        src/spx_hmap.c              \
         src/spx_str_builder.c       \
         src/spx_output_stream.c     \
         src/spx_php.c               \

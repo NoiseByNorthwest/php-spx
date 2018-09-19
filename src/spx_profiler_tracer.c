@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "spx_hset.h"
+#include "spx_hmap.h"
 #include "spx_fmt.h"
 #include "spx_profiler_tracer.h"
 #include "spx_resource_stats.h"
@@ -45,7 +45,7 @@ do {                                         \
 } while (0)
 
 typedef struct {
-    spx_hset_t * hset;
+    spx_hmap_t * hmap;
     size_t size;
     spx_profiler_func_table_entry_t entries[FUNC_TABLE_CAPACITY];
 } func_table_t;
@@ -101,8 +101,8 @@ static spx_profiler_reporter_cost_t null_reporter_notify(
 
 static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * function);
 
-static unsigned long func_table_entry_hash(const void * v);
-static int func_table_entry_cmp(const void * va, const void * vb);
+static unsigned long func_table_hmap_hash_key(const void * v);
+static int func_table_hmap_cmp_key(const void * va, const void * vb);
 
 static spx_profiler_func_table_entry_t * func_table_get_entry(
     func_table_t * func_table,
@@ -156,20 +156,20 @@ spx_profiler_t * spx_profiler_tracer_create(
 
     profiler->stack.depth = 0;
     profiler->func_table.size = 0;
-    profiler->func_table.hset = NULL;
+    profiler->func_table.hmap = NULL;
 
     profiler->metric_collector = spx_metric_collector_create(profiler->enabled_metrics);
     if (!profiler->metric_collector) {
         goto error;
     }
 
-    profiler->func_table.hset = spx_hset_create(
+    profiler->func_table.hmap = spx_hmap_create(
         FUNC_TABLE_CAPACITY,
-        func_table_entry_hash,
-        func_table_entry_cmp
+        func_table_hmap_hash_key,
+        func_table_hmap_cmp_key
     );
 
-    if (!profiler->func_table.hset) {
+    if (!profiler->func_table.hmap) {
         goto error;
     }
 
@@ -382,8 +382,8 @@ static void tracing_profiler_destroy(spx_profiler_t * base_profiler)
 
     func_table_reset(&profiler->func_table);
 
-    if (profiler->func_table.hset) {
-        spx_hset_destroy(profiler->func_table.hset);
+    if (profiler->func_table.hmap) {
+        spx_hmap_destroy(profiler->func_table.hmap);
     }
 
     free(profiler);
@@ -444,24 +444,24 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
     func_table_reset(&profiler->func_table);
 }
 
-static unsigned long func_table_entry_hash(const void * v)
+static unsigned long func_table_hmap_hash_key(const void * v)
 {
-    return ((const spx_profiler_func_table_entry_t *) v)->function.hash_code;
+    return ((const spx_php_function_t *) v)->hash_code;
 }
 
-static int func_table_entry_cmp(const void * va, const void * vb)
+static int func_table_hmap_cmp_key(const void * va, const void * vb)
 {
-    const spx_php_function_t a = ((const spx_profiler_func_table_entry_t *) va)->function;
-    const spx_php_function_t b = ((const spx_profiler_func_table_entry_t *) vb)->function;
+    const spx_php_function_t * a = va;
+    const spx_php_function_t * b = vb;
 
     int n;
 
-    n = strcmp(a.func_name, b.func_name);
+    n = strcmp(a->func_name, b->func_name);
     if (n != 0) {
         return n;
     }
 
-    n = strcmp(a.class_name, b.class_name);
+    n = strcmp(a->class_name, b->class_name);
     if (n != 0) {
         return n;
     }
@@ -473,35 +473,23 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
     func_table_t * func_table,
     const spx_php_function_t * function
 ) {
-    spx_profiler_func_table_entry_t tmp_entry;
-    tmp_entry.function = *function;
+    if (func_table->size == FUNC_TABLE_CAPACITY) {
+        return spx_hmap_get_value(func_table->hmap, function);
+    }
 
     int new = 0;
-    spx_hset_entry_t * hset_entry = NULL;
+    spx_hmap_entry_t * hmap_entry = spx_hmap_ensure_entry(
+        func_table->hmap,
+        function,
+        &new
+    );
 
-    if (func_table->size == FUNC_TABLE_CAPACITY) {
-        hset_entry = spx_hset_get_existing_entry(
-            func_table->hset,
-            &tmp_entry
-        );
-
-        if (!hset_entry) {
-            return NULL;
-        }
-    } else {
-        hset_entry = spx_hset_get_entry(
-            func_table->hset,
-            &tmp_entry,
-            &new
-        );
-
-        if (!hset_entry) {
-            spx_utils_die("Function table hash index failure\n");
-        }
+    if (!hmap_entry) {
+        spx_utils_die("Function table hash index failure\n");
     }
 
     if (!new) {
-        return spx_hset_entry_get_value(hset_entry);
+        return spx_hmap_entry_get_value(hmap_entry);
     }
 
     func_table->size++;
@@ -533,11 +521,8 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
     METRIC_VALUES_ZERO(entry->stats.inc);
     METRIC_VALUES_ZERO(entry->stats.exc);
 
-    spx_hset_entry_set_value(
-        func_table->hset,
-        hset_entry,
-        entry
-    );
+    spx_hmap_entry_set_value(hmap_entry, entry);
+    spx_hmap_set_entry_key(func_table->hmap, hmap_entry, &entry->function);
 
     return entry;
 }
@@ -556,7 +541,7 @@ static void func_table_reset(func_table_t * func_table)
     }
 
     func_table->size = 0;
-    spx_hset_reset(func_table->hset);
+    spx_hmap_reset(func_table->hmap);
 }
 
 static void fill_event(
