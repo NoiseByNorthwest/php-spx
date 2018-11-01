@@ -19,7 +19,7 @@ function foo() {
 
 function bar() {
     trigger_error('');
-    for ($i = 0; $i < 15; $i++) {
+    for ($i = 0; $i < 17; $i++) {
         foo();
     }
 }
@@ -27,7 +27,7 @@ function bar() {
 error_reporting(0);
 
 trigger_error('');
-for ($i = 0; $i < 10; $i++) {
+for ($i = 0; $i < 13; $i++) {
     bar();
 }
 
@@ -37,16 +37,16 @@ for ($i = 0; $i < 10; $i++) {
 
 Global stats:
 
-  Called functions    :    38.6K
+  Called functions    :    71.8K
   Distinct functions  :        3
 
-  ZE error count      :    38.6K
+  ZE error count      :    71.8K
 
 Flat profile:
 
  ZE error count      |
  Inc.     | *Exc.    | Called   | Function
 ----------+----------+----------+----------
-    38.5K |    36.1K |    36.1K | 2@foo
-    38.6K |     2.4K |     2.4K | 2@bar
-    38.6K |        1 |        1 | %s/spx_013.php
+    71.8K |    67.8K |    67.8K | 2@foo
+    71.8K |     4.0K |     4.0K | 2@bar
+    71.8K |        1 |        1 | %s/spx_013.php
