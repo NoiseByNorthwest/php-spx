@@ -15,14 +15,14 @@ It differentiates itself from other similar extensions as being:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
 * [multi metrics](#available-metrics) capable: 21 currently supported (various time metrics, memory, included files, objects in use, I/O...).
-* able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack.
+* able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack and forbids timeline or Flamegraph based analysis.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
   * list profiled script reports
   * select a report for in-depth analysis, featuring these interactive visualizations:
-    * time line (scale to millions of function calls)
+    * timeline (scale to millions of function calls)
     * flat profile
-    * flame graph
+    * Flamegraph
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Current requirements are:
 
 * x86-64
 * **GNU/Linux** or **macOS**
-* zlib dev package (e.g. zlib1g-dev on Debian based distro)
+* zlib dev package (e.g. zlib1g-dev on Debian based distros)
 * PHP 5.6 & 7+
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
 
@@ -91,7 +91,7 @@ Then click on the report in the list and enjoy the [analysis screen](#analysis-s
 
 #### Instant flat profile
 
-Just prepend your command line with `SPX_ENABLED=1` to trigger profiling. You will get the flat profile printed on STDOUT at the end of the execution, even if you abort it by hitting Ctrl-C, as in the following example:
+Just prepend your command line with `SPX_ENABLED=1` to trigger profiling. You will get the flat profile printed on STDERR at the end of the execution, even if you abort it by hitting Ctrl-C, as in the following example:
 
 ```shell
 $ SPX_ENABLED=1 composer update
@@ -202,7 +202,7 @@ Here is the list below:
 
 | Key  | Name  | Description  |
 | ---- | ----- | ------------ |
-| _fp_ | Flat profile | The flat profile provided by SPX. It is the **default report type** and is directly printed on STDOUT. |
+| _fp_ | Flat profile | The flat profile provided by SPX. It is the **default report type** and is directly printed on STDERR. |
 | _full_ | Full report | This is the report type for web UI. Reports will be stored in SPX data directory and thus will be available for analysis on web UI side. |
 | _trace_ | Trace file | A custom format (human readable text) trace file. |
 
@@ -272,9 +272,9 @@ A drop-down window will then appear and allow you to switch between `default` an
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as-csm.png)
 
-##### Time line overview
+##### Timeline overview
 
-This visualization is the time line overview of all called functions.
+This visualization is the timeline overview of all called functions.
 You can change the selected time range by, represented by a transparent green rectangle, by simply dragging it horizontally.
 
 Except for wall time, the current metric is also plotted (current value over time) on a foreground layer.
@@ -285,9 +285,9 @@ Supported controls:
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as-ov.png)
 
-##### Time line focus
+##### Timeline focus
 
-This visualization is an interactive time line which is able to control and keep focus on the selected time range.
+This visualization is an interactive timeline which is able to control and keep focus on the selected time range.
 
 Supported controls:
 - left click drag: time range shift (horizontal) or depth range shift (vertical)
