@@ -1,5 +1,5 @@
 
-spx_ui_assets_dir = $(prefix)/share/misc/php-spx/assets/web-ui
+spx_ui_assets_dir = $(INSTALL_ROOT)$(prefix)/share/misc/php-spx/assets/web-ui
 
 CFLAGS += -DSPX_HTTP_UI_ASSETS_DIR=\"$(spx_ui_assets_dir)\"
 
