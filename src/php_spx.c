@@ -342,11 +342,6 @@ static int check_access(void)
     SPX_UTILS_TOKENIZE_STRING(authorized_ips_str, ',', authorized_ip_str, 32, {
         if (0 == strcmp(ip_str, authorized_ip_str)) {
             /* ip authorized (OK, as well as all previous checks) -> granted */
-            spx_php_log_notice(
-                "access granted: \"%s\" IP with \"%s\" key",
-                ip_str,
-                context.config.key
-            );
 
             return 1;
         }
