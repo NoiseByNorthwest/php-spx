@@ -18,9 +18,12 @@
 
 #include <stdlib.h>
 
+#include <time.h>
+#include <pthread.h>
+
 #include "spx_profiler_sampler.h"
-#include "spx_resource_stats.h"
 #include "spx_utils.h"
+
 
 #define STACK_CAPACITY 2048
 
@@ -30,7 +33,12 @@ typedef struct {
     spx_profiler_t * sampled_profiler;
 
     size_t sampling_period_us;
-    size_t last_sample_time_ns;
+
+    struct {
+        pthread_t thread;
+        int ready;
+        int stop;
+    } heartbeat;
 
     struct {
         struct {
@@ -41,12 +49,15 @@ typedef struct {
 } sampling_profiler_t;
 
 
+static void * sampling_profiler_heartbeat_handler(void * arg);
+
 static void sampling_profiler_call_start(spx_profiler_t * base_profiler, const spx_php_function_t * function);
 static void sampling_profiler_call_end(spx_profiler_t * base_profiler);
-static void sampling_profiler_handle_sample(spx_profiler_t * base_profiler, int call_end);
+static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int call_end);
 
 static void sampling_profiler_finalize(spx_profiler_t * base_profiler);
 static void sampling_profiler_destroy(spx_profiler_t * base_profiler);
+
 
 spx_profiler_t * spx_profiler_sampler_create(
     spx_profiler_t * sampled_profiler,
@@ -58,6 +69,19 @@ spx_profiler_t * spx_profiler_sampler_create(
 
     sampling_profiler_t * profiler = malloc(sizeof(*profiler));
     if (!profiler) {
+        goto error;
+    }
+
+    profiler->heartbeat.ready = 1;
+    profiler->heartbeat.stop = 0;
+    if (
+        pthread_create(
+            &profiler->heartbeat.thread,
+            NULL,
+            sampling_profiler_heartbeat_handler,
+            profiler
+        ) != 0
+    ) {
         goto error;
     }
 
@@ -75,6 +99,29 @@ spx_profiler_t * spx_profiler_sampler_create(
     return (spx_profiler_t *) profiler;
 
 error:
+    free(profiler);
+
+    return NULL;
+}
+
+
+static void * sampling_profiler_heartbeat_handler(void * arg)
+{
+    sampling_profiler_t * profiler = arg;
+    struct timespec period;
+
+    period.tv_sec = profiler->sampling_period_us / (1000 * 1000);
+    period.tv_nsec = (profiler->sampling_period_us % (1000 * 1000)) * 1000;
+
+    while (1) {
+        if (__atomic_load_n(&profiler->heartbeat.stop, __ATOMIC_SEQ_CST)) {
+            break;
+        }
+
+        nanosleep(&period, NULL);
+        __atomic_store_n(&profiler->heartbeat.ready, 1, __ATOMIC_SEQ_CST);
+    }
+
     return NULL;
 }
 
@@ -89,28 +136,25 @@ static void sampling_profiler_call_start(spx_profiler_t * base_profiler, const s
     profiler->stack.current.frames[profiler->stack.current.size] = *function;
     profiler->stack.current.size++;
 
-    sampling_profiler_handle_sample(base_profiler, 0);
+    sampling_profiler_handle_sample(profiler, 0);
 }
 
 static void sampling_profiler_call_end(spx_profiler_t * base_profiler)
 {
     sampling_profiler_t * profiler = (sampling_profiler_t *) base_profiler;
 
-    sampling_profiler_handle_sample(base_profiler, 1);
+    sampling_profiler_handle_sample(profiler, 1);
 
     profiler->stack.current.size--;
 }
 
-static void sampling_profiler_handle_sample(spx_profiler_t * base_profiler, int call_end)
+static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int call_end)
 {
-    sampling_profiler_t * profiler = (sampling_profiler_t *) base_profiler;
-
-    const size_t current_time_ns = spx_resource_stats_wall_time();
-    if ((current_time_ns - profiler->last_sample_time_ns) / 1000.0 < profiler->sampling_period_us ) {
+    if (!__atomic_load_n(&profiler->heartbeat.ready, __ATOMIC_SEQ_CST)) {
         return;
     }
 
-    profiler->last_sample_time_ns = current_time_ns;
+    __atomic_store_n(&profiler->heartbeat.ready, 0, __ATOMIC_SEQ_CST);
 
     size_t common_stack_top = 0;
     while (1) {
@@ -172,6 +216,9 @@ static void sampling_profiler_finalize(spx_profiler_t * base_profiler)
 static void sampling_profiler_destroy(spx_profiler_t * base_profiler)
 {
     sampling_profiler_t * profiler = (sampling_profiler_t *) base_profiler;
+
+    __atomic_store_n(&profiler->heartbeat.stop, 1, __ATOMIC_SEQ_CST);
+    pthread_join(profiler->heartbeat.thread, NULL);
 
     profiler->sampled_profiler->destroy(profiler->sampled_profiler);
 
