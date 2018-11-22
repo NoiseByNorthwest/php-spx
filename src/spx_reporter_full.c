@@ -312,7 +312,7 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
             reporter->output,
             "%s%s%s\n",
             entry->function.class_name,
-            entry->function.call_type,
+            entry->function.class_name[0] ? "::" : "",
             entry->function.func_name
         );
     }

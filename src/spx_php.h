@@ -23,7 +23,6 @@ typedef struct {
     unsigned long hash_code;
 
     const char * func_name;
-    const char * call_type;
     const char * class_name;
 } spx_php_function_t;
 

@@ -267,7 +267,7 @@ static void print_row(
         format,
         prefix,
         function->class_name,
-        function->call_type,
+        function->class_name[0] ? "::" : "",
         function->func_name
     );
 

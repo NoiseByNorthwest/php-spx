@@ -188,37 +188,120 @@ void spx_php_current_function(spx_php_function_t * function)
 {
     TSRMLS_FETCH();
 
+    function->hash_code = 0;
+    function->class_name = "";
+    function->func_name = "";
+
     if (context.active_function_name) {
         function->class_name = "";
-        function->call_type = "";
         function->func_name = context.active_function_name;
     } else {
-        function->class_name = get_active_class_name(&function->call_type TSRMLS_CC);
-        function->func_name = get_active_function_name(TSRMLS_C);
+        if (!zend_is_executing(TSRMLS_C)) {
+            return;
+        }
 
 #if ZEND_MODULE_API_NO >= 20151012
         const zend_function * func = EG(current_execute_data)->func;
+        switch (func->type) {
+            case ZEND_USER_FUNCTION:
+            case ZEND_INTERNAL_FUNCTION:
+            {
+                const zend_class_entry * ce = func->common.scope;
+                if (ce) {
+                    function->class_name = ZSTR_VAL(ce->name);
+                }
+            }
+        }
+
+        switch (func->type) {
+            case ZEND_USER_FUNCTION:
+            {
+                zend_string * function_name = func->common.function_name;
+                if (function_name) {
+                    function->func_name = ZSTR_VAL(function_name);
+                }
+
+                break;
+            }
+
+            case ZEND_INTERNAL_FUNCTION:
+                function->func_name = ZSTR_VAL(func->common.function_name);
+        }
+#else
+        switch (EG(current_execute_data)->function_state.function->type) {
+            case ZEND_USER_FUNCTION:
+            case ZEND_INTERNAL_FUNCTION:
+            {
+                zend_class_entry *ce = EG(current_execute_data)->function_state.function->common.scope;
+                if (ce) {
+                    function->class_name = ce->name;
+                }
+            }
+        }
+
+        switch (EG(current_execute_data)->function_state.function->type) {
+            case ZEND_USER_FUNCTION:
+            {
+                const char * function_name = (
+                        (zend_op_array *) EG(current_execute_data)->function_state.function
+                    )
+                    ->function_name
+                ;
+
+                if (function_name) {
+                    function->func_name = function_name;
+                }
+
+                break;
+            }
+            case ZEND_INTERNAL_FUNCTION:
+                function->func_name = (
+                        (zend_internal_function *) EG(current_execute_data)->function_state.function
+                    )
+                    ->function_name
+                ;
+        }
+#endif
+
+#if ZEND_MODULE_API_NO >= 20151012
         /*
          *  Required for PHP 7+ to avoid function name default'd to "main" in this case
          *  (including file level code).
          *  See get_active_function_name() implementation in php-src.
          */
         if (func->type == ZEND_USER_FUNCTION && !func->common.function_name) {
-            function->func_name = NULL;
+            function->func_name = "";
         }
         /*
          *  This hack is required for PHP 7.1 to prevent a segfault while dereferencing function->func_name
          *  TODO: open an issue if not yet tracked
          */
         if (func->type == ZEND_INTERNAL_FUNCTION && !func->common.function_name) {
-            function->func_name = NULL;
+            function->func_name = "";
         }
 #endif
 
-        if (!function->func_name) {
+        if (!function->func_name[0]) {
             function->class_name = "";
-            function->call_type = "";
-            function->func_name = zend_get_executed_filename(TSRMLS_C);
+
+#if ZEND_MODULE_API_NO >= 20151012
+            const zend_execute_data * ex = EG(current_execute_data);
+            while (ex && (!ex->func || !ZEND_USER_CODE(ex->func->type))) {
+                ex = ex->prev_execute_data;
+            }
+
+            if (ex) {
+                function->func_name = ZSTR_VAL(ex->func->op_array.filename);
+            } else {
+                function->func_name = "[no active file]";
+            }
+#else
+            if (EG(active_op_array)) {
+                function->func_name = EG(active_op_array)->filename;
+            } else {
+                function->func_name = "[no active file]";
+            }
+#endif
         }
     }
 

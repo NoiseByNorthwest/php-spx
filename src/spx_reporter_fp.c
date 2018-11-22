@@ -405,7 +405,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
             "%s%s%s%s",
             cycle_depth_str,
             entry->function.class_name,
-            entry->function.call_type,
+            entry->function.class_name[0] ? "::" : "",
             entry->function.func_name
         );
 
