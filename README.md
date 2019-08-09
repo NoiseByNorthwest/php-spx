@@ -46,7 +46,7 @@ Current requirements are:
 ### Install the extension
 
 ```shell
-git clone git@github.com:NoiseByNorthwest/php-spx.git
+git clone https://github.com/NoiseByNorthwest/php-spx.git
 cd php-spx
 phpize
 ./configure
