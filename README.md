@@ -145,6 +145,7 @@ SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 | spx.http_enabled      | `0`  | PHP_INI_SYSTEM | Whether to enable web UI and HTTP request profiling. |
 | spx.http_key          |  | PHP_INI_SYSTEM | The secret key used for authentication (see [security concern](#security-concern) for more details). You can use the following command to generate a 16 bytes random key as an hex string: `openssl rand -hex 16`. |
 | spx.http_ip_var       | `REMOTE_ADDR` | PHP_INI_SYSTEM | The `$_SERVER` key holding the client IP address used for authentication (see [security concern](#security-concern) for more details). Overriding the default value is required when your application is behind a reverse proxy. |
+| spx.http_trusted_proxies       | `127.0.0.1` | PHP_INI_SYSTEM | The trusted proxy list as a comma separated list of IP addresses. This setting is ignored when `spx.http_ip_var`'s value is `REMOTE_ADDR`. |
 | spx.http_ip_whitelist |  | PHP_INI_SYSTEM | The IP address white list used for authentication as a comma separated list of IP addresses. |
 | spx.http_ui_assets_dir | `/usr/local/share/misc/php-spx/assets/web-ui` | PHP_INI_SYSTEM | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
 
@@ -338,7 +339,7 @@ In tracing mode (default), SPX is subject to accuracy issues for time related me
 
 The first issue is mitigated by using the highest resolution timer provided by the platform. On Linux & recent macOS versions the timer resolution is 1ns; on macOS before 10.12/Sierra, the timer resolution is only 1us.
 
-The second issue is mitigated by taking in account SPX time (wall / cpu) overhead by subtracting it to measured function execution time. This is done by evaluating SPX constant per function overhead before starting profiling the script.
+The second issue is mitigated by taking into account SPX's time (wall / cpu) overhead by subtracting it to measured function execution time. This is done by evaluating SPX constant per function overhead before starting profiling the script.
 
 However, whatever the platform, if you want to maximize accuracy to find a time bottleneck, you should also:
 - avoid profiling internal functions.
@@ -346,58 +347,6 @@ However, whatever the platform, if you want to maximize accuracy to find a time 
 - try sampling mode with different sampling periods.
 - try to play with maximum depth parameter to stop profiling at a given depth.
 
-## Examples
-
-### Command line script: generate trace file
-
-The following command will trace all (user) function calls of _./bin/console_ script in _trace.txt_ file.
-
-```shell
-$ SPX_ENABLED=1 SPX_REPORT=trace SPX_TRACE_FILE=trace.txt ./bin/console > /dev/null && head -20 trace.txt && echo ... && tail -20 trace.txt
-
-SPX trace file: trace.txt
- Wall time                      | ZE memory usage                |
- Cum.     | Inc.     | Exc.     | Cum.     | Inc.     | Exc.     | Depth    | Function
-----------+----------+----------+----------+----------+----------+----------+----------
-      0ns |      0ns |      0ns |       0B |       0B |       0B |        1 | +/var/www/sfapp/bin/console
-  111.8us |      0ns |      0ns |    1.6KB |       0B |       0B |        2 |  +main
-  274.2us |      0ns |      0ns |   14.9KB |       0B |       0B |        3 |   +main
-  275.3us |    1.0us |    1.0us |   14.9KB |       0B |       0B |        3 |   -main
-  278.6us |      0ns |      0ns |   14.5KB |       0B |       0B |        3 |   +ComposerAutoloaderInitff0faccf08b80bfc8761e2c1e69c7292::getLoader
-  298.4us |      0ns |      0ns |   15.4KB |       0B |       0B |        4 |    +ComposerAutoloaderInitff0faccf08b80bfc8761e2c1e69c7292::loadClassLoader
-  591.7us |      0ns |      0ns |   74.9KB |       0B |       0B |        5 |     +main
-  592.5us |    784ns |    784ns |   74.9KB |       0B |       0B |        5 |     -main
-  593.0us |  294.6us |  293.8us |   74.3KB |   59.0KB |   59.0KB |        4 |    -ComposerAutoloaderInitff0faccf08b80bfc8761e2c1e69c7292::loadClassLoader
-  799.5us |      0ns |      0ns |  119.1KB |       0B |       0B |        4 |    +main
-  800.1us |    623ns |    623ns |  119.1KB |       0B |       0B |        4 |    -main
-  802.7us |      0ns |      0ns |  118.7KB |       0B |       0B |        4 |    +Composer\Autoload\ComposerStaticInitff0faccf08b80bfc8761e2c1e69c7292::getInitializer
-  809.5us |    6.8us |    6.8us |  119.6KB |     912B |     912B |        4 |    -Composer\Autoload\ComposerStaticInitff0faccf08b80bfc8761e2c1e69c7292::getInitializer
-  812.6us |      0ns |      0ns |  119.7KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
-  820.3us |    7.8us |    7.8us |  119.8KB |      48B |      48B |        4 |    -Composer\Autoload\ClassLoader::Composer\Autoload\{closure}
-  822.1us |      0ns |      0ns |  118.9KB |       0B |       0B |        4 |    +Composer\Autoload\ClassLoader::register
-  828.7us |    6.6us |    6.6us |  119.1KB |     208B |     208B |        4 |    -Composer\Autoload\ClassLoader::register
-...
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        3 |   +/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Traits/FilesystemCommonTrait.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        4 |    +Symfony\Component\Cache\Adapter\AbstractAdapter::__destruct
-  129.2ms |    190ns |    190ns |   14.6MB |       0B |       0B |        4 |    -Symfony\Component\Cache\Adapter\AbstractAdapter::__destruct
-  129.2ms |    853ns |    663ns |   14.6MB |      48B |      48B |        3 |   -/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Traits/FilesystemCommonTrait.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        3 |   +/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Adapter/AbstractAdapter.php
-  129.2ms |    308ns |    308ns |   14.6MB |      48B |      48B |        3 |   -/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Adapter/AbstractAdapter.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        3 |   +/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Traits/FilesystemCommonTrait.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        4 |    +Symfony\Component\Cache\Adapter\AbstractAdapter::__destruct
-  129.2ms |    237ns |    237ns |   14.6MB |       0B |       0B |        4 |    -Symfony\Component\Cache\Adapter\AbstractAdapter::__destruct
-  129.2ms |    851ns |    614ns |   14.6MB |      48B |      48B |        3 |   -/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Traits/FilesystemCommonTrait.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        3 |   +/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Adapter/AbstractAdapter.php
-  129.2ms |    154ns |    154ns |   14.6MB |      48B |      48B |        3 |   -/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Adapter/AbstractAdapter.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        3 |   +/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Traits/FilesystemCommonTrait.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        4 |    +Symfony\Component\Cache\Adapter\AbstractAdapter::__destruct
-  129.2ms |    172ns |    172ns |   14.6MB |       0B |       0B |        4 |    -Symfony\Component\Cache\Adapter\AbstractAdapter::__destruct
-  129.2ms |    717ns |    545ns |   14.6MB |      48B |      48B |        3 |   -/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Traits/FilesystemCommonTrait.php
-  129.2ms |      0ns |      0ns |   14.6MB |       0B |       0B |        3 |   +/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Adapter/AbstractAdapter.php
-  129.2ms |    244ns |    244ns |   14.6MB |      48B |      48B |        3 |   -/var/www/sfapp/vendor/symfony/symfony/src/Symfony/Component/Cache/Adapter/AbstractAdapter.php
-  129.2ms |  120.6ms |   84.5us |   14.6MB |   13.2MB |    3.1KB |        2 |  -Symfony\Component\Console\Application::run
-  129.2ms |  129.2ms |  134.1us |   14.6MB |   14.6MB |    2.1KB |        1 | -/var/www/sfapp/bin/console
-```
 
 ## Credits
 

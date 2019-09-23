@@ -79,6 +79,7 @@ ZEND_BEGIN_MODULE_GLOBALS(spx)
     zend_bool http_enabled;
     const char * http_key;
     const char * http_ip_var;
+    const char * http_trusted_proxies;
     const char * http_ip_whitelist;
     const char * http_ui_assets_dir;
 ZEND_END_MODULE_GLOBALS(spx)
@@ -107,6 +108,10 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(
         "spx.http_ip_var", "REMOTE_ADDR", PHP_INI_SYSTEM,
         OnUpdateString, http_ip_var, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_trusted_proxies", "127.0.0.1", PHP_INI_SYSTEM,
+        OnUpdateString, http_trusted_proxies, zend_spx_globals, spx_globals
     )
     STD_PHP_INI_ENTRY(
         "spx.http_ip_whitelist", "", PHP_INI_SYSTEM,
@@ -318,6 +323,31 @@ static int check_access(void)
         spx_php_log_notice("access not granted: http_ip_var is empty");
 
         return 0;
+    }
+
+    if (0 != strcmp(SPX_G(http_ip_var), "REMOTE_ADDR")) {
+        if (!SPX_G(http_trusted_proxies) || SPX_G(http_trusted_proxies)[0] == 0) {
+            /* empty client ip server var name -> not granted */
+            spx_php_log_notice("access not granted: http_trusted_proxies is empty");
+
+            return 0;
+        }
+
+        const char * proxy_ip_str = spx_php_global_array_get("_SERVER", "REMOTE_ADDR");
+        int found = 0;
+
+        SPX_UTILS_TOKENIZE_STRING(SPX_G(http_trusted_proxies), ',', trusted_proxy_ip_str, 32, {
+            if (0 == strcmp(proxy_ip_str, trusted_proxy_ip_str)) {
+                found = 1;
+            }
+        });
+
+        if (!found) {
+            /* empty client ip server var name -> not granted */
+            spx_php_log_notice("access not granted: '%s' is not a trusted proxy", proxy_ip_str);
+
+            return 0;
+        }
     }
 
     const char * ip_str = spx_php_global_array_get("_SERVER", SPX_G(http_ip_var));
