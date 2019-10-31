@@ -362,6 +362,12 @@ static int check_access(void)
     }
 
     const char * authorized_ips_str = SPX_G(http_ip_whitelist);
+
+    if (0 == strcmp(authorized_ips_str, "*")) {
+        /* all ips authorized */
+        return 1;
+    }
+
     if (!authorized_ips_str || authorized_ips_str[0] == 0) {
         /* empty ip white list -> not granted */
         spx_php_log_notice("access not granted: IP white list is empty");
