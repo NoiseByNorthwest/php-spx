@@ -8,7 +8,7 @@
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/43e3ffe185a1dcec70e7c8ced36acfdf316bae65/php-spx/doc/fp1.gif)
 
-SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.  
+SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.
 It differentiates itself from other similar extensions as being:
 * totally free and confined to your infrastructure (i.e. no data leaks to a SaaS).
 * very simple to use: just set an environment variable (command line) or switch on a radio button (web page) to profile your script. Thus, you are free of:
@@ -26,7 +26,7 @@ It differentiates itself from other similar extensions as being:
 
 ## Requirements
 
-Platforms support is currently quite limited. Feel free to open an issue if your platform is not supported.  
+Platforms support is currently quite limited. Feel free to open an issue if your platform is not supported.
 Current requirements are:
 
 * x86-64
@@ -54,16 +54,16 @@ make
 sudo make install
 ```
 
-Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.  
+Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
 You may also want to override [default SPX configuration](#configuration) to be able to profile a web page, with [this one](#private-environment) for example for a local development environment.
 
 ## Development status
 
-This is still **experimental**. API might change, features might be added or dropped, or development could be frozen.  
+This is still **experimental**. API might change, features might be added or dropped, or development could be frozen.
 
-You can still safely use it in a **non-production** environment.  
+You can still safely use it in a **non-production** environment.
 
-Contributions are welcome but be aware of the experimental status of this project and **please follow the contribution rules** described here: [CONTRIBUTING.md](CONTRIBUTING.md)  
+Contributions are welcome but be aware of the experimental status of this project and **please follow the contribution rules** described here: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Basic usage
 
@@ -79,13 +79,13 @@ You will then see the following form:
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/93baabbcba04223586d06756dbcecfbd6ec1293d/php-spx/doc/cp-form.png)
 
-Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.  
+Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.
 
-Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.  
+Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/cp-list2.png)
 
-Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).  
+Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).
 
 ### Command line script
 
@@ -146,7 +146,7 @@ SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 | spx.http_key          |  | PHP_INI_SYSTEM | The secret key used for authentication (see [security concern](#security-concern) for more details). You can use the following command to generate a 16 bytes random key as an hex string: `openssl rand -hex 16`. |
 | spx.http_ip_var       | `REMOTE_ADDR` | PHP_INI_SYSTEM | The `$_SERVER` key holding the client IP address used for authentication (see [security concern](#security-concern) for more details). Overriding the default value is required when your application is behind a reverse proxy. |
 | spx.http_trusted_proxies       | `127.0.0.1` | PHP_INI_SYSTEM | The trusted proxy list as a comma separated list of IP addresses. This setting is ignored when `spx.http_ip_var`'s value is `REMOTE_ADDR`. |
-| spx.http_ip_whitelist |  | PHP_INI_SYSTEM | The IP address white list used for authentication as a comma separated list of IP addresses. |
+| spx.http_ip_whitelist |  | PHP_INI_SYSTEM | The IP address white list used for authentication as a comma separated list of IP addresses, use `*` to allow all IP addresses. |
 | spx.http_ui_assets_dir | `/usr/local/share/misc/php-spx/assets/web-ui` | PHP_INI_SYSTEM | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
 
 
@@ -198,7 +198,7 @@ _\*\*: I/O metrics are not supported on macOS._
 
 #### Available report types
 
-Contrary to web page profiling which only support _full_ report type (the one exploitable by the web UI), command line script profiling supports several types of report.  
+Contrary to web page profiling which only support _full_ report type (the one exploitable by the web UI), command line script profiling supports several types of report.
 Here is the list below:
 
 | Key  | Name  | Description  |
@@ -254,8 +254,8 @@ This is the home page of the web UI, divided into 2 parts:
 
 ##### Performance, report size & sampling
 
-The analysis screen can nicely handle profile reports with up to several (5+) millions of recorded function calls with Chromium on my i5 @ 3.3GHz / 8GB desktop.  
-In case you want to profile a long running, CPU intensive, script which tends to generate giant reports, you can enable sampling mode with the suitable sampling period.  
+The analysis screen can nicely handle profile reports with up to several (5+) millions of recorded function calls with Chromium on my i5 @ 3.3GHz / 8GB desktop.
+In case you want to profile a long running, CPU intensive, script which tends to generate giant reports, you can enable sampling mode with the suitable sampling period.
 See _SPX_SAMPLING_PERIOD_ [parameter](#available-parameters) for command line script.
 
 ##### Metric selector
@@ -309,7 +309,7 @@ This visualization is the flat profile for the selected time range and the selec
 
 ##### Flame Graph
 
-This visualization, designed by [Brendan Gregg](http://www.brendangregg.com/flamegraphs.html), allows to quickly find the hot code path for the selected time range and the selected metric.  
+This visualization, designed by [Brendan Gregg](http://www.brendangregg.com/flamegraphs.html), allows to quickly find the hot code path for the selected time range and the selected metric.
 Metrics corresponding to releasable resources (memory, objects in use...) are not supported by this visualization.
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as-fg.png)
@@ -318,7 +318,7 @@ Metrics corresponding to releasable resources (memory, objects in use...) are no
 
 _The lack of review / feedback about this concern is the main reason **SPX cannot yet be considered as production ready**._
 
-SPX allows you to profile web page as well as command line scripts, and also to list and analyze profile reports through its embedded web UI.  
+SPX allows you to profile web page as well as command line scripts, and also to list and analyze profile reports through its embedded web UI.
 This is why there is a huge security risk, since an attacker could:
  - access to web UI and get sensible information about your application.
  - to a lesser extent, make a DoS attack against your application with a costly profiling setup.
