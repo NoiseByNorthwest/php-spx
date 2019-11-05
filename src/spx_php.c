@@ -57,6 +57,17 @@ do {                                                     \
 } while (0)
 #endif
 
+typedef void (*execute_internal_func_t) (
+    zend_execute_data * execute_data,
+#if ZEND_MODULE_API_NO >= 20151012
+    zval * return_value
+#else
+    struct _zend_fcall_info * fci,
+    int ret
+#endif
+    TSRMLS_DC
+);
+
 static struct {
 #if ZEND_MODULE_API_NO >= 20151012
     void * (*malloc) (size_t size);
@@ -66,16 +77,8 @@ static struct {
 #endif
 
     void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
-    void (*execute_internal) (
-        zend_execute_data * execute_data,
-#if ZEND_MODULE_API_NO >= 20151012
-        zval * return_value
-#else
-        struct _zend_fcall_info * fci,
-        int ret
-#endif
-        TSRMLS_DC
-    );
+    execute_internal_func_t previous_zend_execute_internal;
+    execute_internal_func_t execute_internal;
 
     zend_op_array * (*zend_compile_file)(zend_file_handle * file_handle, int type TSRMLS_DC);
     zend_op_array * (*zend_compile_string)(zval * source_string, char * filename TSRMLS_DC);
@@ -95,7 +98,7 @@ static struct {
 #if ZEND_MODULE_API_NO >= 20151012
     NULL, NULL, NULL, NULL,
 #endif
-    NULL, NULL,
+    NULL, NULL, NULL,
     NULL, NULL,
 #if ZEND_MODULE_API_NO >= 20151012
     NULL,
@@ -594,10 +597,13 @@ size_t spx_php_zend_error_count(void)
 
 void spx_php_global_hooks_set(void)
 {
-    ze_hooked_func.execute_ex = execute_ex;
+    ze_hooked_func.execute_ex = zend_execute_ex;
     zend_execute_ex = global_hook_execute_ex;
 
-    ze_hooked_func.execute_internal = execute_internal;
+    ze_hooked_func.previous_zend_execute_internal = zend_execute_internal;
+    ze_hooked_func.execute_internal = zend_execute_internal ?
+        zend_execute_internal : execute_internal
+    ;
     zend_execute_internal = global_hook_execute_internal;
 
     ze_hooked_func.zend_compile_file = zend_compile_file;
@@ -623,7 +629,8 @@ void spx_php_global_hooks_unset(void)
     }
 
     if (ze_hooked_func.execute_internal) {
-        zend_execute_internal = ze_hooked_func.execute_internal;
+        zend_execute_internal = ze_hooked_func.previous_zend_execute_internal;
+        ze_hooked_func.previous_zend_execute_internal = NULL;
         ze_hooked_func.execute_internal = NULL;
     }
 
