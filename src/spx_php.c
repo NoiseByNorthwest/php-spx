@@ -594,10 +594,10 @@ size_t spx_php_zend_error_count(void)
 
 void spx_php_global_hooks_set(void)
 {
-    ze_hooked_func.execute_ex = execute_ex;
+    ze_hooked_func.execute_ex = zend_execute_ex;
     zend_execute_ex = global_hook_execute_ex;
 
-    ze_hooked_func.execute_internal = execute_internal;
+    ze_hooked_func.execute_internal = zend_execute_internal;
     zend_execute_internal = global_hook_execute_internal;
 
     ze_hooked_func.zend_compile_file = zend_compile_file;
