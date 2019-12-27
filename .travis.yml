@@ -5,6 +5,7 @@ php:
   - 7.1
   - 7.2
   - 7.3
+  - 7.4
 matrix:
   include:
     # `php: ..` in here is just descriptive/for UI, they don't affect installed ver.
