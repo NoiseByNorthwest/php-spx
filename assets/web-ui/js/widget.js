@@ -972,7 +972,7 @@ export class OverView extends SVGWidget {
 
         const calls = this.profileData.getCalls(
             this.profileData.getTimeRange(),
-            0.3 / this.viewPort.width
+            this.profileData.getTimeRange().length() / this.viewPort.width
         );
 
         for (let i = 0; i < calls.length; i++) {
@@ -1214,7 +1214,7 @@ export class TimeLine extends SVGWidget {
         const timeRange = this.viewTimeRange.getTimeRange();
         const calls = this.profileData.getCalls(
             timeRange,
-            timeRange.length() / 50000
+            timeRange.length() / this.viewPort.width
         );
 
         const viewRange = this.viewTimeRange.getScaledViewRange();
@@ -1232,7 +1232,7 @@ export class TimeLine extends SVGWidget {
             }
 
             let w = this.viewPort.width * call.getInc('wt') / timeRange.length() - 1;
-            if (w < 0.3 || x + w < 0) {
+            if (w < 0.1 || x + w < 0) {
                 continue;
             }
 
