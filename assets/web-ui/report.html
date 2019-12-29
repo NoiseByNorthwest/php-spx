@@ -23,14 +23,30 @@
                 <select></select>
             </div>
             <div id="colorscheme-manager" class="widget" style="flex: 0 0 220px;"></div>
-            <div id="category-legend" class="widget" style="flex: 1 0 150px;"></div>
-            <div id="color-scale" class="widget" style="flex: 1 0 150px;"></div>
+            <div id="category-legend" class="widget"></div>
+            <div id="color-scale" class="widget" style="flex: 1 1 150px;"></div>
         </div>
         <div id="overview" class="widget visualization" style="flex: 0 0 80px"></div>
-        <div id="timeline" class="widget visualization" style="flex: 1 0 140px"></div>
-        <div style="flex: 1 0 100px; display: flex; flex-direction: row;">
-            <div id="flatprofile" class="widget" style="flex: 4 0 300px;"></div>
-            <div id="flamegraph" class="widget visualization" style="flex: 3 0 100px;"></div>
+        <div style="flex:1; min-height: 0; display: flex; flex-direction: column;">
+            <div id="timeline" class="widget visualization" style="flex: 0 0 auto; height: 300px"></div>
+            <div
+                style="flex: 0 0 3px; width: 100%; background-color: #444; cursor: row-resize;"
+                data-layout-splitter-target="timeline"
+                data-layout-splitter-axis="y"
+                data-layout-splitter-dir="-1"
+                data-layout-splitter-min="30"
+            ></div>
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: row;">
+                <div id="flatprofile" class="widget" style="flex: 0 0 auto; width: 900px"></div>
+                <div
+                    style="flex: 0 0 3px; height: 100%; background-color: #444; cursor: col-resize;"
+                    data-layout-splitter-target="flatprofile"
+                    data-layout-splitter-axis="x"
+                    data-layout-splitter-dir="-1"
+                    data-layout-splitter-min="500"
+                ></div>
+                <div id="flamegraph" class="widget visualization" style="flex: 1 1 auto"></div>
+            </div>
         </div>
     </div>
 
@@ -50,11 +66,13 @@
     <script type="module" crossorigin src="?SPX_UI_URI=/js/fmt.js"></script>
     <script type="module" crossorigin src="?SPX_UI_URI=/js/profileData.js"></script>
     <script type="module" crossorigin src="?SPX_UI_URI=/js/widget.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/js/layoutSplitter.js"></script>
 
     <script type="module" crossorigin>
         import * as fmt from './?SPX_UI_URI=/js/fmt.js';
         import {ProfileDataBuilder} from './?SPX_UI_URI=/js/profileData.js';
         import * as widget from './?SPX_UI_URI=/js/widget.js';
+        import * as layoutSplitter from './?SPX_UI_URI=/js/layoutSplitter.js';
 
         $(() => {
             const m = window.location.href.match(/\bkey=([^&]+)/);
@@ -237,6 +255,13 @@
                     return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
                 })
                 .then(profileData => {
+                    const metricSelector = $('#metric-selector select');
+                    for (const metric of profileData.getMetadata().enabled_metrics) {
+                        metricSelector.append(
+                            `<option value="${metric}">${profileData.getMetricInfo(metric).name}</option>`
+                        );
+                    }
+
                     const widgets = [
                         new widget.ColorScale($('#color-scale'), profileData),
                         new widget.CategoryLegend($('#category-legend'), profileData),
@@ -249,16 +274,20 @@
 
                     widgets.forEach(widget => widget.render());
 
-                    const metricSelector = $('#metric-selector select');
-                    for (const metric of profileData.getMetadata().enabled_metrics) {
-                        metricSelector.append(
-                            `<option value="${metric}">${profileData.getMetricInfo(metric).name}</option>`
-                        );
-                    }
-
                     metricSelector.on('change', () => {
                         widgets.forEach(widget => widget.setCurrentMetric(metricSelector.val()));
                         widgets.forEach(widget => widget.repaint());
+                    });
+
+                    layoutSplitter.init();
+                    layoutSplitter.change(() => {
+                        widgets.forEach(widget => {
+                            if (!["timeline", "flatprofile", "flamegraph"].includes(widget.container.attr("id"))) {
+                                return;
+                            }
+
+                            widget.handleResize();
+                        });
                     });
 
                     return new Promise(resolve => resolve());

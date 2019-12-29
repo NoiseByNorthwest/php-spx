@@ -43,7 +43,7 @@ export class NodePool {
             this.nodes.push(createNode(this.name));
         }
 
-        let node = this.nodes[this.top];
+        const node = this.nodes[this.top];
         this.top++;
 
         for (let k in attributes || {}) {
