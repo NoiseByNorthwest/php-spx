@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.org/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 7.x](https://img.shields.io/badge/php-5.6--7.4-blue.svg) ![Supported platforms: GNU/Linux 64-bit, macOS 64-bit](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20-yellow)
 
-[Click here for a live demo of the analysis screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20180603_211110-dev-3540-294703905)
+[Click here for a live demo of the analysis screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20191229_175636-06d2fe5ee423-3795-233665123)
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as.apng)
 
