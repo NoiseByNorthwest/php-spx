@@ -93,7 +93,7 @@
             };
 
             function setProgress(title, current, total) {
-                initDialog.title.text(title);
+                initDialog.title.html(title);
 
                 if (!total) {
                     initDialog.progress.hide();
@@ -115,17 +115,13 @@
 
                 const currentTime = new Date().getTime() / 1000;
 
+                const rate = (current - initDialog.data[title].startCount) / (currentTime - initDialog.data[title].startTime);
                 const remainingTime = Math.round(
-                    (total - current)
-                        * (
-                            (currentTime - initDialog.data[title].startTime)
-                            / (current - initDialog.data[title].startCount)
-                        )
+                    (total - current) / rate
                 );
 
                 initDialog.progressInfo.text(
-                    fmt.pct(current / total) + ' (' + fmt.quantity(current) + ')'
-                        + ' ETA: ' + remainingTime + 's'
+                    `${fmt.pct(current / total)} (${fmt.quantity(current)}, ${fmt.quantity(rate)}/s) ETA: ${remainingTime}s`
                 );
             }
 
@@ -200,7 +196,9 @@
                         }
 
                         setProgress(
-                            'Building call list... (1/2)',
+                            'Building call list... (1/2)<br>'
+                                + `${fmt.quantity(profileDataBuilder.getTotalCallCount())} function calls`
+                            ,
                             profileDataBuilder.getCurrentCallCount(),
                             profileDataBuilder.getTotalCallCount()
                         );
@@ -244,7 +242,7 @@
                 })
                 .then(() => profileDataBuilder.buildCallRangeTree(
                     (current, total) => setProgress(
-                        'Building call range tree... (2/2)',
+                        `Building call range tree... (2/2)<br>${fmt.quantity(total)} function calls`,
                         current,
                         total
                     )
