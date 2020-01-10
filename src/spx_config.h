@@ -34,6 +34,8 @@ typedef struct {
 
     const char * ui_uri;
 
+    int auto_start;
+
     size_t sampling_period;
     int builtins;
     size_t max_depth;

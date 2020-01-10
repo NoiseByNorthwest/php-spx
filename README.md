@@ -135,6 +135,40 @@ You just have to specify `SPX_REPORT=full` to generate a report available via th
 SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 ```
 
+
+#### Handle long-living / daemon processes
+
+If your CLI script is long-living and/or daemonized (e.g. via supervisord), profiling its whole lifespan could be meaningless. This is especially true in case of a service waiting for tasks to process.  
+To handle this case, SPX allows to disable the automatic start of profiling and exposes 2 userland functions, `spx_profiler_start(): void` & `spx_profiler_stop(): void`, in order to respectively control the start and the end of the profiled spans.  
+
+Here is how you can instrument your script:
+
+```php
+<?php
+
+while ($task = get_next_ready_task()) {
+  spx_profiler_start();
+  try {
+    $task->process();
+  } finally {
+    spx_profiler_stop();
+  }
+}
+
+```
+
+And of course this script must be run at least with profiling enabled and the automatic start disabled as in the following command:
+
+```shell
+SPX_ENABLED=1 SPX_REPORT=full SPX_AUTO_START=0 my_script.php
+```
+
+Side notes:
+- `spx_profiler_start()` and `spx_profiler_stop()` can safely be nested.
+- when automatic start is disabled, no signal handlers (i.e. on SIGINT/SIGTERM) are registered by SPX.
+- automatic start can only be disabled for CLI SAPI.
+
+
 ## Advanced usage
 
 ### Configuration
@@ -212,6 +246,7 @@ Here is the list below:
 | Name  | Default  | Description  |
 | ----- | -------- | ------------ |
 | _SPX_ENABLED_ | `0` | Whether to enable SPX profiler (i.e. triggering profiling). When disabled there is no performance impact on your application. |
+| _SPX_AUTO_START_ | `1` | Whether to enable SPX profiler's automatic start. When automatic start is disabled, you have to start & stop profiling on your own at runtime via the `spx_profiler_start()` & `spx_profiler_stop()` functions. [See here](#handle-long-living--daemon-processes) for more details. |
 | _SPX_BUILTINS_ | `0` | Whether to profile internal functions, script compilations, GC runs and request shutdown. |
 | _SPX_DEPTH_ | `0` | The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls). 0 (default value) means unlimited. |
 | _SPX_SAMPLING_PERIOD_ | `0` | Whether to collect data for the current call stack at regular intervals according to the specified sampling period (`0` means no sampling). The result will usually be less accurate but in some cases it could be far more accurate by not over-evaluating small functions called many times. It is recommended to try sampling (with different periods) if you want to accurately find a time bottleneck. When profiling a long running & CPU intensive script, this option will allow you to contain report size and thus keeping it small enough to be exploitable by the [web UI](#web-ui). See [here](#performance-report-size--sampling) for more details. |
@@ -237,8 +272,6 @@ Well, as you might already noticed in corresponding [basic usage example](#comma
 Since the web UI uses advanced JavaScript features, only the following browsers are known to be supported:
 - most recent version of any Chromium-based browser.
 - most recent version of Firefox with `dom.moduleScripts.enabled` preference set to `true`.
-
-_You will, however, have the best user experience with a Chromium-based browser._
 
 #### Control panel & report list
 

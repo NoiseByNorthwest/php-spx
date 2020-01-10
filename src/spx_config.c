@@ -30,6 +30,8 @@ typedef struct {
 
     const char * ui_uri_str;
 
+    const char * auto_start_str;
+
     const char * sampling_period_str;
     const char * builtins_str;
     const char * depth_str;
@@ -112,6 +114,8 @@ static void init_config(spx_config_t * config, int cli)
 
     config->ui_uri = NULL;
 
+    config->auto_start = 1;
+
     config->sampling_period = 0;
     config->builtins = 0;
     config->max_depth = 0;
@@ -143,6 +147,7 @@ static void fix_config(spx_config_t * config, int cli)
     }
 
     if (!cli) {
+        config->auto_start = 1;
         config->report = SPX_CONFIG_REPORT_FULL;
     }
 
@@ -161,6 +166,7 @@ static void source_data_get(source_data_t * source_data, source_handler_t handle
     source_data->enabled_str          = handler("SPX_ENABLED");
     source_data->key_str              = handler("SPX_KEY");
     source_data->ui_uri_str           = handler("SPX_UI_URI");
+    source_data->auto_start_str       = handler("SPX_AUTO_START");
     source_data->sampling_period_str  = handler("SPX_SAMPLING_PERIOD");
     source_data->builtins_str         = handler("SPX_BUILTINS");
     source_data->depth_str            = handler("SPX_DEPTH");
@@ -188,6 +194,10 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
 
     if (source_data->ui_uri_str) {
         config->ui_uri = source_data->ui_uri_str;
+    }
+
+    if (source_data->auto_start_str) {
+        config->auto_start = *source_data->auto_start_str == '1' ? 1 : 0;
     }
 
     if (source_data->sampling_period_str) {

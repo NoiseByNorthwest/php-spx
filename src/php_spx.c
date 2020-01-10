@@ -47,6 +47,8 @@ typedef struct {
     void (*shutdown) (void);
 } execution_handler_t;
 
+#define STACK_CAPACITY 2048
+
 static SPX_THREAD_TLS struct {
     int cli_sapi;
     spx_config_t config;
@@ -71,6 +73,9 @@ static SPX_THREAD_TLS struct {
 
         spx_profiler_reporter_t * reporter;
         spx_profiler_t * profiler;
+        spx_php_function_t stack[STACK_CAPACITY];
+        size_t depth;
+        size_t span_depth;
     } profiling_handler;
 } context;
 
@@ -128,11 +133,15 @@ static PHP_MSHUTDOWN_FUNCTION(spx);
 static PHP_RINIT_FUNCTION(spx);
 static PHP_RSHUTDOWN_FUNCTION(spx);
 static PHP_MINFO_FUNCTION(spx);
+static PHP_FUNCTION(spx_profiler_start);
+static PHP_FUNCTION(spx_profiler_stop);
 
 static int check_access(void);
 
 static void profiling_handler_init(void);
 static void profiling_handler_shutdown(void);
+static void profiling_handler_start(void);
+static void profiling_handler_stop(void);
 static void profiling_handler_ex_set_context(void);
 static void profiling_handler_ex_unset_context(void);
 static void profiling_handler_ex_hook_before(void);
@@ -163,8 +172,9 @@ static execution_handler_t http_ui_handler = {
 };
 
 static zend_function_entry spx_functions[] = {
-    /* empty */
-    {NULL, NULL, NULL, 0, 0}
+    PHP_FE(spx_profiler_start,  NULL)
+    PHP_FE(spx_profiler_stop, NULL)
+    PHP_FE_END
 };
 
 zend_module_entry spx_module_entry = {
@@ -276,6 +286,81 @@ static PHP_MINFO_FUNCTION(spx)
     php_info_print_table_end();
 
     DISPLAY_INI_ENTRIES();
+}
+
+static PHP_FUNCTION(spx_profiler_start)
+{
+    if (context.execution_handler != &profiling_handler) {
+        spx_php_log_notice("spx_profiler_start(): profiling is not enabled");
+
+        return;
+    }
+
+    if (context.config.auto_start) {
+        spx_php_log_notice("spx_profiler_start(): automatic start is not enabled");
+
+        return;
+    }
+
+    context.profiling_handler.span_depth++;
+    if (context.profiling_handler.span_depth > 1) {
+        /*
+            Starting a nested span, nothing to do.
+        */
+        return;
+    }
+
+    if (context.profiling_handler.profiler) {
+        return;
+    }
+
+    profiling_handler_start();
+
+    if (!context.profiling_handler.profiler) {
+        spx_php_log_notice("spx_profiler_start(): failure, nothing will be profiled");
+
+        return;
+    }
+
+    for (size_t i = 0; i < context.profiling_handler.depth; i++) {
+        context.profiling_handler.profiler->call_start(
+            context.profiling_handler.profiler,
+            &context.profiling_handler.stack[i]
+        );
+    }
+}
+
+static PHP_FUNCTION(spx_profiler_stop)
+{
+    if (context.execution_handler != &profiling_handler) {
+        spx_php_log_notice("spx_profiler_stop(): profiling is not enabled");
+
+        return;
+    }
+
+    if (context.config.auto_start) {
+        spx_php_log_notice("spx_profiler_stop(): automatic start is not enabled");
+
+        return;
+    }
+
+    if (context.profiling_handler.span_depth == 0) {
+        /*
+            No active span, nothing to do.
+        */
+        return;
+    }
+
+    context.profiling_handler.span_depth--;
+
+    if (context.profiling_handler.span_depth > 0) {
+        /*
+            Leaving a nested span, nothing to do.
+        */
+        return;
+    }
+
+    profiling_handler_stop();
 }
 
 static int check_access(void)
@@ -395,8 +480,6 @@ static int check_access(void)
 
 static void profiling_handler_init(void)
 {
-    TSRMLS_FETCH();
-
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.handler_set = 0;
     context.profiling_handler.sig_handling.probing = 0;
@@ -409,6 +492,28 @@ static void profiling_handler_init(void)
 
     context.profiling_handler.reporter = NULL;
     context.profiling_handler.profiler = NULL;
+    context.profiling_handler.depth = 0;
+    context.profiling_handler.span_depth = 0;
+
+    if (context.config.auto_start) {
+        profiling_handler_start();
+    }
+}
+
+static void profiling_handler_shutdown(void)
+{
+    profiling_handler_stop();
+    profiling_handler_ex_unset_context();
+}
+
+
+static void profiling_handler_start(void)
+{
+    TSRMLS_FETCH();
+
+    if (context.profiling_handler.profiler) {
+        return;
+    }
 
     switch (context.config.report) {
         default:
@@ -468,10 +573,10 @@ static void profiling_handler_init(void)
     return;
 
 error:
-    profiling_handler_shutdown();
+    profiling_handler_stop();
 }
 
-static void profiling_handler_shutdown(void)
+static void profiling_handler_stop(void)
 {
     spx_php_execution_finalize();
 
@@ -485,8 +590,6 @@ static void profiling_handler_shutdown(void)
         spx_profiler_reporter_destroy(context.profiling_handler.reporter);
         context.profiling_handler.reporter = NULL;
     }
-
-    profiling_handler_ex_unset_context();
 }
 
 static void profiling_handler_ex_set_context(void)
@@ -514,7 +617,7 @@ static void profiling_handler_ex_set_context(void)
     spx_resource_stats_init();
 
 #ifdef USE_SIGNAL
-    if (context.cli_sapi) {
+    if (context.cli_sapi && context.config.auto_start) {
         profiling_handler_sig_set_handler();
     }
 #endif
@@ -523,7 +626,7 @@ static void profiling_handler_ex_set_context(void)
 static void profiling_handler_ex_unset_context(void)
 {
 #ifdef USE_SIGNAL
-    if (context.cli_sapi) {
+    if (context.cli_sapi && context.config.auto_start) {
         profiling_handler_sig_unset_handler();
     }
 #endif
@@ -538,12 +641,34 @@ static void profiling_handler_ex_unset_context(void)
 
 static void profiling_handler_ex_hook_before(void)
 {
-#ifdef USE_SIGNAL
-    context.profiling_handler.sig_handling.probing = 1;
-#endif
+    /*
+        It might appear a bit unfair to resolve & copy the current function
+        name in the context.profiling_handler.stack array even for
+        non-profiled functions.
+        But I've no other choice since I currently don't know how to safely
+        & accuratly resolve the current stack (accordingly to SPX_BUILTINS)
+        via the Zend Engine.
+        The induced overhead will, however, not be noticable in most cases.
+    */
+
+    if (context.profiling_handler.depth == STACK_CAPACITY) {
+        spx_utils_die("STACK_CAPACITY exceeded");
+    }
 
     spx_php_function_t function;
     spx_php_current_function(&function);
+
+    context.profiling_handler.stack[context.profiling_handler.depth] = function;
+
+    context.profiling_handler.depth++;
+
+    if (!context.profiling_handler.profiler) {
+        return;
+    }
+
+#ifdef USE_SIGNAL
+    context.profiling_handler.sig_handling.probing = 1;
+#endif
 
     context.profiling_handler.profiler->call_start(context.profiling_handler.profiler, &function);
 
@@ -557,6 +682,12 @@ static void profiling_handler_ex_hook_before(void)
 
 static void profiling_handler_ex_hook_after(void)
 {
+    context.profiling_handler.depth--;
+
+    if (!context.profiling_handler.profiler) {
+        return;
+    }
+
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.probing = 1;
 #endif
