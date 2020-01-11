@@ -421,7 +421,7 @@ static int check_access(void)
         const char * proxy_ip_str = spx_php_global_array_get("_SERVER", "REMOTE_ADDR");
         int found = 0;
 
-        SPX_UTILS_TOKENIZE_STRING(SPX_G(http_trusted_proxies), ',', trusted_proxy_ip_str, 32, {
+        SPX_UTILS_TOKENIZE_STRING(SPX_G(http_trusted_proxies), ',', trusted_proxy_ip_str, 64, {
             if (0 == strcmp(proxy_ip_str, trusted_proxy_ip_str)) {
                 found = 1;
             }
@@ -455,7 +455,7 @@ static int check_access(void)
         return 0;
     }
 
-    SPX_UTILS_TOKENIZE_STRING(authorized_ips_str, ',', authorized_ip_str, 32, {
+    SPX_UTILS_TOKENIZE_STRING(authorized_ips_str, ',', authorized_ip_str, 64, {
         if (0 == strcmp(ip_str, authorized_ip_str)) {
             /* ip authorized (OK, as well as all previous checks) -> granted */
 

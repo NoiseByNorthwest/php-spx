@@ -1,5 +1,5 @@
 --TEST--
-Authentication: KO (invalid IP address)
+Authentication: OK (invalid reverse proxy IP address)
 --CGI--
 --INI--
 spx.http_enabled=1
@@ -10,7 +10,7 @@ spx.http_ip_whitelist="127.0.0.5"
 log_errors=on
 --ENV--
 return <<<END
-REMOTE_ADDR=127.0.0.1
+REMOTE_ADDR=127.0.0.31
 HTTP_X_FORWARDED_FOR=127.0.0.5
 REQUEST_URI=/
 END;
@@ -21,5 +21,5 @@ SPX_KEY=dev&SPX_UI_URI=/data/metrics
 echo 'Normal output';
 ?>
 --EXPECT--
-Notice: SPX: access not granted: '127.0.0.1' is not a trusted proxy in Unknown on line 0
+Notice: SPX: access not granted: '127.0.0.31' is not a trusted proxy in Unknown on line 0
 Normal output
