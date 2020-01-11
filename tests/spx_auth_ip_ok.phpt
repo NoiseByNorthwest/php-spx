@@ -1,13 +1,14 @@
 --TEST--
-Authentication: OK
+Authentication: OK (valid IP address)
 --CGI--
 --INI--
 spx.http_enabled=1
 spx.http_key="dev"
-spx.http_ip_whitelist="127.0.0.1"
+spx.http_ip_whitelist="127.0.0.1,127.0.0.2,127.0.0.3"
+log_errors=on
 --ENV--
 return <<<END
-REMOTE_ADDR=127.0.0.1
+REMOTE_ADDR=127.0.0.2
 REQUEST_URI=/
 END;
 --GET--
