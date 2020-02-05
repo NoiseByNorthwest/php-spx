@@ -57,6 +57,15 @@ sudo make install
 Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
 You may also want to override [default SPX configuration](#configuration) to be able to profile a web page, with [this one](#private-environment) for example for a local development environment.
 
+### Linux, PHP-FPM & I/O stats
+
+On GNU/Linux, SPX uses procfs (i.e. by reading files under `/proc` directory) to get I/O stats of the current thread. This is what is done under the hood when you select at least one of these 3 metrics: `io`, `ior` or `iow`.
+
+But, on most PHP-FPM setups, you will have a permission issue preventing SPX to open `/proc/self/task/<thread Id>/io`.
+This is due to the fact that PHP-FPM master process runs as root when child processes run as another unprivileged user.
+
+When this is the case, the `process.dumpable = yes` line must be added to the FPM pool configuration so that child processes will be able to read `/proc/self/task/<thread Id>/io`.
+
 ## Development status
 
 This is still **experimental**. API might change, features might be added or dropped, or development could be frozen.
@@ -226,7 +235,7 @@ Here is the list of available metrics to collect. By default only _Wall time_ an
 
 _\*: Allocated and freed byte counts will not be collected if you use a custom allocator or if you force the libc one through the `USE_ZEND_ALLOC` environment variable set to `0`._
 
-_\*\*: I/O metrics are not supported on macOS._
+_\*\*: I/O metrics are not supported on macOS. On GNU/Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
 
 ### Command line script
 
