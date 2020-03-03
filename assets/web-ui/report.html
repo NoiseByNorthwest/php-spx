@@ -248,7 +248,7 @@
                     )
                 ))
                 .then(() => {
-                    initDialog.title.innerText = ('Initializing widgets...');
+                    initDialog.title.innerText = 'Initializing widgets...';
 
                     return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
                 })
