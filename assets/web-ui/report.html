@@ -85,18 +85,18 @@
 
             const initDialog = {
                 container: $('#init-report'),
-                title: $('#init-report p:nth-of-type(1)'),
-                progressInfo: $('#init-report p:nth-of-type(2)'),
-                progress: $('#init-report .progress'),
-                progressBar: $('#init-report .progress > div'),
+                title: document.querySelector('#init-report p:nth-of-type(1)'),
+                progressInfo: document.querySelector('#init-report p:nth-of-type(2)'),
+                progress: document.querySelector('#init-report .progress'),
+                progressBar: document.querySelector('#init-report .progress > div'),
                 data: {}
             };
 
             function setProgress(title, current, total) {
-                initDialog.title.html(title);
+                initDialog.title.innerHTML = title;
 
                 if (!total) {
-                    initDialog.progress.hide();
+                    initDialog.progress.style.display = 'none';
 
                     return;
                 }
@@ -108,8 +108,8 @@
                     };
                 }
 
-                initDialog.progress.show();
-                initDialog.progressBar.width(
+                initDialog.progress.style.display = 'block';
+                initDialog.progressBar.style.width = (
                     Math.round(100 * current / total) + '%'
                 );
 
@@ -120,7 +120,7 @@
                     (total - current) / rate
                 );
 
-                initDialog.progressInfo.text(
+                initDialog.progressInfo.innerText = (
                     `${fmt.pct(current / total)} (${fmt.quantity(current)}, ${fmt.quantity(rate)}/s) ETA: ${remainingTime}s`
                 );
             }
@@ -248,7 +248,7 @@
                     )
                 ))
                 .then(() => {
-                    initDialog.title.text('Initializing widgets...');
+                    initDialog.title.innerText = 'Initializing widgets...';
 
                     return new Promise(resolve => resolve(profileDataBuilder.getProfileData()));
                 })
@@ -291,7 +291,7 @@
                     return new Promise(resolve => resolve());
                 })
                 .then(() => initDialog.container.fadeOut(500))
-                .catch(e => initDialog.progressInfo.text(e))
+                .catch(e => initDialog.progressInfo.innerText = e)
             ;
         });
     </script>
