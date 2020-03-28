@@ -209,7 +209,6 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
         return;
     }
 
-    profiler->active = profiler->stack.depth < profiler->max_depth;
     if (!profiler->active) {
         if (profiler->stack.depth == STACK_CAPACITY) {
             fprintf(stderr, "SPX: STACK_CAPACITY (%d) exceeded\n", STACK_CAPACITY);
@@ -275,6 +274,8 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
 
 end:
     profiler->stack.depth++;
+
+    profiler->active = profiler->stack.depth < profiler->max_depth;
 }
 
 static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
@@ -290,6 +291,8 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
     }
 
     profiler->stack.depth--;
+
+    profiler->active = profiler->stack.depth < profiler->max_depth;
 
     if (!profiler->active) {
         return;
