@@ -15,10 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 #include <stdlib.h>
-
 #include <time.h>
+
 #include <pthread.h>
 
 #include "spx_profiler_sampler.h"
@@ -156,7 +155,7 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
 
     __atomic_store_n(&profiler->heartbeat.ready, 0, __ATOMIC_SEQ_CST);
 
-    size_t common_stack_top = 0;
+    int common_stack_top = 0;
     while (1) {
         if (
             common_stack_top >= profiler->stack.previous.size
@@ -172,10 +171,16 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
             break;
         }
 
+        /*
+            We cannot check the function & class name as the previous call stack related pointers
+            may be invalid. This is however not a big issue, aliased functions will only slighlty
+            reduce the correctness of the report.
+         */
+
         common_stack_top++;
     }
 
-    size_t i;
+    int i;
 
     /* end all previous stack calls down to common stack */
 
