@@ -322,7 +322,8 @@ static PHP_FUNCTION(spx_profiler_start)
         return;
     }
 
-    for (size_t i = 0; i < context.profiling_handler.depth; i++) {
+    size_t i;
+    for (i = 0; i < context.profiling_handler.depth; i++) {
         context.profiling_handler.profiler->call_start(
             context.profiling_handler.profiler,
             &context.profiling_handler.stack[i]
