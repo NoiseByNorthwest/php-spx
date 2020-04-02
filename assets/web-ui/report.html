@@ -291,7 +291,10 @@
                     return new Promise(resolve => resolve());
                 })
                 .then(() => initDialog.container.fadeOut(500))
-                .catch(e => initDialog.progressInfo.innerText = e)
+                .catch(e => {
+                    initDialog.progressInfo.innerText = e;
+                    console.error(e)
+                })
             ;
         });
     </script>
