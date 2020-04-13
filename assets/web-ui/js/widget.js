@@ -408,14 +408,27 @@ class Widget {
         this.repaintTimeout = null;
         this.resizingTimeouts = [];
         this.colorSchemeMode = null;
+        this.highlightedFunctionName = null;
         this.functionColorResolver = (functionName, defaultColor) => {
+            let color;
             switch (this.colorSchemeMode) {
                 case ColorSchemeManager.MODE_CATEGORY:
-                    return getFunctionCategoryColor(functionName);
+                    color = getFunctionCategoryColor(functionName);
+                    break;
 
                 default:
-                    return defaultColor;
+                    color = defaultColor;
             }
+
+            if (this.highlightedFunctionName) {
+                color = math.Vec3
+                    .createFromHTMLColor(color)
+                    .mult(functionName == this.highlightedFunctionName ? 1.5 : 0.33)
+                    .toHTMLColor()
+                ;
+            }
+
+            return color;
         };
 
         $(window).on('resize', () => this.handleResize());
@@ -440,6 +453,12 @@ class Widget {
 
             this.onColorSchemeCategoryUpdate();
         });
+
+        $(window).on('spx-highlighted-function-update', (e, highlightedFunctionName) => {
+            this.highlightedFunctionName = highlightedFunctionName;
+
+            this.onHighlightedFunctionUpdate();
+        });
     }
 
     onTimeRangeUpdate() {
@@ -450,6 +469,10 @@ class Widget {
     }
 
     onColorSchemeCategoryUpdate() {
+        this.repaint();
+    }
+
+    onHighlightedFunctionUpdate() {
         this.repaint();
     }
 
@@ -1068,17 +1091,39 @@ export class TimeLine extends SVGWidget {
             this.notifyTimeRangeUpdate(this.viewTimeRange.getTimeRange());
         });
 
-        let lastPos = {x: 0, y: 0};
+        this.infoViewPort = null;
+
+        const firstPos = {x: 0, y: 0};
+        const lastPos = {x: 0, y: 0};
         let dragging = false;
+        let pointedElement = null, callIdx = null;
 
         this.container.mousedown(e => {
             dragging = true;
+
+            firstPos.x = e.clientX;
+            firstPos.y = e.clientY;
             lastPos.x = e.clientX;
             lastPos.y = e.clientY;
         });
 
         this.container.mouseup(e => {
             dragging = false;
+            if (
+                firstPos.x != e.clientX
+                || firstPos.y != e.clientY
+            ) {
+                return;
+            }
+
+            const callIdx = pointedElement != null ? pointedElement.dataset.callIdx : null;
+
+            $(window).trigger(
+                'spx-highlighted-function-update',
+                [
+                    callIdx != null ? this.profileData.getCall(callIdx).getFunctionName() : null
+                ]
+            );
         });
 
         this.container.mouseleave(e => {
@@ -1127,9 +1172,6 @@ export class TimeLine extends SVGWidget {
 
             this.notifyTimeRangeUpdate(this.viewTimeRange.getTimeRange());
         });
-
-        this.infoViewPort = null;
-        let pointedElement = null, callIdx = null;
 
         $(this.viewPort.node).dblclick(e => {
             if (callIdx == null) {
@@ -1396,6 +1438,17 @@ export class FlameGraph extends SVGWidget {
                 ]
             );
         });
+
+        this.viewPort.node.addEventListener('click', e => {
+            const cgNodeIdx = this.pointedElement != null ? this.pointedElement.dataset.cgNodeIdx : null;
+
+            $(window).trigger(
+                'spx-highlighted-function-update',
+                [
+                    cgNodeIdx != null ? this.renderedCgNodes[cgNodeIdx].getFunctionName() : null
+                ]
+            );
+        });
     }
 
     onTimeRangeUpdate() {
@@ -1636,18 +1689,19 @@ export class FlatProfile extends Widget {
                 stats.exc.getValue(this.currentMetric)
             );
 
-            let funcName = stats.functionName;
+            let functionLabel = stats.functionName;
             if (stats.maxCycleDepth > 0) {
-                funcName += '@' + stats.maxCycleDepth;
+                functionLabel += '@' + stats.maxCycleDepth;
             }
 
             html += `
 <tr>
     <td
-        title="${funcName}"
+        data-function-name="${stats.functionName}"
+        title="${functionLabel}"
         style="text-align: left; font-size: 12px; color: black; background-color: ${
             this.functionColorResolver(
-                funcName,
+                stats.functionName,
                 getCallMetricValueColor(
                     this.profileData,
                     this.currentMetric,
@@ -1656,7 +1710,7 @@ export class FlatProfile extends Widget {
             )
         }"
     >
-        ${utils.truncateFunctionName(funcName, (this.container.width() - 5 * 90) / 8)}
+        ${utils.truncateFunctionName(functionLabel, (this.container.width() - 5 * 90) / 8)}
     </td>
     <td width="80px">${fmt.quantity(stats.called)}</td>
     <td width="80px">${fmt.pct(incRel)}${renderRelativeCostBar(incRel)}</td>
@@ -1685,6 +1739,17 @@ export class FlatProfile extends Widget {
 
             this.sortCol = sortCol;
             this.repaint();
+        });
+
+        this.container.find('tbody td').click(e => {
+            const functionName = $(e.target).data('function-name');
+
+            $(window).trigger(
+                'spx-highlighted-function-update',
+                [
+                    functionName != undefined ? functionName : null
+                ]
+            );
         });
     }
 }

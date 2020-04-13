@@ -356,6 +356,14 @@ Metrics corresponding to releasable resources (memory, objects in use...) are no
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as-fg.png)
 
+
+##### Function highlighting
+
+You can highlight a function by clicking on one of its spans within the timeline or Flamegraph widgets or its name within the flat profile widget.
+
+![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/47d8f8d93fad1e6659c46c47e5aa8f82822454a9/php-spx/doc/as-fh.png)
+
+
 ## Security concern
 
 _The lack of review / feedback about this concern is the main reason **SPX cannot yet be considered as production ready**._
