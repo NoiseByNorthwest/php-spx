@@ -148,7 +148,6 @@ function renderSVGMultiLineText(viewPort, lines) {
         y: y,
         'font-size': 12,
         fill: '#fff',
-        'pointer-events': 'none',
     });
 
     viewPort.appendChild(text);
@@ -1092,11 +1091,12 @@ export class TimeLine extends SVGWidget {
         });
 
         this.infoViewPort = null;
+        this.selectedCallIdx = null;
 
         const firstPos = {x: 0, y: 0};
         const lastPos = {x: 0, y: 0};
         let dragging = false;
-        let pointedElement = null, callIdx = null;
+        let pointedElement = null, callIdx = null, holdCallInfo = false;
 
         this.container.mousedown(e => {
             dragging = true;
@@ -1116,14 +1116,16 @@ export class TimeLine extends SVGWidget {
                 return;
             }
 
-            const callIdx = pointedElement != null ? pointedElement.dataset.callIdx : null;
-
             $(window).trigger(
                 'spx-highlighted-function-update',
                 [
-                    callIdx != null ? this.profileData.getCall(callIdx).getFunctionName() : null
+                    callIdx != null ?
+                        this.profileData.getCall(callIdx).getFunctionName()
+                        : null
                 ]
             );
+
+            this.selectedCallIdx = callIdx;
         });
 
         this.container.mouseleave(e => {
@@ -1187,12 +1189,17 @@ export class TimeLine extends SVGWidget {
             }
 
             if (pointedElement != null) {
-                pointedElement.setAttribute('stroke', 'none');
+                if (this.selectedCallIdx == null) {
+                    pointedElement.setAttribute('stroke', 'none');
+                }
+
                 pointedElement = null;
                 callIdx = null;
             }
 
-            this.infoViewPort.clear();
+            if (this.selectedCallIdx == null) {
+                this.infoViewPort.clear();
+            }
 
             if (e.type == 'mouseout') {
                 return;
@@ -1211,26 +1218,13 @@ export class TimeLine extends SVGWidget {
                 return;
             }
 
+            if (this.selectedCallIdx != null) {
+                return;
+            }
+
             pointedElement.setAttribute('stroke', '#0ff');
 
-            const call = this.profileData.getCall(callIdx);
-            const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
-            const formatter = this.profileData.getMetricFormatter(this.currentMetric);
-
-            renderSVGMultiLineText(
-                this.infoViewPort.createSubViewPort(
-                    this.infoViewPort.width - 5,
-                    this.infoViewPort.height,
-                    5,
-                    0
-                ),
-                [
-                    'Function: ' + call.getFunctionName(),
-                    'Depth: ' + call.getDepth(),
-                    currentMetricName + ' inc.: ' + formatter(call.getInc(this.currentMetric)),
-                    currentMetricName + ' exc.: ' + formatter(call.getExc(this.currentMetric)),
-                ]
-            );
+            this._renderCallInfo(callIdx);
         });
     }
 
@@ -1242,6 +1236,11 @@ export class TimeLine extends SVGWidget {
     onContainerResize() {
         super.onContainerResize();
         this.viewTimeRange.setViewWidth(this.container.width());
+    }
+
+    onHighlightedFunctionUpdate() {
+        this.selectedCallIdx = null;
+        super.onHighlightedFunctionUpdate();
     }
 
     render() {
@@ -1293,7 +1292,7 @@ export class TimeLine extends SVGWidget {
                 y: y,
                 width: w,
                 height: h,
-                stroke: 'none',
+                stroke: call.getIdx() == this.selectedCallIdx ? '#0ff' : 'none',
                 'stroke-width': 2,
                 fill: this.functionColorResolver(
                     call.getFunctionName(),
@@ -1344,7 +1343,6 @@ export class TimeLine extends SVGWidget {
             width: overlayViewPort.width,
             height: overlayViewPort.height,
             'fill-opacity': '0.5',
-            'pointer-events': 'none',
         }));
 
         if (this.currentMetric != 'wt') {
@@ -1363,6 +1361,31 @@ export class TimeLine extends SVGWidget {
             65,
             0,
             0
+        );
+
+        if (this.selectedCallIdx != null) {
+            this._renderCallInfo(this.selectedCallIdx);
+        }
+    }
+
+    _renderCallInfo(callIdx) {
+        const call = this.profileData.getCall(callIdx);
+        const currentMetricName = this.profileData.getMetricInfo(this.currentMetric).name;
+        const formatter = this.profileData.getMetricFormatter(this.currentMetric);
+
+        renderSVGMultiLineText(
+            this.infoViewPort.createSubViewPort(
+                this.infoViewPort.width - 5,
+                this.infoViewPort.height,
+                5,
+                0
+            ),
+            [
+                'Function: ' + call.getFunctionName(),
+                'Depth: ' + call.getDepth(),
+                currentMetricName + ' inc.: ' + formatter(call.getInc(this.currentMetric)),
+                currentMetricName + ' exc.: ' + formatter(call.getExc(this.currentMetric)),
+            ]
         );
     }
 }
@@ -1416,7 +1439,6 @@ export class FlameGraph extends SVGWidget {
                 width: this.infoViewPort.width,
                 height: this.infoViewPort.height,
                 'fill-opacity': '0.5',
-                'pointer-events': 'none',
             }));
 
             const cgNode = this.renderedCgNodes[cgNodeIdx];
@@ -1440,12 +1462,12 @@ export class FlameGraph extends SVGWidget {
         });
 
         this.viewPort.node.addEventListener('click', e => {
-            const cgNodeIdx = this.pointedElement != null ? this.pointedElement.dataset.cgNodeIdx : null;
-
             $(window).trigger(
                 'spx-highlighted-function-update',
                 [
-                    cgNodeIdx != null ? this.renderedCgNodes[cgNodeIdx].getFunctionName() : null
+                    this.pointedElement != null ?
+                        this.renderedCgNodes[this.pointedElement.dataset.cgNodeIdx].getFunctionName()
+                        : null
                 ]
             );
         });
