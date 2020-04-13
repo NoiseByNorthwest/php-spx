@@ -65,6 +65,14 @@ export class Vec3 {
         return this;
     }
 
+    mult(v) {
+        this.x *= v;
+        this.y *= v;
+        this.z *= v;
+
+        return this;
+    }
+
     toHTMLColor() {
         const c = this.copy().bound();
 
@@ -73,6 +81,16 @@ export class Vec3 {
             parseInt(c.y * 255),
             parseInt(c.z * 255),
         ].join(',') + ')';
+    }
+
+    static createFromHTMLColor(htmlColor) {
+        const matches = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(htmlColor);
+
+        return this.createFromRGB888(
+            matches[1],
+            matches[2],
+            matches[3]
+        );
     }
 
     static createFromRGB888(r, g, b) {
