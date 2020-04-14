@@ -308,7 +308,7 @@ class TruncatedCallListEntry extends CallListEntry {
 
 class CallList {
 
-    constructor(size, functionCount, metrics) {
+    constructor(functionCount, metrics) {
         this.metrics = metrics;
         this.functionNames = Array(functionCount).fill("n/a");
 
@@ -331,7 +331,7 @@ class CallList {
             structure['exc_'   + metric] = 'float64';
         }
 
-        this.array = new utils.PackedRecordArray(structure, size);
+        this.array = new utils.ChunkedRecordArray(structure, 1024 * 1024);
     }
 
     getSize() {
@@ -423,7 +423,7 @@ class CumCostStats {
 //       keep in mind that Sample might be to concrete since MetricValueSet can also represent a cost
 class MetricValuesList {
 
-    constructor(size, metrics) {
+    constructor(metrics) {
         this.metrics = metrics;
 
         const structure = {};
@@ -431,7 +431,7 @@ class MetricValuesList {
             structure[metric] = 'float64';
         }
 
-        this.array = new utils.PackedRecordArray(structure, size);
+        this.array = new utils.ChunkedRecordArray(structure, 1024 * 1024);
     }
 
     setRawMetricValuesData(idx, rawMetricValuesData) {
@@ -1240,13 +1240,11 @@ export class ProfileDataBuilder {
         this.currentCallCount = 0;
 
         this.callList = new CallList(
-            metadata.recorded_call_count,
             metadata.called_function_count,
             this.metrics
         );
 
         this.metricValuesList = new MetricValuesList(
-            metadata.recorded_call_count * 2,
             this.metrics
         );
 
@@ -1322,6 +1320,7 @@ export class ProfileDataBuilder {
         }
 
         this.currentCallCount++;
+
         this.callList.setRawCallData(
             frame.idx,
             frame.fnIdx,

@@ -223,6 +223,50 @@ export class PackedRecordArray {
     }
 }
 
+export class ChunkedRecordArray {
+
+    constructor(fields, chunkSize) {
+        this.fields = fields;
+        this.chunkSize = chunkSize;
+        this.chunks = [];
+        this.size = 0;
+    }
+
+    resize(newSize) {
+        const chunkCount = Math.ceil(newSize / this.chunkSize);
+        for (let i = this.chunks.length; i < chunkCount; i++) {
+            this.chunks.push(new PackedRecordArray(this.fields, this.chunkSize));
+        }
+
+        this.size = newSize;
+    }
+
+    getSize() {
+        return this.size;
+    }
+
+    setElement(idx, obj) {
+        if (idx + 1 > this.getSize()) {
+            this.resize(idx + 1);
+        }
+
+        this.chunks[Math.floor(idx / this.chunkSize)].setElement(idx % this.chunkSize, obj);
+    }
+
+    setElementFieldValue(idx, fieldName, fieldValue) {
+        this.chunks[Math.floor(idx / this.chunkSize)].setElementFieldValue(idx % this.chunkSize, fieldName, fieldValue);
+    }
+
+    getElement(idx) {
+        return this.chunks[Math.floor(idx / this.chunkSize)].getElement(idx % this.chunkSize);
+    }
+
+    getElementFieldValue(idx, fieldName) {
+        return this.chunks[Math.floor(idx / this.chunkSize)].getElementFieldValue(idx % this.chunkSize, fieldName);
+    }
+}
+
+
 /*
     FIXME move all categories related stuff elsewhere (e.g. in a dedicated module)
 */
