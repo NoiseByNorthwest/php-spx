@@ -1363,6 +1363,12 @@ export class TimeLine extends SVGWidget {
             0
         );
 
+        $(this.infoViewPort.node).css('cursor', 'text');
+        $(this.infoViewPort.node).css('user-select', 'text');
+        $(this.infoViewPort.node).on('mousedown mousemove', e => {
+            e.stopPropagation();
+        });
+
         if (this.selectedCallIdx != null) {
             this._renderCallInfo(this.selectedCallIdx);
         }
