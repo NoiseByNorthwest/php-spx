@@ -55,6 +55,7 @@ typedef struct {
 } spx_config_t;
 
 typedef enum {
+    SPX_CONFIG_SOURCE_INI,
     SPX_CONFIG_SOURCE_ENV,
     SPX_CONFIG_SOURCE_HTTP_COOKIE,
     SPX_CONFIG_SOURCE_HTTP_HEADER,
