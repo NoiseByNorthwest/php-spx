@@ -16,9 +16,11 @@
  */
 
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "spx_config.h"
 #include "spx_php.h"
@@ -56,6 +58,7 @@ static void init_config(spx_config_t * config, int cli);
 static void fix_config(spx_config_t * config, int cli);
 static void source_data_get(source_data_t * source_data, source_handler_t handler);
 static void source_data_to_config(const source_data_t * source_data, spx_config_t * config);
+static const char * source_handler_ini_http(const char * parameter);
 static const char * source_handler_env(const char * parameter);
 static const char * source_handler_http_cookie(const char * parameter);
 static const char * source_handler_http_header(const char * parameter);
@@ -74,6 +77,14 @@ void spx_config_get(spx_config_t * config, int cli, ...)
         spx_config_source_t source = va_arg(ap, spx_config_source_t);
         source_handler_t source_handler = NULL;
         switch (source) {
+            case SPX_CONFIG_SOURCE_INI:
+                if (cli) {
+                    break;
+                }
+
+                source_handler = source_handler_ini_http;
+                break;
+
             case SPX_CONFIG_SOURCE_ENV:
                 source_handler = source_handler_env;
                 break;
@@ -271,6 +282,31 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
     }
 }
 
+static const char * source_handler_ini_http(const char * parameter)
+{
+    const size_t prefix_len = strlen("SPX_");
+    if (strlen(parameter) <= prefix_len) {
+        return NULL;
+    }
+
+    char name[128];
+
+    snprintf(
+        name,
+        sizeof(name),
+        "spx.http_profiling_%s",
+        parameter + prefix_len
+    );
+
+    char * p = name;
+    while (*p) {
+        *p = tolower(*p);
+        p++;
+    }
+
+    return spx_php_ini_get_string(name);
+}
+
 static const char * source_handler_env(const char * parameter)
 {
     return getenv(parameter);
@@ -283,13 +319,16 @@ static const char * source_handler_http_cookie(const char * parameter)
 
 static const char * source_handler_http_header(const char * parameter)
 {
-    char key[128] = "HTTP_";
+    char key[128];
 
-    return spx_php_global_array_get("_SERVER", strncat(
+    snprintf(
         key,
-        parameter,
-        sizeof(key) - strlen(key) - 1
-    ));
+        sizeof(key),
+        "HTTP_%s",
+        parameter
+    );
+
+    return spx_php_global_array_get("_SERVER", key);
 }
 
 static const char * source_handler_http_query_string(const char * parameter)

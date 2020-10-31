@@ -80,6 +80,7 @@ static SPX_THREAD_TLS struct {
 } context;
 
 ZEND_BEGIN_MODULE_GLOBALS(spx)
+    zend_bool debug;
     const char * data_dir;
     zend_bool http_enabled;
     const char * http_key;
@@ -87,6 +88,11 @@ ZEND_BEGIN_MODULE_GLOBALS(spx)
     const char * http_trusted_proxies;
     const char * http_ip_whitelist;
     const char * http_ui_assets_dir;
+    const char * http_profiling_enabled;
+    const char * http_profiling_builtins;
+    const char * http_profiling_sampling_period;
+    const char * http_profiling_depth;
+    const char * http_profiling_metrics;
 ZEND_END_MODULE_GLOBALS(spx)
 
 ZEND_DECLARE_MODULE_GLOBALS(spx)
@@ -98,6 +104,10 @@ ZEND_DECLARE_MODULE_GLOBALS(spx)
 #endif
 
 PHP_INI_BEGIN()
+    STD_PHP_INI_ENTRY(
+        "spx.debug", "0", PHP_INI_SYSTEM,
+        OnUpdateBool, debug, zend_spx_globals, spx_globals
+    )
     STD_PHP_INI_ENTRY(
         "spx.data_dir", "/tmp/spx", PHP_INI_SYSTEM,
         OnUpdateString, data_dir, zend_spx_globals, spx_globals
@@ -125,6 +135,26 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(
         "spx.http_ui_assets_dir", SPX_HTTP_UI_ASSETS_DIR, PHP_INI_SYSTEM,
         OnUpdateString, http_ui_assets_dir, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_profiling_enabled", NULL, PHP_INI_SYSTEM,
+        OnUpdateString, http_profiling_enabled, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_profiling_builtins", NULL, PHP_INI_SYSTEM,
+        OnUpdateString, http_profiling_builtins, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_profiling_sampling_period", NULL, PHP_INI_SYSTEM,
+        OnUpdateString, http_profiling_sampling_period, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_profiling_depth", NULL, PHP_INI_SYSTEM,
+        OnUpdateString, http_profiling_depth, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_profiling_metrics", NULL, PHP_INI_SYSTEM,
+        OnUpdateString, http_profiling_metrics, zend_spx_globals, spx_globals
     )
 PHP_INI_END()
 
@@ -235,30 +265,47 @@ static PHP_RINIT_FUNCTION(spx)
         spx_config_get(
             &context.config,
             context.cli_sapi,
+            SPX_CONFIG_SOURCE_INI,
             SPX_CONFIG_SOURCE_HTTP_COOKIE,
             SPX_CONFIG_SOURCE_HTTP_HEADER,
             SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
             -1
         );
-    }
 
-    if (!context.config.ui_uri && !context.config.enabled) {
-        return SUCCESS;
-    }
-
-    if (!check_access()) {
-        return SUCCESS;
+        if (!check_access()) {
+            /*
+                The access is not granted through HTTP request fragments, we then need to read the
+                config again from the INI source only.
+            */
+            spx_config_get(
+                &context.config,
+                context.cli_sapi,
+                SPX_CONFIG_SOURCE_INI,
+                -1
+            );
+        }
     }
 
     if (context.config.ui_uri) {
         context.execution_handler = &http_ui_handler;
-    } else if (context.config.enabled) {
-        context.execution_handler = &profiling_handler;
+    } else {
+        if (context.config.enabled) {
+            context.execution_handler = &profiling_handler;
+        }
+
+        if (!context.cli_sapi && SPX_G(debug)) {
+            spx_php_output_add_header_linef(
+                "SPX-Debug-Profiling-Triggered: %d",
+                context.config.enabled
+            );
+        }
     }
 
-    if (context.execution_handler) {
-        context.execution_handler->init();
+    if (!context.execution_handler) {
+        return SUCCESS;
     }
+
+    context.execution_handler->init();
 
     return SUCCESS;
 }

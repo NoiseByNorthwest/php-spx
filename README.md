@@ -90,6 +90,8 @@ You will then see the following form:
 
 Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.
 
+_N.B.: You can also enable the profiling at INI configuration level via the `spx.http_profiling_enabled` [setting](#configuration), and therefore for all HTTP requests. However, keep in mind that using this setting on a high-traffic environment could quickly exhaust the storage device's capacity of the SPX's data directory._
+
 Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/cp-list2.png)
@@ -184,13 +186,18 @@ Side notes:
 
 | Name                  | Default  | Changeable  | Description  |
 | --------------------- | -------- | ----------- | ------------ |
-| spx.data_dir     | `/tmp/spx` | PHP_INI_SYSTEM | The directory where profiling reports will be stored. You may change it to point to a shared file system for example in case of multi-server architecture.  |
-| spx.http_enabled      | `0`  | PHP_INI_SYSTEM | Whether to enable web UI and HTTP request profiling. |
-| spx.http_key          |  | PHP_INI_SYSTEM | The secret key used for authentication (see [security concern](#security-concern) for more details). You can use the following command to generate a 16 bytes random key as an hex string: `openssl rand -hex 16`. |
-| spx.http_ip_var       | `REMOTE_ADDR` | PHP_INI_SYSTEM | The `$_SERVER` key holding the client IP address used for authentication (see [security concern](#security-concern) for more details). Overriding the default value is required when your application is behind a reverse proxy. |
-| spx.http_trusted_proxies       | `127.0.0.1` | PHP_INI_SYSTEM | The trusted proxy list as a comma separated list of IP addresses. This setting is ignored when `spx.http_ip_var`'s value is `REMOTE_ADDR`. |
-| spx.http_ip_whitelist |  | PHP_INI_SYSTEM | The IP address white list used for authentication as a comma separated list of IP addresses, use `*` to allow all IP addresses. |
-| spx.http_ui_assets_dir | `/usr/local/share/misc/php-spx/assets/web-ui` | PHP_INI_SYSTEM | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
+| _spx.data_dir_     | `/tmp/spx` | _PHP_INI_SYSTEM_ | The directory where profiling reports will be stored. You may change it to point to a shared file system for example in case of multi-server architecture.  |
+| _spx.http_enabled_      | `0`  | _PHP_INI_SYSTEM_ | Whether to enable web UI and HTTP request profiling. |
+| _spx.http_key_          |  | _PHP_INI_SYSTEM_ | The secret key used for authentication (see [security concern](#security-concern) for more details). You can use the following command to generate a 16 bytes random key as an hex string: `openssl rand -hex 16`. |
+| _spx.http_ip_var_       | `REMOTE_ADDR` | _PHP_INI_SYSTEM_ | The `$_SERVER` key holding the client IP address used for authentication (see [security concern](#security-concern) for more details). Overriding the default value is required when your application is behind a reverse proxy. |
+| _spx.http_trusted_proxies_       | `127.0.0.1` | _PHP_INI_SYSTEM_ | The trusted proxy list as a comma separated list of IP addresses. This setting is ignored when `spx.http_ip_var`'s value is `REMOTE_ADDR`. |
+| _spx.http_ip_whitelist_ |  | _PHP_INI_SYSTEM_ | The IP address white list used for authentication as a comma separated list of IP addresses, use `*` to allow all IP addresses. |
+| _spx.http_ui_assets_dir_ | `/usr/local/share/misc/php-spx/assets/web-ui` | _PHP_INI_SYSTEM_ | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
+| _spx.http_profiling_enabled_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_ENABLED` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
+| _spx.http_profiling_builtins_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_BUILTINS` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
+| _spx.http_profiling_sampling_period_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_SAMPLING_PERIOD` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
+| _spx.http_profiling_depth_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_DEPTH` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
+| _spx.http_profiling_metrics_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_METRICS` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 
 
 #### Private environment

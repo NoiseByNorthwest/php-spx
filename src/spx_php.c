@@ -209,6 +209,22 @@ void spx_php_current_function(spx_php_function_t * function)
     ;
 }
 
+const char * spx_php_ini_get_string(const char * name)
+{
+    return zend_ini_string(
+        /*
+         * This cast is checked
+         */
+        (char *)name,
+        strlen(name)
+#if ZEND_MODULE_API_NO < 20151012
+            + 1
+#endif
+        ,
+        0
+    );
+}
+
 double spx_php_ini_get_double(const char * name)
 {
     return zend_ini_double(
