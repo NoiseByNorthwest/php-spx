@@ -80,6 +80,7 @@ static SPX_THREAD_TLS struct {
 } context;
 
 ZEND_BEGIN_MODULE_GLOBALS(spx)
+    zend_bool debug;
     const char * data_dir;
     zend_bool http_enabled;
     const char * http_key;
@@ -103,6 +104,10 @@ ZEND_DECLARE_MODULE_GLOBALS(spx)
 #endif
 
 PHP_INI_BEGIN()
+    STD_PHP_INI_ENTRY(
+        "spx.debug", "0", PHP_INI_SYSTEM,
+        OnUpdateBool, debug, zend_spx_globals, spx_globals
+    )
     STD_PHP_INI_ENTRY(
         "spx.data_dir", "/tmp/spx", PHP_INI_SYSTEM,
         OnUpdateString, data_dir, zend_spx_globals, spx_globals
@@ -283,8 +288,17 @@ static PHP_RINIT_FUNCTION(spx)
 
     if (context.config.ui_uri) {
         context.execution_handler = &http_ui_handler;
-    } else if (context.config.enabled) {
-        context.execution_handler = &profiling_handler;
+    } else {
+        if (context.config.enabled) {
+            context.execution_handler = &profiling_handler;
+        }
+
+        if (!context.cli_sapi && SPX_G(debug)) {
+            spx_php_output_add_header_linef(
+                "SPX-Debug-Profiling-Triggered: %d",
+                context.config.enabled
+            );
+        }
     }
 
     if (!context.execution_handler) {
