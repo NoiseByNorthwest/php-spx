@@ -14,7 +14,7 @@ It differentiates itself from other similar extensions as being:
 * very simple to use: just set an environment variable (command line) or switch on a radio button (web page) to profile your script. Thus, you are free of:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
-* [multi metrics](#available-metrics) capable: 21 currently supported (various time metrics, memory, included files, objects in use, I/O...).
+* [multi metrics](#available-metrics) capable: 22 are currently supported (various time & memory metrics, included files, objects in use, I/O...).
 * able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack and forbids timeline or Flamegraph based analysis.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
@@ -59,12 +59,12 @@ You may also want to override [default SPX configuration](#configuration) to be 
 
 ### Linux, PHP-FPM & I/O stats
 
-On GNU/Linux, SPX uses procfs (i.e. by reading files under `/proc` directory) to get I/O stats of the current thread. This is what is done under the hood when you select at least one of these 3 metrics: `io`, `ior` or `iow`.
+On GNU/Linux, SPX uses procfs (i.e. by reading files under `/proc` directory) to get some stats for the current process or thread. This is what is done under the hood when you select at least one of these metrics: `mor`, `io`, `ior` or `iow`.
 
-But, on most PHP-FPM setups, you will have a permission issue preventing SPX to open `/proc/self/task/<thread Id>/io`.
+But, on most PHP-FPM setups, you will have a permission issue preventing SPX to open a file under `/proc/self` directory.
 This is due to the fact that PHP-FPM master process runs as root when child processes run as another unprivileged user.
 
-When this is the case, the `process.dumpable = yes` line must be added to the FPM pool configuration so that child processes will be able to read `/proc/self/task/<thread Id>/io`.
+When this is the case, the `process.dumpable = yes` line must be added to the FPM pool configuration so that child processes will be able to read any file under `/proc/self`.
 
 ## Development status
 
@@ -236,13 +236,14 @@ Here is the list of available metrics to collect. By default only _Wall time_ an
 | _zuo_ | Zend Engine user opcode count | Number of included userland opcodes (sum of all userland file/function/method opcodes). |
 | _zo_ | Zend Engine object count | Number of objects currently held by user code. |
 | _ze_ | Zend Engine error count | Number of raised PHP errors. |
+| _mor_ | Process's own RSS<b>\*\*</b> | The part of the process's memory held in RAM. The shared (with other processes) memory blocks are not taken into account. This metric can be useful to highlight a memory leak within a PHP extension or deeper (e.g. a third-party C library). |
 | _io_ | I/O (reads + writes)**\*\*** | Bytes read or written while performing I/O. |
 | _ior_ | I/O (reads)**\*\*** | Bytes read while performing I/O. |
 | _iow_ | I/O (writes)**\*\*** | Bytes written while performing I/O. |
 
 _\*: Allocated and freed byte counts will not be collected if you use a custom allocator or if you force the libc one through the `USE_ZEND_ALLOC` environment variable set to `0`._
 
-_\*\*: I/O metrics are not supported on macOS. On GNU/Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
+_\*\*: RSS & I/O metrics are not supported on macOS. On GNU/Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
 
 ### Command line script
 

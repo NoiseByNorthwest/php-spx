@@ -57,6 +57,11 @@ size_t spx_resource_stats_cpu_time(void)
 #endif
 }
 
+size_t spx_resource_stats_own_rss(void)
+{
+    return 0;
+}
+
 void spx_resource_stats_io(size_t * in, size_t * out)
 {
     // MacOS doesn't expose any per-process I/O counters equivalent to linux
