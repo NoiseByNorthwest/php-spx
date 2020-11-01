@@ -201,9 +201,15 @@ static execution_handler_t http_ui_handler = {
     http_ui_handler_shutdown
 };
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_start, ZEND_SEND_BY_VAL, ZEND_RETURN_VALUE, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_stop, ZEND_SEND_BY_VAL, ZEND_RETURN_VALUE, 0)
+ZEND_END_ARG_INFO()
+
 static zend_function_entry spx_functions[] = {
-    PHP_FE(spx_profiler_start,  NULL)
-    PHP_FE(spx_profiler_stop, NULL)
+    PHP_FE(spx_profiler_start, arginfo_spx_profiler_start)
+    PHP_FE(spx_profiler_stop, arginfo_spx_profiler_stop)
     PHP_FE_END
 };
 
