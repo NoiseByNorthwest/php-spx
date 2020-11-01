@@ -236,7 +236,7 @@ Here is the list of available metrics to collect. By default only _Wall time_ an
 | _zuo_ | Zend Engine user opcode count | Number of included userland opcodes (sum of all userland file/function/method opcodes). |
 | _zo_ | Zend Engine object count | Number of objects currently held by user code. |
 | _ze_ | Zend Engine error count | Number of raised PHP errors. |
-| _mor_ | Process's own RSS**\*\*** | The part of the process's memory held in RAM. The shared (with other processes) memory blocks are not taken into account. This metric can be useful to highlight a memory leak within a PHP extension or deeper (e.g. a third-party C library). |
+| _mor_ | Process's own RSS<b>\*\*</b> | The part of the process's memory held in RAM. The shared (with other processes) memory blocks are not taken into account. This metric can be useful to highlight a memory leak within a PHP extension or deeper (e.g. a third-party C library). |
 | _io_ | I/O (reads + writes)**\*\*** | Bytes read or written while performing I/O. |
 | _ior_ | I/O (reads)**\*\*** | Bytes read while performing I/O. |
 | _iow_ | I/O (writes)**\*\*** | Bytes written while performing I/O. |
