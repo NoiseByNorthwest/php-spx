@@ -40,6 +40,7 @@ echo 'Normal output';
 ,{"key": "zuo","short_name": "ZE opcodes count","name": "Zend Engine user opcode count","type": "quantity","releasable": 0}
 ,{"key": "zo","short_name": "ZE object count","name": "Zend Engine object count","type": "quantity","releasable": 1}
 ,{"key": "ze","short_name": "ZE error count","name": "Zend Engine error count","type": "quantity","releasable": 0}
+,{"key": "mor","short_name": "Own RSS","name": "Process's own RSS","type": "memory","releasable": 1}
 ,{"key": "io","short_name": "I/O Bytes","name": "I/O Bytes (reads + writes)","type": "memory","releasable": 0}
 ,{"key": "ior","short_name": "I/O Read Bytes","name": "I/O Read Bytes","type": "memory","releasable": 0}
 ,{"key": "iow","short_name": "I/O Written Bytes","name": "I/O Written Bytes","type": "memory","releasable": 0}

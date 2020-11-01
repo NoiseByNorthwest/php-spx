@@ -194,6 +194,14 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         0,
         spx_php_zend_error_count,
     },
+    ARRAY_INIT_INDEX(SPX_METRIC_MEM_OWN_RSS) {
+        "mor",
+        "Own RSS",
+        "Process's own RSS",
+        SPX_FMT_MEMORY,
+        1,
+        spx_resource_stats_own_rss,
+    },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_BYTES) {
         "io",
         "I/O Bytes",
