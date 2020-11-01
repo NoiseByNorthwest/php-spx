@@ -6,7 +6,10 @@ php:
   - 7.2
   - 7.3
   - 7.4
-  - 8.0
+  # PHP 8.0 support is not available yet.
+  # See here: https://travis-ci.community/t/php-8-0-missing/10132
+  # FIXME enable PHP 8.0 ASAP
+#  - 8.0
 matrix:
   include:
     # `php: ..` in here is just descriptive/for UI, they don't affect installed ver.
