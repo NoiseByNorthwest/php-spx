@@ -19,6 +19,19 @@
 #ifndef SPX_PHP_H_DEFINED
 #define SPX_PHP_H_DEFINED
 
+/*
+	TSRMLS_* macros, which were deprecated since PHP7, are removed in PHP8.
+	More details here:
+	https://github.com/php/php-src/blob/PHP-8.0/UPGRADING.INTERNALS#L50
+*/
+#if PHP_API_VERSION >= 20200930
+#define TSRMLS_CC
+#define TSRMLS_C
+#define TSRMLS_DC
+#define TSRMLS_D
+#define TSRMLS_FETCH()
+#endif
+
 typedef struct {
     unsigned long hash_code;
 

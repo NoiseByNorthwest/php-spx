@@ -81,7 +81,15 @@ static struct {
     execute_internal_func_t execute_internal;
 
     zend_op_array * (*zend_compile_file)(zend_file_handle * file_handle, int type TSRMLS_DC);
-    zend_op_array * (*zend_compile_string)(zval * source_string, char * filename TSRMLS_DC);
+    zend_op_array * (*zend_compile_string)(
+#if PHP_API_VERSION >= 20200930
+        zend_string * source_string,
+        const
+#else
+        zval * source_string,
+#endif
+        char * filename TSRMLS_DC
+    );
 
 #if ZEND_MODULE_API_NO >= 20151012
     int (*gc_collect_cycles)(void);
@@ -91,8 +99,12 @@ static struct {
         int type,
         const char *error_filename,
         const uint error_lineno,
+#if PHP_API_VERSION >= 20200930
+        zend_string *message
+#else
         const char *format,
         va_list args
+#endif
     );
 } ze_hooked_func = {
 #if ZEND_MODULE_API_NO >= 20151012
@@ -165,7 +177,15 @@ static void global_hook_execute_internal(
 );
 
 static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC);
-static zend_op_array * global_hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC);
+static zend_op_array * global_hook_zend_compile_string(
+#if PHP_API_VERSION >= 20200930
+    zend_string * source_string,
+    const
+#else
+    zval * source_string,
+#endif
+    char * filename TSRMLS_DC
+);
 
 #if ZEND_MODULE_API_NO >= 20151012
 static int global_hook_gc_collect_cycles(void);
@@ -175,8 +195,12 @@ static void global_hook_zend_error_cb(
     int type,
     const char *error_filename,
     const uint error_lineno,
+#if PHP_API_VERSION >= 20200930
+    zend_string *message
+#else
     const char *format,
     va_list args
+#endif
 );
 
 static void update_userland_stats(void);
@@ -1121,8 +1145,15 @@ static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_han
     return op_array;
 }
 
-static zend_op_array * global_hook_zend_compile_string(zval * source_string, char * filename TSRMLS_DC)
-{
+static zend_op_array * global_hook_zend_compile_string(
+#if PHP_API_VERSION >= 20200930
+    zend_string * source_string,
+    const
+#else
+    zval * source_string,
+#endif
+    char * filename TSRMLS_DC
+) {
     if (!context.global_hooks_enabled) {
         return ze_hooked_func.zend_compile_string(source_string, filename TSRMLS_CC);
     }
@@ -1197,11 +1228,25 @@ static void global_hook_zend_error_cb(
     int type,
     const char *error_filename,
     const uint error_lineno,
+#if PHP_API_VERSION >= 20200930
+    zend_string *message
+#else
     const char *format,
     va_list args
+#endif
 ) {
     if (!context.global_hooks_enabled) {
-        ze_hooked_func.zend_error_cb(type, error_filename, error_lineno, format, args);
+        ze_hooked_func.zend_error_cb(
+            type,
+            error_filename,
+            error_lineno,
+#if PHP_API_VERSION >= 20200930
+            message
+#else
+            format,
+            args
+#endif
+        );
 
         return;
     }
@@ -1211,7 +1256,17 @@ static void global_hook_zend_error_cb(
     }
 
     context.error_count++;
-    ze_hooked_func.zend_error_cb(type, error_filename, error_lineno, format, args);
+    ze_hooked_func.zend_error_cb(
+        type,
+        error_filename,
+        error_lineno,
+#if PHP_API_VERSION >= 20200930
+        message
+#else
+        format,
+        args
+#endif
+    );
 }
 
 static void update_userland_stats(void)
