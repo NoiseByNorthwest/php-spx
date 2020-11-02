@@ -271,17 +271,21 @@ static PHP_RINIT_FUNCTION(spx)
         spx_config_get(
             &context.config,
             context.cli_sapi,
-            SPX_CONFIG_SOURCE_INI,
             SPX_CONFIG_SOURCE_HTTP_COOKIE,
             SPX_CONFIG_SOURCE_HTTP_HEADER,
             SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
             -1
         );
 
-        if (!check_access()) {
+        /*
+            The access (multi-factor authentication check) is required as long as the client request the
+            access to the web UI or to profile the current script.
+        */
+        const int access_required = context.config.ui_uri || context.config.enabled;
+
+        if (!access_required || !check_access()) {
             /*
-                The access is not granted through HTTP request fragments, we then need to read the
-                config again from the INI source only.
+                If the access is not required or not granted, we have to read the config again, from the INI source only.
             */
             spx_config_get(
                 &context.config,
