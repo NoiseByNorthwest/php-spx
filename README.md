@@ -1,6 +1,6 @@
 # SPX - A simple profiler for PHP
 
-[![Build Status](https://travis-ci.org/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.org/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.0-blue.svg) ![Supported platforms: GNU/Linux 64-bit, macOS 64-bit](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20-yellow)
+[![Build Status](https://travis-ci.com/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.com/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.0-blue.svg) ![Supported platforms: GNU/Linux 64-bit, macOS 64-bit](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20-yellow)
 
 [Click here for a live demo of the analysis screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20191229_175636-06d2fe5ee423-3795-233665123)
 
