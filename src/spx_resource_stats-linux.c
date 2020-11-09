@@ -115,7 +115,8 @@ size_t spx_resource_stats_own_rss(void)
     size_t stat_name_start = 0;
     int reading_rss_anonymous = 0;
     size_t rss_anonymous = 0;
-    for (size_t i = 0; i < sizeof(context.lg_buf); i++) {
+    size_t i;
+    for (i = 0; i < sizeof(context.lg_buf); i++) {
         const char c = context.lg_buf[i];
         if (c == '\n') {
             if (reading_rss_anonymous) {
