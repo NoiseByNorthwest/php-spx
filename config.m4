@@ -14,7 +14,7 @@ if test "$PHP_SPX" = "yes"; then
 
     AC_DEFINE(HAVE_SPX, 1, [spx])
 
-    CFLAGS="-Werror -Wall -O3 -pthread"
+    CFLAGS="-Werror -Wall -O3 -pthread -std=gnu90"
     if test "$CONTINUOUS_INTEGRATION" = "true"
     then
         CFLAGS="$CFLAGS -DCONTINUOUS_INTEGRATION"
