@@ -82,7 +82,7 @@ Assuming a development environment with the configuration [described here](#priv
 
 Just open with your browser the following URL: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access to the web UI [control panel](#control-panel).
 
-_N.B.: I assume `http://localhost/` is served by a PHP script through standard web server feature like directory index or URL rewriting. If this is not the case you can also explicitly point to an existing PHP script as in the following example: `http://localhost/my_application.php?SPX_KEY=dev&SPX_UI_URI=/`. The PHP script will not be executed, SPX will intercept and disable its execution to serve its content in place._
+_N.B.: `http://localhost/` must be served by a PHP script through standard web server feature like directory index or URL rewriting. The PHP script will however not be executed, SPX will intercept and disable its execution to serve its content in place._
 
 You will then see the following form:
 
