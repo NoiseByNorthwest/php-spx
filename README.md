@@ -98,7 +98,7 @@ Then refresh the web page you want to profile and refresh the control panel to s
 
 Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).
 
-SPX profiling can also be trigged with curl as shown in this example:
+Profiling can also be triggered with Curl as shown in this example:
 
 `curl --cookie "SPX_ENABLED=1; SPX_KEY=dev" http://localhost/`
 
