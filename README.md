@@ -90,6 +90,10 @@ You will then see the following form:
 
 Then switch on "Enabled". At this point profiling is enabled for the current domain and your current browser session through a set of dedicated cookies.
 
+Profiling can also be triggered with Curl as shown in this example:
+
+`curl --cookie "SPX_ENABLED=1; SPX_KEY=dev" http://localhost/`
+
 _N.B.: You can also enable the profiling at INI configuration level via the `spx.http_profiling_enabled` [setting](#configuration), and therefore for all HTTP requests. However, keep in mind that using this setting on a high-traffic environment could quickly exhaust the storage device's capacity of the SPX's data directory._
 
 Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.
@@ -97,10 +101,6 @@ Then refresh the web page you want to profile and refresh the control panel to s
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/cp-list2.png)
 
 Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).
-
-Profiling can also be triggered with Curl as shown in this example:
-
-`curl --cookie "SPX_ENABLED=1; SPX_KEY=dev" http://localhost/`
 
 ### Command line script
 
