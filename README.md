@@ -292,7 +292,7 @@ Well, as you might already noticed in corresponding [basic usage example](#comma
 
 Since the web UI uses advanced JavaScript features, only the following browsers are known to be supported:
 - most recent version of any Chromium-based browser.
-- most recent version of Firefox with `dom.moduleScripts.enabled` preference set to `true`.
+- most recent version of Firefox.
 
 #### Control panel & report list
 
