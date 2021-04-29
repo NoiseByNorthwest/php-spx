@@ -171,7 +171,7 @@ table.data_table td > a {
     border-color: #089;
 }
 
-#colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea {
+#colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea, #search-container input {
     font-family: monospace;
     font-size: 12px;
     background-color: #000;
@@ -197,6 +197,10 @@ table.data_table td > a {
 
 #category-legend {
     display: none;
+}
+
+#search-container button {
+    cursor: pointer;
 }
 
 #flatprofile table {
