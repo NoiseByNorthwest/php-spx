@@ -27,8 +27,8 @@
 #   error "Only Linux-based OS or Apple MacOS are supported"
 #endif
 
-#ifndef __x86_64__
-#   error "Only x86-64 architecture is supported"
+#if !defined(__x86_64__) && !defined(__aarch64__)
+#   error "Only x86-64 and ARM64 architectures are supported"
 #endif
 
 #if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20200930
