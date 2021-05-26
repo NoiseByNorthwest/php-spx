@@ -29,7 +29,7 @@ It differentiates itself from other similar extensions as being:
 Platforms support is currently quite limited. Feel free to open an issue if your platform is not supported.
 Current requirements are:
 
-* x86-64
+* x86-64 or ARM64
 * **GNU/Linux** or **macOS**
 * zlib dev package (e.g. zlib1g-dev on Debian based distros)
 * PHP 5.6 to 8.0

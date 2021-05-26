@@ -6,12 +6,18 @@ php:
   - 7.2
   - 7.3
   - 7.4
-  # PHP 8.0 support is not available yet.
-  # See here: https://travis-ci.community/t/php-8-0-missing/10132
-  # FIXME enable PHP 8.0 ASAP
-#  - 8.0
-matrix:
-  include:
+  - 8.0
+arch:
+  - amd64
+  - arm64
+jobs:
+  exclude:
+    - php: 5.6
+      arch: arm64
+    - php: 7.0
+      arch: arm64
+#matrix:
+#  include:
     # `php: ..` in here is just descriptive/for UI, they don't affect installed ver.
     # FIXME PHP 5.6 & 7.0 don't work anymore
     # see here for more details: https://travis-ci.org/NoiseByNorthwest/php-spx/jobs/570820077
