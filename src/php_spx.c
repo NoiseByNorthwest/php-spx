@@ -354,7 +354,7 @@ static PHP_FUNCTION(spx_profiler_start)
     }
 
     if (context.config.auto_start) {
-        spx_php_log_notice("spx_profiler_start(): automatic start is not enabled");
+        spx_php_log_notice("spx_profiler_start(): automatic start is not disabled");
 
         return;
     }
@@ -397,7 +397,7 @@ static PHP_FUNCTION(spx_profiler_stop)
     }
 
     if (context.config.auto_start) {
-        spx_php_log_notice("spx_profiler_stop(): automatic start is not enabled");
+        spx_php_log_notice("spx_profiler_stop(): automatic start is not disabled");
 
         return;
     }
