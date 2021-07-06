@@ -154,7 +154,9 @@ SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 #### Handle long-living / daemon processes
 
 If your CLI script is long-living and/or daemonized (e.g. via supervisord), profiling its whole lifespan could be meaningless. This is especially true in case of a service waiting for tasks to process.  
-To handle this case, SPX allows to disable the automatic start of profiling and exposes 2 userland functions, `spx_profiler_start(): void` & `spx_profiler_stop(): void`, in order to respectively control the start and the end of the profiled spans.  
+To handle this case, SPX allows to disable the automatic start of profiling and exposes 2 userland functions, `spx_profiler_start(): void` & `spx_profiler_stop(): ?string`, in order to respectively control the start and the end of the profiled spans.  
+
+N.B.: When the report type is _full_, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.  
 
 Here is how you can instrument your script:
 
