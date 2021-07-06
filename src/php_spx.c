@@ -71,6 +71,7 @@ static SPX_THREAD_TLS struct {
         } sig_handling;
 #endif
 
+        char full_report_key[512];
         spx_profiler_reporter_t * reporter;
         spx_profiler_t * profiler;
         spx_php_function_t stack[STACK_CAPACITY];
@@ -419,6 +420,14 @@ static PHP_FUNCTION(spx_profiler_stop)
     }
 
     profiling_handler_stop();
+
+    if (context.profiling_handler.full_report_key[0]) {
+#if PHP_API_VERSION >= 20151012
+        RETURN_STRING(context.profiling_handler.full_report_key);
+#else
+        RETURN_STRING(context.profiling_handler.full_report_key, 1);
+#endif
+    }
 }
 
 static int check_access(void)
@@ -548,6 +557,7 @@ static void profiling_handler_init(void)
 
     profiling_handler_ex_set_context();
 
+    context.profiling_handler.full_report_key[0] = 0;
     context.profiling_handler.reporter = NULL;
     context.profiling_handler.profiler = NULL;
     context.profiling_handler.depth = 0;
@@ -573,10 +583,18 @@ static void profiling_handler_start(void)
         return;
     }
 
+    context.profiling_handler.full_report_key[0] = 0;
+
     switch (context.config.report) {
         default:
         case SPX_CONFIG_REPORT_FULL:
             context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir));
+            snprintf(
+                context.profiling_handler.full_report_key,
+                sizeof(context.profiling_handler.full_report_key),
+                "%s",
+                spx_reporter_full_get_key(context.profiling_handler.reporter)
+            );
 
             break;
 
@@ -943,7 +961,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
     const char * get_report_metadata_uri = "/data/reports/metadata/";
     if (spx_utils_str_starts_with(relative_path, get_report_metadata_uri)) {
         char file_name[512];
-        spx_reporter_full_metadata_get_file_name(
+        spx_reporter_full_build_metadata_file_name(
             data_dir,
             relative_path + strlen(get_report_metadata_uri),
             file_name,
@@ -956,7 +974,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
     const char * get_report_uri = "/data/reports/get/";
     if (spx_utils_str_starts_with(relative_path, get_report_uri)) {
         char file_name[512];
-        spx_reporter_full_get_file_name(
+        spx_reporter_full_build_file_name(
             data_dir,
             relative_path + strlen(get_report_uri),
             file_name,
