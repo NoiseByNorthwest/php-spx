@@ -15,31 +15,46 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <sys/time.h>
 
-#ifdef HAVE_CONFIG_H
-#   include "config.h"
-#endif
+#include "spx_resource_stats.h"
 
-#include "main/php.h"
+void spx_resource_stats_init(void)
+{
+}
 
-/* linux 2.6+ or OSX */
-#if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__)
-#   error "Only Linux-based OSes, Apple MacOS and FreeBSD are supported"
-#endif
+void spx_resource_stats_shutdown(void)
+{
+}
 
-#if !defined(__x86_64__) && !defined(__aarch64__)
-#   error "Only x86-64 and ARM64 architectures are supported"
-#endif
+#define TIMESPEC_TO_NS(ts) ((ts).tv_sec * 1000 * 1000 * 1000 + (ts).tv_nsec)
 
-#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20200930
-#   error "Only the following PHP versions are supported: 5.6 to 8.0"
-#endif
+size_t spx_resource_stats_wall_time(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 
-#if defined(ZTS) && !defined(CONTINUOUS_INTEGRATION)
-#   error "ZTS is not yet supported"
-#endif
+    return TIMESPEC_TO_NS(ts);
+}
 
-#define PHP_SPX_EXTNAME "SPX"
-#define PHP_SPX_VERSION "0.4.10"
+size_t spx_resource_stats_cpu_time(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
 
-extern zend_module_entry spx_module_entry;
+    return TIMESPEC_TO_NS(ts);
+}
+
+size_t spx_resource_stats_own_rss(void)
+{
+    /* FIXME supported ? */
+    return 0;
+}
+
+void spx_resource_stats_io(size_t * in, size_t * out)
+{
+    /* FIXME supported ? */
+    *in = 0;
+    *out = 0;
+}
+

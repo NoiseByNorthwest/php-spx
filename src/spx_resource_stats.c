@@ -16,10 +16,12 @@
  */
 
 
-#ifdef linux
+#if defined(linux)
 #   include "spx_resource_stats-linux.c"
 #elif defined(__APPLE__) && defined(__MACH__)
 #   include "spx_resource_stats-macos.c"
+#elif defined(__FreeBSD__)
+#   include "spx_resource_stats-freebsd.c"
 #else
 #   error "Your platform is not supported. Please open an issue."
 #endif
