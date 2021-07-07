@@ -33,5 +33,5 @@ FROM scratch
 # get version
 ARG VERSION
 
-# copy spx module from ubuntu image to the scratch image so files can be copied back to host
+# copy spx module from alpine image to the scratch image so files can be copied back to host
 COPY --from=build /php-spx/modules/spx.so alpine-$VERSION/spx.so
