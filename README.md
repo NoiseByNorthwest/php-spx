@@ -48,7 +48,7 @@ Current requirements are:
 ```shell
 git clone https://github.com/NoiseByNorthwest/php-spx.git
 cd php-spx
-git checkout tags/v0.4.10
+git checkout release/latest
 phpize
 ./configure
 make
