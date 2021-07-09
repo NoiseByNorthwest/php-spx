@@ -2,6 +2,10 @@
 
 [![Build Status](https://travis-ci.com/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.com/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.0-blue.svg) ![Supported platforms: GNU/Linux, macOS & FreeBSD](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow) ![Supported architectures: x86-64 or ARM64](https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver)
 
+
+<a href="https://www.buymeacoffee.com/noisebynw" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
+
+
 [Click here for a live demo of the analysis screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20191229_175636-06d2fe5ee423-3795-233665123)
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as.apng)
