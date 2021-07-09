@@ -408,6 +408,7 @@ class Widget {
         this.resizingTimeouts = [];
         this.colorSchemeMode = null;
         this.highlightedFunctionName = null;
+        this.searchQuery = null;
         this.functionColorResolver = (functionName, defaultColor) => {
             let color;
             switch (this.colorSchemeMode) {
@@ -425,6 +426,10 @@ class Widget {
                     .mult(functionName == this.highlightedFunctionName ? 1.5 : 0.33)
                     .toHTMLColor()
                 ;
+            }
+
+            if (this.searchQuery && (functionName.toLowerCase()).indexOf(this.searchQuery.toLowerCase()) > -1) {
+                color = '#fcc'
             }
 
             return color;
@@ -457,6 +462,18 @@ class Widget {
             this.highlightedFunctionName = highlightedFunctionName;
 
             this.onHighlightedFunctionUpdate();
+        });
+
+        $(window).on('spx-search', (e) => {
+            this.searchQuery = $('#search_query').val();
+            console.log('Search For', this.searchQuery);
+            this.repaint();
+        });
+
+        $(window).on('spx-search-clear', (e) => {
+            this.searchQuery = null;
+            $('#search_query').val(null);
+            this.repaint();
         });
     }
 
@@ -1677,7 +1694,7 @@ export class FlatProfile extends Widget {
         });
 
         const formatter = this.profileData.getMetricFormatter(this.currentMetric);
-        const limit = Math.min(100, functionsStats.length);
+        const limit = this.searchQuery ? functionsStats.length : Math.min(100, functionsStats.length);
 
         const cumCostStats = this.timeRangeStats.getCumCostStats();
 
@@ -1702,6 +1719,10 @@ export class FlatProfile extends Widget {
 
         for (let i = 0; i < limit; i++) {
             const stats = functionsStats[i];
+
+            if (this.searchQuery && (stats.functionName.toLowerCase()).indexOf(this.searchQuery.toLowerCase()) < 0) {
+                continue;
+            }
 
             const neg = stats.inc.getValue(this.currentMetric) < 0 ? 1 : 0;
             const relRange =  neg ?
