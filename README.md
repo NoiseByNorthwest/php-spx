@@ -1,6 +1,6 @@
 # SPX - A simple profiler for PHP
 
-[![Build Status](https://travis-ci.com/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.com/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.0-blue.svg) ![Supported platforms: GNU/Linux 64-bit, macOS 64-bit](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20-yellow)
+[![Build Status](https://travis-ci.com/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.com/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.0-blue.svg) ![Supported platforms: GNU/Linux, macOS & FreeBSD](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow) ![Supported architectures: x86-64 or ARM64](https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver)
 
 [Click here for a live demo of the analysis screen](https://noisebynorthwest.github.io/php-spx/demo/report.html?key=spx-full-20191229_175636-06d2fe5ee423-3795-233665123)
 
@@ -30,7 +30,7 @@ Platforms support is currently quite limited. Feel free to open an issue if your
 Current requirements are:
 
 * x86-64 or ARM64
-* **GNU/Linux** or **macOS**
+* **GNU/Linux**, **macOS** or **FreeBSD**
 * zlib dev package (e.g. zlib1g-dev on Debian based distros)
 * PHP 5.6 to 8.0
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
@@ -250,7 +250,7 @@ Here is the list of available metrics to collect. By default only _Wall time_ an
 
 _\*: Allocated and freed byte counts will not be collected if you use a custom allocator or if you force the libc one through the `USE_ZEND_ALLOC` environment variable set to `0`._
 
-_\*\*: RSS & I/O metrics are not supported on macOS. On GNU/Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
+_\*\*: RSS & I/O metrics are not supported on macOS and FreeBSD. On GNU/Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
 
 ### Command line script
 
@@ -402,7 +402,7 @@ In tracing mode (default), SPX is subject to accuracy issues for time related me
 - close or lower than the timer precision
 - close or lower than SPX's own per function overhead
 
-The first issue is mitigated by using the highest resolution timer provided by the platform. On Linux & recent macOS versions the timer resolution is 1ns; on macOS before 10.12/Sierra, the timer resolution is only 1us.
+The first issue is mitigated by using the highest resolution timer provided by the platform. On Linux, FreeBSD & recent macOS versions the timer resolution is 1ns; on macOS before 10.12/Sierra, the timer resolution is only 1us.
 
 The second issue is mitigated by taking into account SPX's time (wall / cpu) overhead by subtracting it to measured function execution time. This is done by evaluating SPX constant per function overhead before starting profiling the script.
 
