@@ -90,6 +90,7 @@ ZEND_BEGIN_MODULE_GLOBALS(spx)
     const char * http_ip_whitelist;
     const char * http_ui_assets_dir;
     const char * http_profiling_enabled;
+    const char * http_profiling_auto_start;
     const char * http_profiling_builtins;
     const char * http_profiling_sampling_period;
     const char * http_profiling_depth;
@@ -140,6 +141,10 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(
         "spx.http_profiling_enabled", NULL, PHP_INI_SYSTEM,
         OnUpdateString, http_profiling_enabled, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.http_profiling_auto_start", NULL, PHP_INI_SYSTEM,
+        OnUpdateString, http_profiling_auto_start, zend_spx_globals, spx_globals
     )
     STD_PHP_INI_ENTRY(
         "spx.http_profiling_builtins", NULL, PHP_INI_SYSTEM,

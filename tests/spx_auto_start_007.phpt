@@ -1,13 +1,18 @@
 --TEST--
 Auto start disabled, full report & span report keys printed
+--CGI--
+--INI--
+spx.debug=1
+spx.http_enabled=1
+spx.http_key="dev"
+spx.http_ip_whitelist="127.0.0.1"
 --ENV--
 return <<<END
-SPX_ENABLED=1
-SPX_AUTO_START=0
-SPX_METRICS=zo
-SPX_BUILTINS=0
-SPX_REPORT=full
+REMOTE_ADDR=127.0.0.1
+REQUEST_URI=/
 END;
+--GET--
+SPX_KEY=dev&SPX_ENABLED=1&SPX_AUTO_START=0
 --FILE--
 <?php
 function foo() {
