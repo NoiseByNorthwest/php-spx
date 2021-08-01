@@ -188,7 +188,7 @@ Automatic start can also be disabled for web requests via the `spx.http_profilin
 
 Side notes:
 - `spx_profiler_start()` and `spx_profiler_stop()` can safely be nested.
-- in non-CLI (web request) context or in CLI context with the _full_ report type, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.  
+- When profiling with the _full_ report type, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.  
 - in CLI context, when automatic start is disabled, no signal handlers (i.e. on SIGINT/SIGTERM) are registered by SPX.
 
 
