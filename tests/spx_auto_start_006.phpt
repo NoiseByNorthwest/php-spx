@@ -1,5 +1,5 @@
 --TEST--
-Auto start disabled, fp report & span report file names printed (null expected)
+Auto start disabled, fp report & span report keys printed (null expected)
 --ENV--
 return <<<END
 SPX_ENABLED=1

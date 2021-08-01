@@ -63,6 +63,13 @@
                                 description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
                             },
                             {
+                                key: 'SPX_AUTO_START',
+                                label: 'Automatic start',
+                                type: 'switch',
+                                defaultValue: '1',
+                                description: 'Whether to enable SPX profiler\'s automatic start. When automatic start is disabled, you have to start & stop profiling on your own at runtime via the `spx_profiler_start()` & `spx_profiler_stop()` functions.',
+                            },
+                            {
                                 key: 'SPX_BUILTINS',
                                 label: 'Profile internal functions',
                                 type: 'switch',

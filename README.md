@@ -15,7 +15,7 @@
 SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.
 It differentiates itself from other similar extensions as being:
 * totally free and confined to your infrastructure (i.e. no data leaks to a SaaS).
-* very simple to use: just set an environment variable (command line) or switch on a radio button (web page) to profile your script. Thus, you are free of:
+* very simple to use: just set an environment variable (command line) or switch on a radio button (web request) to profile your script. Thus, you are free of:
   * manually instrumenting your code (Ctrl-C a long running command line script is even supported).
   * using a dedicated browser extension or command line launcher.
 * [multi metrics](#available-metrics) capable: 22 are currently supported (various time & memory metrics, included files, objects in use, I/O...).
@@ -60,7 +60,7 @@ sudo make install
 ```
 
 Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
-You may also want to override [default SPX configuration](#configuration) to be able to profile a web page, with [this one](#private-environment) for example for a local development environment.
+You may also want to override [default SPX configuration](#configuration) to be able to profile a web request, with [this one](#private-environment) for example for a local development environment.
 
 ### Linux, PHP-FPM & I/O stats
 
@@ -81,7 +81,7 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 ## Basic usage
 
-### Web page
+### web request
 
 Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.
 
@@ -101,7 +101,7 @@ Profiling can also be triggered with Curl as shown in this example:
 
 _N.B.: You can also enable the profiling at INI configuration level via the `spx.http_profiling_enabled` [setting](#configuration), and therefore for all HTTP requests. However, keep in mind that using this setting on a high-traffic environment could quickly exhaust the storage device's capacity of the SPX's data directory._
 
-Then refresh the web page you want to profile and refresh the control panel to see the generated report in the list below the control panel form.
+Then refresh the web request you want to profile and refresh the control panel to see the generated report in the list below the control panel form.
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/cp-list2.png)
 
@@ -161,8 +161,6 @@ SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 If your CLI script is long-living and/or daemonized (e.g. via supervisord), profiling its whole lifespan could be meaningless. This is especially true in case of a service waiting for tasks to process.  
 To handle this case, SPX allows to disable the automatic start of profiling and exposes 2 userland functions, `spx_profiler_start(): void` & `spx_profiler_stop(): ?string`, in order to respectively control the start and the end of the profiled spans.  
 
-N.B.: When the report type is _full_, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.  
-
 Here is how you can instrument your script:
 
 ```php
@@ -185,10 +183,13 @@ And of course this script must be run at least with profiling enabled and the au
 SPX_ENABLED=1 SPX_REPORT=full SPX_AUTO_START=0 my_script.php
 ```
 
+Automatic start can also be disabled for web requests via the `spx.http_profiling_auto_start` INI parameter or via the control panel.
+
+
 Side notes:
 - `spx_profiler_start()` and `spx_profiler_stop()` can safely be nested.
-- when automatic start is disabled, no signal handlers (i.e. on SIGINT/SIGTERM) are registered by SPX.
-- automatic start can only be disabled for CLI SAPI.
+- when profiling with the _full_ report type, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.  
+- in CLI context, when automatic start is disabled, no signal handlers (i.e. on SIGINT/SIGTERM) are registered by SPX.
 
 
 ## Advanced usage
@@ -205,6 +206,7 @@ Side notes:
 | _spx.http_ip_whitelist_ |  | _PHP_INI_SYSTEM_ | The IP address white list used for authentication as a comma separated list of IP addresses, use `*` to allow all IP addresses. |
 | _spx.http_ui_assets_dir_ | `/usr/local/share/misc/php-spx/assets/web-ui` | _PHP_INI_SYSTEM_ | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
 | _spx.http_profiling_enabled_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_ENABLED` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
+| _spx.http_profiling_auto_start_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_AUTO_START` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 | _spx.http_profiling_builtins_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_BUILTINS` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 | _spx.http_profiling_sampling_period_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_SAMPLING_PERIOD` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 | _spx.http_profiling_depth_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_DEPTH` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
@@ -260,7 +262,7 @@ _\*\*: RSS & I/O metrics are not supported on macOS and FreeBSD. On GNU/Linux yo
 
 #### Available report types
 
-Contrary to web page profiling which only support _full_ report type (the one exploitable by the web UI), command line script profiling supports several types of report.
+Contrary to web request profiling which only support _full_ report type (the one exploitable by the web UI), command line script profiling supports several types of report.
 Here is the list below:
 
 | Key  | Name  | Description  |
@@ -387,7 +389,7 @@ You can highlight a function by clicking on one of its spans within the timeline
 
 _The lack of review / feedback about this concern is the main reason **SPX cannot yet be considered as production ready**._
 
-SPX allows you to profile web page as well as command line scripts, and also to list and analyze profile reports through its embedded web UI.
+SPX allows you to profile web request as well as command line scripts, and also to list and analyze profile reports through its embedded web UI.
 This is why there is a huge security risk, since an attacker could:
  - access to web UI and get sensible information about your application.
  - to a lesser extent, make a DoS attack against your application with a costly profiling setup.
@@ -398,7 +400,7 @@ SPX provides two-factor authentication with these 2 mandatory locks:
 * IP address white list (exact string representation matching).
 * Fixed secret random key (generated on your own) provided via a request header, cookie or query string parameter.
 
-Thus a client can profile your application via a web page only if **its IP address is white listed and its provided key is valid**.
+Thus a client can profile your application via a web request only if **its IP address is white listed and its provided key is valid**.
 
 ## Notes on accuracy
 

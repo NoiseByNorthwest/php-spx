@@ -158,7 +158,6 @@ static void fix_config(spx_config_t * config, int cli)
     }
 
     if (!cli) {
-        config->auto_start = 1;
         config->report = SPX_CONFIG_REPORT_FULL;
     }
 
