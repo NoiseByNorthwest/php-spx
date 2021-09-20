@@ -57,7 +57,7 @@ export function makeDataTable(containerId, options, rows) {
                 }
 
                 if (url) {
-                    value = `<a href="${url}">${value}</a>`;
+                    value = `<a target="_blank" href="${url}">${value}</a>`;
                 }
 
                 html += `<td class="${column.cssClass || ''}">${value}</td>`;
