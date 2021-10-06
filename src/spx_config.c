@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2020 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -158,7 +158,6 @@ static void fix_config(spx_config_t * config, int cli)
     }
 
     if (!cli) {
-        config->auto_start = 1;
         config->report = SPX_CONFIG_REPORT_FULL;
     }
 

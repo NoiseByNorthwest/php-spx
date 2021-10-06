@@ -15,18 +15,46 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <sys/time.h>
 
-#ifndef SPX_THREAD_H_DEFINED
-#define SPX_THREAD_H_DEFINED
+#include "spx_resource_stats.h"
 
-#ifdef ZTS
-#   if !defined(__CYGWIN__) && defined(WIN32)
-#       define SPX_THREAD_TLS __declspec(thread)
-#   else
-#       define SPX_THREAD_TLS __thread
-#   endif
-#else
-#   define SPX_THREAD_TLS
-#endif
+void spx_resource_stats_init(void)
+{
+}
 
-#endif /* SPX_THREAD_H_DEFINED */
+void spx_resource_stats_shutdown(void)
+{
+}
+
+#define TIMESPEC_TO_NS(ts) ((ts).tv_sec * 1000 * 1000 * 1000 + (ts).tv_nsec)
+
+size_t spx_resource_stats_wall_time(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+
+    return TIMESPEC_TO_NS(ts);
+}
+
+size_t spx_resource_stats_cpu_time(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+
+    return TIMESPEC_TO_NS(ts);
+}
+
+size_t spx_resource_stats_own_rss(void)
+{
+    /* FIXME supported ? */
+    return 0;
+}
+
+void spx_resource_stats_io(size_t * in, size_t * out)
+{
+    /* FIXME supported ? */
+    *in = 0;
+    *out = 0;
+}
+

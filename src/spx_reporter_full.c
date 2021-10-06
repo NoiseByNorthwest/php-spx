@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2020 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -123,7 +123,7 @@ size_t spx_reporter_full_metadata_list_files(
     return count;
 }
 
-int spx_reporter_full_metadata_get_file_name(
+int spx_reporter_full_build_metadata_file_name(
     const char * data_dir,
     const char * key,
     char * file_name,
@@ -138,7 +138,7 @@ int spx_reporter_full_metadata_get_file_name(
     );
 }
 
-int spx_reporter_full_get_file_name(
+int spx_reporter_full_build_file_name(
     const char * data_dir,
     const char * key,
     char * file_name,
@@ -173,14 +173,14 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
     }
 
     char file_name[512];
-    spx_reporter_full_get_file_name(
+    spx_reporter_full_build_file_name(
         data_dir,
         reporter->metadata->key,
         file_name,
         sizeof(file_name)
     );
 
-    spx_reporter_full_metadata_get_file_name(
+    spx_reporter_full_build_metadata_file_name(
         data_dir,
         reporter->metadata->key,
         reporter->metadata_file_name,
@@ -208,6 +208,13 @@ error:
     spx_profiler_reporter_destroy((spx_profiler_reporter_t *)reporter);
 
     return NULL;
+}
+
+const char * spx_reporter_full_get_key(const spx_profiler_reporter_t * base_reporter)
+{
+    const full_reporter_t * reporter = (const full_reporter_t *) base_reporter;
+
+    return reporter->metadata->key;
 }
 
 static spx_profiler_reporter_cost_t full_notify(

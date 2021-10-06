@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2020 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,10 +16,12 @@
  */
 
 
-#ifdef linux
+#if defined(linux)
 #   include "spx_resource_stats-linux.c"
 #elif defined(__APPLE__) && defined(__MACH__)
 #   include "spx_resource_stats-macos.c"
+#elif defined(__FreeBSD__)
+#   include "spx_resource_stats-freebsd.c"
 #else
 #   error "Your platform is not supported. Please open an issue."
 #endif

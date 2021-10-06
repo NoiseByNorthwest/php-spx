@@ -1,5 +1,5 @@
 --TEST--
-Authentication: OK (invalid reverse proxy IP address)
+Authentication: KO (invalid reverse proxy IP address)
 --CGI--
 --INI--
 spx.http_enabled=1
