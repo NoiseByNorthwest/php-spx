@@ -198,11 +198,35 @@ table.data_table td > a {
 #category-legend {
     display: none;
 }
-
+#search-container {
+    border: none;
+    text-align: left;
+    margin-top: -5px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #044;
+    z-index: 100;
+}
+#search-container input {
+    border: none;
+    width: calc(100% - 45px);
+    padding-bottom: 2px;
+}
 #search-container button {
     cursor: pointer;
+    width: 30px;
+    margin: 0;
+    background: #089;
 }
-
+#search-container button img {
+    width: 100%;
+}
+#search-container > * {
+    min-height: 20px;
+}
+#search_query_button_clear {
+    color: black;
+    font-weight: bold;
+}
 #flatprofile table {
     border-collapse: collapse;
     border-spacing: 0;
