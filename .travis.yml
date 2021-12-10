@@ -7,6 +7,10 @@ php:
   - 7.3
   - 7.4
   - 8.0
+  # PHP 8.1 support is not available yet.
+  # See here: https://docs.travis-ci.com/user/languages/php/
+  # FIXME enable PHP 8.1 ASAP
+  #- 8.1
 arch:
   - amd64
   - arm64

@@ -97,7 +97,11 @@ static struct {
 
     void (*zend_error_cb) (
         int type,
+#if PHP_API_VERSION >= 20210902
+        zend_string *error_filename,
+#else
         const char *error_filename,
+#endif
         const uint error_lineno,
 #if PHP_API_VERSION >= 20200930
         zend_string *message
@@ -193,7 +197,11 @@ static int global_hook_gc_collect_cycles(void);
 
 static void global_hook_zend_error_cb(
     int type,
+#if PHP_API_VERSION >= 20210902
+    zend_string *error_filename,
+#else
     const char *error_filename,
+#endif
     const uint error_lineno,
 #if PHP_API_VERSION >= 20200930
     zend_string *message
@@ -1226,7 +1234,11 @@ static int global_hook_gc_collect_cycles(void)
 
 static void global_hook_zend_error_cb(
     int type,
+#if PHP_API_VERSION >= 20210902
+    zend_string *error_filename,
+#else
     const char *error_filename,
+#endif
     const uint error_lineno,
 #if PHP_API_VERSION >= 20200930
     zend_string *message

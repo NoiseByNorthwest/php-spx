@@ -1,5 +1,5 @@
 --TEST--
-GC is traced (PHP 7.2)
+GC is traced (PHP 8.0+)
 --SKIPIF--
 <?php
 if (
