@@ -594,12 +594,14 @@ static void profiling_handler_start(void)
         default:
         case SPX_CONFIG_REPORT_FULL:
             context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir));
-            snprintf(
-                context.profiling_handler.full_report_key,
-                sizeof(context.profiling_handler.full_report_key),
-                "%s",
-                spx_reporter_full_get_key(context.profiling_handler.reporter)
-            );
+            if (context.profiling_handler.reporter) {
+                snprintf(
+                    context.profiling_handler.full_report_key,
+                    sizeof(context.profiling_handler.full_report_key),
+                    "%s",
+                    spx_reporter_full_get_key(context.profiling_handler.reporter)
+                );
+            }
 
             break;
 
