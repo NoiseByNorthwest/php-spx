@@ -53,4 +53,4 @@ Flat profile:
        10 |        0 |        9 |        0 |   100.0K |        0 |        1 | %s/spx_%s.php
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::zend_compile_file
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::php_request_shutdown
-       10 |       10 |   -99991 |   -99991 |   100.0K |   100.0K |       10 | ::gc_collect_cycles
+       10 |       10 |  -100.0K |  -100.0K |   100.0K |   100.0K |       10 | ::gc_collect_cycles
