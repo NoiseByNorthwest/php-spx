@@ -89,7 +89,7 @@ Just open with your browser the following URL: `http://localhost/?SPX_KEY=dev&SP
 
 _N.B.: `http://localhost/` must be served by a PHP script through standard web server feature like directory index or URL rewriting. The PHP script will however not be executed, SPX will intercept and disable its execution to serve its content in place._
 
-_If you see only a blank page then make sure to set zlib.output_compression = 0 in your php ini file_
+_If you see only a blank page then make sure to set `zlib.output_compression = 0` in your PHP configuration file_
 
 You will then see the following form:
 
