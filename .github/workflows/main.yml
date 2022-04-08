@@ -35,6 +35,10 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
 
+      - name: Install dependencies
+        if: runner.os == 'macOS'
+        run: brew install zlib
+
       - name: phpize
         run: phpize
 
