@@ -43,7 +43,12 @@ jobs:
         run: phpize
 
       - name: Configure
-        run: ./configure
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ] then
+            ./configure --with-zlib-dir=$(brew --prefix)/opt/zlib
+          else
+            ./configure
+          fi
 
       - name: Compile
         run: |
