@@ -25,7 +25,7 @@ jobs:
           # Linux
           - { name: ubuntu, os: ubuntu-20.04 }
           # macOS
-          - { name: macOS,  os: macos-12 }
+          - { name: macOS,  os: macos-11 }
 
     steps:
       - uses: actions/checkout@v2
