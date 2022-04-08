@@ -39,6 +39,7 @@ jobs:
 
       - name: Extension Info
         run: |
+          echo "extension=spx.so" >> $(php -r "echo php_ini_loaded_file();")
           php --ini
           php --ri spx
 
