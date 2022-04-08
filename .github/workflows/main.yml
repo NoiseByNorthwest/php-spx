@@ -57,12 +57,16 @@ jobs:
 
       - name: Extension Info
         run: |
-          echo "extension=spx.so" >> $(php -r "echo php_ini_loaded_file();")
+          cp ${{ github.workspace }}/.github/ci-spx.ini $(dirname $(php -r "echo php_ini_loaded_file();"))/conf.d/50-spx.ini
           php --ini
           php --ri spx
 
       - name: Run Tests
         run: make test
+        env:
+          NO_INTERACTION: 1
+          REPORT_EXIT_STATUS: 1
+          TEST_PHP_ARGS: "--show-diff"
 
       - name: Upload build artifacts after Failure
         if: failure()
