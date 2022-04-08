@@ -44,7 +44,7 @@ jobs:
 
       - name: Configure
         run: |
-          if [ "${{ runner.os }}" = "macOS" ] then
+          if [ "${{ runner.os }}" = "macOS" ]; then
             ./configure --with-zlib-dir=$(brew --prefix)/opt/zlib
           else
             ./configure
