@@ -30,12 +30,12 @@ jobs:
         run: phpize
 
       - name: Configure
-        run: ./configure --enable-spx
+        run: ./configure
 
       - name: Compile
         run: |
           make -j"$(getconf _NPROCESSORS_ONLN)"
-          make install
+          sudo make install
 
       - name: Extension Info
         run: |
