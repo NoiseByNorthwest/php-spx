@@ -44,3 +44,12 @@ jobs:
 
       - name: Run Tests
         run: make test
+
+      - name: Upload build artifacts after Failure
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: debug-PHP-${{ matrix.php }}
+          path: |
+            ${{ github.workspace }}/*.log
+          retention-days: 7
