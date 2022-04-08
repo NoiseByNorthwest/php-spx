@@ -17,6 +17,10 @@ jobs:
       matrix:
         php: [ '7.4', '8.0' ]
 
+        name:
+          - ubuntu
+          - macOS
+
         include:
           # Linux
           - { name: ubuntu, os: ubuntu-20.04 }
