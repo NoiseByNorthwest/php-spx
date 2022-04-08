@@ -43,4 +43,4 @@ jobs:
           php --ri spx
 
       - name: Run Tests
-        name: make test
+        run: make test
