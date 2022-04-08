@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+  pull_request:
+
+jobs:
+  build:
+    name: build / PHP-${{ matrix.php }}
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-20.04 ]
+        php: ['7.4']
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+
+      - name: PHPIZE
+        run: phpize
+
+      - name: Configure
+        run: ./configure --enable-spx
+
+      - name: Compile
+        run: |
+          make -j"$(getconf _NPROCESSORS_ONLN)"
+          make install
+
+      - name: Extension Info
+        run: |
+          php --ini
+          php --ri spx
+
+      - name: Run Tests
+        name: make test
