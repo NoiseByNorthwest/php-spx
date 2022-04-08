@@ -57,10 +57,8 @@ jobs:
 
       - name: Extension Info
         run: |
-          echo "-- Copy spx.ini file to conf.d PHP dir."
-          sudo cp ${{ github.workspace }}/.github/ci-spx.ini $(dirname $(php -r "echo php_ini_loaded_file();"))/conf.d/50-spx.ini
           php --ini
-          php --ri spx
+          php -d extension=./modules/spx.so --ri spx
 
       - name: Run Tests
         run: make test
