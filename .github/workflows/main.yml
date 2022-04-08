@@ -9,14 +9,19 @@ on:
 
 jobs:
   build:
-    name: build / PHP-${{ matrix.php }}
+    name: build / ${{ matrix.name }} PHP-${{ matrix.php }}
 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04 ]
-        php: ['7.4']
+        php: [ '7.4', '8.0' ]
+
+        include:
+          # Linux
+          - { name: ubuntu, os: ubuntu-20.04 }
+          # macOS
+          - { name: macOS,  os: macos-12 }
 
     steps:
       - uses: actions/checkout@v2
@@ -26,7 +31,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
 
-      - name: PHPIZE
+      - name: phpize
         run: phpize
 
       - name: Configure
