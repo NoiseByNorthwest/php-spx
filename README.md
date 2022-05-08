@@ -46,6 +46,7 @@ Current requirements are:
 * PHP development package (corresponding to your installed PHP version).
 * zlib development package:
   * For Debian based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`.
+  * For Fedora based distros (including CentOS, AlmaLinux, Rocky Linux...), just run: `sudo dnf install zlib-devel`.
 
 ### Install the extension
 
