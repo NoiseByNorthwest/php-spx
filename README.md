@@ -1,9 +1,10 @@
 # SPX - A simple profiler for PHP
 
-[![Build Status](https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg)](https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml)
-![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.1-blue.svg)
-![Supported platforms: GNU/Linux, macOS & FreeBSD](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow)
-![Supported architectures: x86-64 or ARM64](https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver)
+[![Build Status][:badge-ci:]][:link-ci:]
+![Supported PHP versions: 5.6 .. 8.x][:badge-php-versions:]
+![Supported platforms: GNU/Linux, macOS & FreeBSD][:badge-supported-platforms:]
+![Supported architectures: x86-64 or ARM64][:badge-supported-arch:]
+[![License][:badge-license:]][:link-license:]
 
 
 <a href="https://www.buymeacoffee.com/noisebynw" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
@@ -430,3 +431,19 @@ I have found lot of inspiration and hints reading:
  - [XHProf](https://github.com/phacility/xhprof)
  - [Xdebug](https://github.com/xdebug/xdebug)
  - [PHP](https://github.com/php/php-src)
+
+## License
+
+**SPX** is open source software licensed under the GNU General Public License (GPL-3).
+See the [LICENSE][:link-license:] file for more information.
+
+<!-- All external links should be here to avoid duplication and long lines with links -->
+[:badge-ci:]:           https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg
+[:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
+
+[:badge-php-versions:]: https://img.shields.io/badge/php-5.6--8.1-blue.svg
+[:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow
+[:badge-supported-arch:]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver
+
+[:badge-license:]:      https://img.shields.io/github/license/NoiseByNorthwest/php-spx
+[:link-license:]:       https://github.com/NoiseByNorthwest/php-spx/blob/master/LICENSE
