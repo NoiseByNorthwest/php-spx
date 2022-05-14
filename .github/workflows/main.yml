@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: build / ${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}
+    name: build / php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}
 
     runs-on: ${{ matrix.os }}
     strategy:
@@ -19,13 +19,13 @@ jobs:
 
         name:
           - linux
-          - macOS
+          - mac
 
         include:
           # Linux
           - { name: linux, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
           # macOS
-          - { name: macOS, ts: 'nts', compiler: 'clang', os: macos-11 }
+          - { name: mac,   ts: 'nts', compiler: 'clang', os: macos-11 }
 
     steps:
       - uses: actions/checkout@v2
@@ -85,11 +85,17 @@ jobs:
             ${{ github.workspace }}/tests/*.log
           retention-days: 7
 
+      - name: Create ZIP archive with build artifact
+        run: |
+          zip -rvj ${{ steps.setup-artifact.outputs.spx_file_name }}.zip \
+            ./modules/spx.so LICENSE $ZIP_EXCLUDE
+          zip -rv ${{ steps.setup-artifact.outputs.spx_file_name }}.zip \
+            ./assets $ZIP_EXCLUDE
+        env:
+          ZIP_EXCLUDE: -x ".*" -x "__MACOSX" -x "*.DS_Store"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
-          path: |
-            ${{ github.workspace }}/modules/spx.so
-            ${{ github.workspace }}/assets/**
-            ${{ github.workspace }}/LICENSE
+          name: ${{ steps.setup-artifact.outputs.spx_file_name }}
+          path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
