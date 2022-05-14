@@ -99,3 +99,38 @@ jobs:
         with:
           name: ${{ steps.setup-artifact.outputs.spx_file_name }}
           path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+
+    needs: [ build ]
+    name: Create Release
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Get the release version
+        id: get-version
+        run: |
+          echo ::set-output name=version::${GITHUB_REF#refs/tags/}
+
+      - name: Download SPX build artifacts
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          path: ./build-artifacts
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.get-version.outputs.version }}
+          tag: ${{ steps.get-version.outputs.version }}
+          # bodyFile: "./build-artifacts/release-notes.md"
+          allowUpdates: true
+          artifacts: "./build-artifacts/*.zip"
+          artifactContentType: application/octet-stream
