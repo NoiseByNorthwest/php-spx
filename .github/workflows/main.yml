@@ -94,6 +94,11 @@ jobs:
         env:
           ZIP_EXCLUDE: -x ".*" -x "__MACOSX" -x "*.DS_Store"
 
+      - name: Check Release notes
+        run: |
+          echo "-- Parsing Release Notes from CHANGELOG"
+          ./.github/release-notes.sh ./CHANGELOG.md
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v2
         with:
@@ -124,13 +129,18 @@ jobs:
         with:
           path: ./build-artifacts
 
+      - name: Prepare Release notes
+        run: |
+          echo "-- Creating Release Notes"
+          ./.github/release-notes.sh ./CHANGELOG.md > ./release-notes.md
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ steps.get-version.outputs.version }}
           tag: ${{ steps.get-version.outputs.version }}
-          # bodyFile: "./build-artifacts/release-notes.md"
+          bodyFile: "./release-notes.md"
           allowUpdates: true
           artifacts: "./build-artifacts/*.zip"
           artifactContentType: application/octet-stream
