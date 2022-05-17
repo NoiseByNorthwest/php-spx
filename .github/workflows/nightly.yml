@@ -29,6 +29,11 @@ jobs:
         run: |
           echo "::set-output name=spx_file_name::spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}"
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+
       - name: Install dependencies
         if: runner.os == 'macOS'
         run: brew install zlib
