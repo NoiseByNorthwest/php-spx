@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '**.txt'
+  pull_request:
+
+jobs:
+  build:
+    name: build / php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '5.6', '7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1' ]
+
+        name:
+          - linux
+          - mac
+
+        include:
+          # Linux
+          - { name: linux, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          # macOS
+          - { name: mac,   ts: 'nts', compiler: 'clang', os: macos-11 }
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # configure spx artifact name in next format:
+      #   {php}-{ts}-{os.name}-{compiler}
+      #   spx-php-8.1-nts-Linux-gcc
+      - name: Set artifact name
+        id: setup-artifact
+        run: |
+          echo "::set-output name=spx_file_name::spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+
+      - name: Install dependencies
+        if: runner.os == 'macOS'
+        run: brew install zlib
+
+      - name: phpize
+        run: phpize
+
+      - name: Configure
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            ./configure --with-zlib-dir=$(brew --prefix)/opt/zlib
+          else
+            ./configure
+          fi
+
+      - name: Compile
+        run: |
+          make -j"$(getconf _NPROCESSORS_ONLN)"
+          sudo make install
+
+      - name: Extension Info
+        run: |
+          php --ini
+          php -d extension=./modules/spx.so --ri spx
+
+      - name: Run Tests
+        run: make test
+        env:
+          NO_INTERACTION: 1
+          REPORT_EXIT_STATUS: 1
+          TEST_PHP_ARGS: "--show-diff"
+
+      - name: Upload build artifacts after Failure
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: debug-${{ steps.setup-artifact.outputs.spx_file_name }}
+          path: |
+            ${{ github.workspace }}/*.log
+            ${{ github.workspace }}/tests/*.log
+          retention-days: 7
+
+      - name: Create ZIP archive with build artifact
+        run: |
+          zip -rvj ${{ steps.setup-artifact.outputs.spx_file_name }}.zip \
+            ./modules/spx.so LICENSE $ZIP_EXCLUDE
+          zip -rv ${{ steps.setup-artifact.outputs.spx_file_name }}.zip \
+            ./assets $ZIP_EXCLUDE
+        env:
+          ZIP_EXCLUDE: -x ".*" -x "__MACOSX" -x "*.DS_Store"
+
+      - name: Check Release notes
+        run: |
+          echo "-- Parsing Release Notes from CHANGELOG"
+          ./.github/release-notes.sh ./CHANGELOG.md
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.setup-artifact.outputs.spx_file_name }}
+          path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+
+    needs: [ build ]
+    name: Create Release
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Get the release version
+        id: get-version
+        run: |
+          echo ::set-output name=version::${GITHUB_REF#refs/tags/}
+
+      - name: Download SPX build artifacts
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          path: ./build-artifacts
+
+      - name: Prepare Release notes
+        run: |
+          echo "-- Creating Release Notes"
+          ./.github/release-notes.sh ./CHANGELOG.md > ./release-notes.md
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.get-version.outputs.version }}
+          tag: ${{ steps.get-version.outputs.version }}
+          bodyFile: "./release-notes.md"
+          allowUpdates: true
+          artifacts: "./build-artifacts/*.zip"
+          artifactContentType: application/octet-stream
