@@ -5,6 +5,7 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
+      - '**/nightly.yml'
   pull_request:
 
 jobs:
