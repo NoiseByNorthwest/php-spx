@@ -1,6 +1,7 @@
 # SPX - A simple profiler for PHP
 
 [![Build Status][:badge-ci:]][:link-ci:]
+[![Nightly Build Status][:badge-nightly-ci:]][:link-nightly-ci:]
 ![Supported PHP versions: 5.6 .. 8.x][:badge-php-versions:]
 ![Supported platforms: GNU/Linux, macOS & FreeBSD][:badge-supported-platforms:]
 ![Supported architectures: x86-64 or ARM64][:badge-supported-arch:]
@@ -441,6 +442,8 @@ See the [LICENSE][:link-license:] file for more information.
 <!-- All external links should be here to avoid duplication and long lines with links -->
 [:badge-ci:]:           https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg
 [:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
+[:badge-nightly-ci:]:   https://github.com/NoiseByNorthwest/php-spx/actions/workflows/nightly.yml/badge.svg
+[:link-nightly-ci:]:    https://github.com/NoiseByNorthwest/php-spx/actions/workflows/nightly.yml
 
 [:badge-php-versions:]: https://img.shields.io/badge/php-5.6--8.1-blue.svg
 [:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow

@@ -1,7 +1,6 @@
 name: Nightly
 
 on:
-  push:
   schedule:
     - cron: '0 2 * * *' # Daily at 02:00 runs only on default branch
   workflow_dispatch:

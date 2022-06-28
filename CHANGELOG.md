@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 - Github Actions workflow ([#180](https://github.com/NoiseByNorthwest/php-spx/issues/180))
+- Github Action workflow for Nightly builds ([#180](https://github.com/NoiseByNorthwest/php-spx/issues/180))
 
 ### Removed
 - Travis CI
