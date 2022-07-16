@@ -216,9 +216,6 @@ table.data_table td > a {
     margin: 0;
     background: #089;
 }
-#search-container button img {
-    width: 100%;
-}
 #search-container > * {
     min-height: 20px;
 }
