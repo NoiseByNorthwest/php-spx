@@ -22,8 +22,18 @@
             <div id="metric-selector" class="widget" style="flex: 0 0 120px;">
                 <select></select>
             </div>
-            <div id="colorscheme-manager" class="widget" style="flex: 0 0 220px;"></div>
+            <div id="colorscheme-manager" class="widget" style="flex: 0 0 180px;"></div>
             <div id="category-legend" class="widget"></div>
+            <div id="search-container" class="widget" style="flex: 0 0 195px;">
+                <input type="text"
+                       id="search_query"
+                       name="search_query"
+                       autocomplete="off"
+                       placeholder="Search by function name">
+                <button id="search_query_button_clear" onclick="$(window).trigger('spx-search-clear')" style="display: none;">
+                    X
+                </button>
+            </div>
             <div id="color-scale" class="widget" style="flex: 1 1 150px;"></div>
         </div>
         <div id="overview" class="widget visualization" style="flex: 0 0 80px"></div>

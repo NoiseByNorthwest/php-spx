@@ -201,15 +201,14 @@ table.data_table td > a {
 #search-container {
     border: none;
     text-align: left;
-    margin-top: -5px;
-    margin-bottom: 5px;
-    border-bottom: 1px solid #044;
+    height: 26px;
     z-index: 100;
+    position: relative;
 }
 #search-container input {
     border: none;
-    width: calc(100% - 45px);
-    padding-bottom: 2px;
+    width: calc(100% - 5px);
+    height: 100%;
 }
 #search-container button {
     cursor: pointer;
@@ -226,6 +225,10 @@ table.data_table td > a {
 #search_query_button_clear {
     color: black;
     font-weight: bold;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
 }
 #flatprofile table {
     border-collapse: collapse;

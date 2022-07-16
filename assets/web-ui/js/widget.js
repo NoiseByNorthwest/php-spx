@@ -475,19 +475,13 @@ class Widget {
         $(window).on('spx-search-clear', (e) => {
             this.searchQuery = null;
             $('#search_query').val(null);
+            $('#search_query_button_clear').css('display', 'none');
             this.repaint();
         });
 
-        $(window).on('focus', '#search_query', (e) => {
+        $(document).on('focus keyup', '#search_query', (e) => {
             if (this.searchQuery) {
-                $('#search_query').val(this.searchQuery);
-            }
-        });
-
-        $(document).on('keyup', '#search_query', (e) => {
-            if (this.searchQuery) {
-                $('#search_query_button').css('display', 'initial');
-                $('#search_query_button_clear').css('display', 'none');
+                $('#search_query_button_clear').css('display', 'inline-block');
             }
         });
 
@@ -1660,21 +1654,7 @@ export class FlatProfile extends Widget {
 <table width="${this.container.width() - 20}px">
 <thead>
     <tr>
-        <th rowspan="3" class="sortable" data-sort="name">
-          <div id="search-container" class="widget">
-                <input type="text"
-                       id="search_query"
-                       name="search_query"
-                       placeholder="${this.searchQuery ? this.searchQuery : 'Enter function name'}">
-                <button id="search_query_button" onclick="$(window).trigger('spx-search')" style="display: ${!this.searchQuery ? 'initial' : 'none'};">
-                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4c6QAABJVJREFUaEPtmXnIZ2MUxz9jF2XJTogsKSP7liVlKUsGM5bGMFGIki1LhFCWLMUfKPsaRpPxB2P7x74k2ZIlCYPs2bL3eXsu13Wf5d7f/eWdcmp6e+ee55zzfc5z1ncKCzlNWcjt538AwNrA5sB6wKrAosBvwJfAu8BrwFvj8nRfD2wKHAnsHwzP2bcAmAfcBjyZY+7yvSuAnYBzgN27KGnwvghcADwwgoy/jpYCWBm4CjgUBoubR4BjgfdGAVICwFu/G1hjFEWRs98CRwH39ZWdA3AQcDuwZF8FBef+AE4DLi/g/RdLCsC+wP3AYn0E9zhzMnBl13MxAKbFp4ClCwT+CDwe+M02XwHLAasAWwN7ht9zon4PWc1sVUxtAJYBXgY2yEj5NGSTm4AfEryLAz5FM8/6GZlfAJsBH5UiaANwMXB6RsAtwAnAd6WKgCWAc4EzM5nsXmBGqdwmgHVD1VRZGxlwZwGC7EuHAXotpkO5Zr6igtcEcA1wfMKyC0Mh62t8de4I4OaEkIeBvUqU1AEsCxiE/myjucABgF4Ygq4ATkp4ekPgnZyiOoBZgG+7jX4CNgI+yAns8N2LehtYLXLmfOC8nLw6gLuAQyIHbCNit5XTkfpuIrg6wvA8sG1OeB2AqSvWLpjPbcKGppWAT0IL3pRtS758LtNVAFYI/XubgR8Daw349ps6zDY7Rm5mK+Cl1K1VALZIMNo17jH01dfkXQscE5FvPbAuRKkCsCvwRITLZu7wMQIwUC1wbXQ0cEMJAAeU+RHG60LfPi4MdqKXRoQfB+ihrAd8g7HKZ0d64LisBy4DTo3IPxi4pwSARSM2eD8LbD9GAHcAthdt5Mt4tASAHeP3gD+b9DPgSOn0NDQZgx8m0rcdcbIa1+uAeX7Lvq7siUx9sfryWVjTJEXXARhIBlQbPRee0VB9UKXjzrAoaNNp7zUtdzF1ANsAGhqj6aMM3y1Cvf0XErPBTMD4KPaAjK8Dm0RO6FJ7k/dzQgu+2yI8A2wc4XUys/rbRHYC4LbNYSNGrwI7A1/nBCe+O8i41HJWjtElwBklOpoDjVlII22dY/Qm4MbCvWdXMpvNCRNX7Kyztvq/KRHeNhPb9zgRpUgXO9vqrV8LFKnHgHT349iaIhddNxbInGCJrVVyo2UlX29cDzwYyde25/sAs4HtCo1y1BSEa5YsxQAsBTwG7JCV8DeDrvefwb5imLRW77lLLQaR2sxphB3q1A4ghmQtApHbjTroWFDMPP8FZUHkAGi0meki4BRgkYFR2H+5CUxREkQJgEq4Rczgdswbld4ATgyNnHtVY6UXiC4Aqqy1N+AmeZceHnHT4IDilPdLsNhq3BtEVwD1W1oH2A/YLSxk/b35xFwI2G0+DTwEvBK5ZguXCaOzJ0YB0LTF1Ota3Tft7GCx69K9CkJP5P4S9I+YGBLAqHHheSdDPZEDYVI5u3rTQygeUkYJCNsXn9vnk80D1UUIwue0ZuJmJlbwkxWAdjsP+5zaQBhb/v+CyQygAqEnHG7qZCp2ZzTYH62HjIGmLN+623FXLA5St4bOYKKO/AnjXcwxS73yhgAAAABJRU5ErkJggg==" alt="Search">
-                </button>
-                <button id="search_query_button_clear" onclick="$(window).trigger('spx-search-clear')" style="display: ${this.searchQuery ? 'initial' : 'none'};">
-                    X
-                </button>
-            </div>
-            <div>Function</div>
-        </th>
+        <th rowspan="3" class="sortable" data-sort="name">Function</th>
         <th rowspan="3" width="80px" class="sortable" data-sort="called">Called</th>
         <th colspan="4">${this.profileData.getMetricInfo(this.currentMetric).name}</th>
     </tr>
