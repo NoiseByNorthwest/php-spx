@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2022 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -594,12 +594,14 @@ static void profiling_handler_start(void)
         default:
         case SPX_CONFIG_REPORT_FULL:
             context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir));
-            snprintf(
-                context.profiling_handler.full_report_key,
-                sizeof(context.profiling_handler.full_report_key),
-                "%s",
-                spx_reporter_full_get_key(context.profiling_handler.reporter)
-            );
+            if (context.profiling_handler.reporter) {
+                snprintf(
+                    context.profiling_handler.full_report_key,
+                    sizeof(context.profiling_handler.full_report_key),
+                    "%s",
+                    spx_reporter_full_get_key(context.profiling_handler.reporter)
+                );
+            }
 
             break;
 

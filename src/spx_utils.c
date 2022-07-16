@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2022 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,11 +31,49 @@ char * spx_utils_json_escape(char * dst, const char * src, size_t limit)
 
     size_t i = 0;
     while (*src && i < limit - 2) {
-        if (*src == '\\' || *src == '"') {
-            dst[i++] = '\\';
+        char escaped_char = 0;
+
+        switch (*src) {
+            case '\\':
+            case '"':
+            case '/':
+                escaped_char = *src;
+
+                break;
+
+            case '\b':
+                escaped_char = 'b';
+
+                break;
+
+            case '\f':
+                escaped_char = 'f';
+
+                break;
+
+            case '\n':
+                escaped_char = 'n';
+
+                break;
+
+            case '\r':
+                escaped_char = 'r';
+
+                break;
+
+            case '\t':
+                escaped_char = 't';
+
+                break;
         }
 
-        dst[i++] = *src;
+        if (escaped_char != 0) {
+            dst[i++] = '\\';
+            dst[i++] = escaped_char;
+        } else {
+            dst[i++] = *src;
+        }
+
         src++;
     }
 

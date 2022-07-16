@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2022 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -286,6 +286,11 @@ static void resolve_pct_format(double * value, const char ** format)
 
 static void resolve_qty_format(double * value, const char ** format)
 {
+    int neg = *value < 0;
+    if (neg) {
+        *value *= -1;
+    }
+
     if (*value >= 1000 * 1000 * 1000) {
         *format = "%7.1fG";
         *value /= 1000 * 1000 * 1000;
@@ -297,5 +302,9 @@ static void resolve_qty_format(double * value, const char ** format)
         *value /= 1000;
     } else {
         *format = "%8.f";
+    }
+
+    if (neg) {
+        *value *= -1;
     }
 }

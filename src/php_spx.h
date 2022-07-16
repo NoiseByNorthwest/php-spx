@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2021 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2022 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,8 +31,8 @@
 #   error "Only x86-64 and ARM64 architectures are supported"
 #endif
 
-#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20200930
-#   error "Only the following PHP versions are supported: 5.6 to 8.0"
+#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20210902
+#   error "Only the following PHP versions are supported: 5.6 to 8.1"
 #endif
 
 #if defined(ZTS) && !defined(CONTINUOUS_INTEGRATION)
@@ -40,6 +40,6 @@
 #endif
 
 #define PHP_SPX_EXTNAME "SPX"
-#define PHP_SPX_VERSION "0.4.11"
+#define PHP_SPX_VERSION "0.4.12"
 
 extern zend_module_entry spx_module_entry;

@@ -1,6 +1,10 @@
 # SPX - A simple profiler for PHP
 
-[![Build Status](https://travis-ci.com/NoiseByNorthwest/php-spx.svg?branch=master)](https://travis-ci.com/NoiseByNorthwest/php-spx) ![Supported PHP versions: 5.6 .. 8.x](https://img.shields.io/badge/php-5.6--8.0-blue.svg) ![Supported platforms: GNU/Linux, macOS & FreeBSD](https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow) ![Supported architectures: x86-64 or ARM64](https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver)
+[![Build Status][:badge-ci:]][:link-ci:]
+![Supported PHP versions: 5.6 .. 8.x][:badge-php-versions:]
+![Supported platforms: GNU/Linux, macOS & FreeBSD][:badge-supported-platforms:]
+![Supported architectures: x86-64 or ARM64][:badge-supported-arch:]
+[![License][:badge-license:]][:link-license:]
 
 
 <a href="https://www.buymeacoffee.com/noisebynw" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
@@ -36,7 +40,7 @@ Current requirements are:
 * x86-64 or ARM64
 * **GNU/Linux**, **macOS** or **FreeBSD**
 * zlib dev package (e.g. zlib1g-dev on Debian based distros)
-* PHP 5.6 to 8.0
+* PHP 5.6 to 8.1
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
 
 ## Installation
@@ -46,6 +50,7 @@ Current requirements are:
 * PHP development package (corresponding to your installed PHP version).
 * zlib development package:
   * For Debian based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`.
+  * For Fedora based distros (including CentOS, AlmaLinux, Rocky Linux...), just run: `sudo dnf install zlib-devel`.
 
 ### Install the extension
 
@@ -88,6 +93,8 @@ Assuming a development environment with the configuration [described here](#priv
 Just open with your browser the following URL: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access to the web UI [control panel](#control-panel).
 
 _N.B.: `http://localhost/` must be served by a PHP script through standard web server feature like directory index or URL rewriting. The PHP script will however not be executed, SPX will intercept and disable its execution to serve its content in place._
+
+_If you see only a blank page then make sure to set `zlib.output_compression = 0` in your PHP configuration file_
 
 You will then see the following form:
 
@@ -425,3 +432,19 @@ I have found lot of inspiration and hints reading:
  - [XHProf](https://github.com/phacility/xhprof)
  - [Xdebug](https://github.com/xdebug/xdebug)
  - [PHP](https://github.com/php/php-src)
+
+## License
+
+**SPX** is open source software licensed under the GNU General Public License (GPL-3).
+See the [LICENSE][:link-license:] file for more information.
+
+<!-- All external links should be here to avoid duplication and long lines with links -->
+[:badge-ci:]:           https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg
+[:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
+
+[:badge-php-versions:]: https://img.shields.io/badge/php-5.6--8.1-blue.svg
+[:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow
+[:badge-supported-arch:]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver
+
+[:badge-license:]:      https://img.shields.io/github/license/NoiseByNorthwest/php-spx
+[:link-license:]:       https://github.com/NoiseByNorthwest/php-spx/blob/master/LICENSE
