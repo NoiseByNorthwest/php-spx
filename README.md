@@ -375,6 +375,10 @@ Except for wall time, the current metric is also plotted (current value over tim
 
 This visualization is the flat profile for the selected time range and the selected metric, displayed as a sortable table.
 
+The `Inc.` and `Exc.` sub-columns respectively correspond to:
+- the inclusive resource consumption of the function, including its called functions consumption
+- the exclusive resource consumption of the function, excluding its called functions consumption
+
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/d8a90827d6eb256f49d580de448b6b6fad4119ac/php-spx/doc/as-fp.png)
 
 ##### Flame Graph
