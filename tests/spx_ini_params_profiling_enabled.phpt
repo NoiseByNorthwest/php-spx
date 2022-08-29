@@ -13,4 +13,8 @@ SPX-Debug-Profiling-Triggered: 1
 --EXPECT--
 Normal output
 --CLEAN--
-system("rm -rf /tmp/spx")
+<?php
+
+exec("rm -rf /tmp/spx");
+
+?>

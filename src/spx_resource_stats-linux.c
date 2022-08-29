@@ -16,7 +16,11 @@
  */
 
 
-#define _GNU_SOURCE
+/* _GNU_SOURCE is implicitly defined since PHP 8.2 https://github.com/php/php-src/pull/8807 */
+#ifndef _GNU_SOURCE
+#   define _GNU_SOURCE
+#endif
+
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
