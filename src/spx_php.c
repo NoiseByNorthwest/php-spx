@@ -16,12 +16,15 @@
  */
 
 
-#define _GNU_SOURCE /* vasprintf */
-#include <stdio.h>
-#undef _GNU_SOURCE /* to avoid clash in main/php_config.h */
-
 #include "main/php.h"
 #include "main/SAPI.h"
+
+/* _GNU_SOURCE is implicitly defined since PHP 8.2 https://github.com/php/php-src/pull/8807 */
+#ifndef _GNU_SOURCE
+#   define _GNU_SOURCE /* vasprintf */
+#endif
+
+#include <stdio.h>
 
 #include "spx_php.h"
 #include "spx_thread.h"
@@ -88,7 +91,11 @@ static struct {
 #else
         zval * source_string,
 #endif
-        char * filename TSRMLS_DC
+        char * filename
+#if PHP_API_VERSION >= 20210903
+        , zend_compile_position position
+#endif
+        TSRMLS_DC
     );
 
 #if ZEND_MODULE_API_NO >= 20151012
@@ -188,7 +195,11 @@ static zend_op_array * global_hook_zend_compile_string(
 #else
     zval * source_string,
 #endif
-    char * filename TSRMLS_DC
+    char * filename
+#if PHP_API_VERSION >= 20210903
+    , zend_compile_position position
+#endif
+        TSRMLS_DC
 );
 
 #if ZEND_MODULE_API_NO >= 20151012
@@ -1160,10 +1171,21 @@ static zend_op_array * global_hook_zend_compile_string(
 #else
     zval * source_string,
 #endif
-    char * filename TSRMLS_DC
+    char * filename
+#if PHP_API_VERSION >= 20210903
+    , zend_compile_position position
+#endif
+        TSRMLS_DC
 ) {
     if (!context.global_hooks_enabled) {
-        return ze_hooked_func.zend_compile_string(source_string, filename TSRMLS_CC);
+        return ze_hooked_func.zend_compile_string(
+            source_string,
+            filename
+#if PHP_API_VERSION >= 20210903
+            , position
+#endif
+            TSRMLS_CC
+        );
     }
 
     if (context.execution_disabled) {
@@ -1176,7 +1198,14 @@ static zend_op_array * global_hook_zend_compile_string(
         context.ex_hook.internal.before();
     }
 
-    zend_op_array * op_array = ze_hooked_func.zend_compile_string(source_string, filename TSRMLS_CC);
+    zend_op_array * op_array = ze_hooked_func.zend_compile_string(
+        source_string,
+        filename
+#if PHP_API_VERSION >= 20210903
+        , position
+#endif
+        TSRMLS_CC
+    );
 
     if (op_array) {
         context.file_opcode_count += op_array->last - 1;
