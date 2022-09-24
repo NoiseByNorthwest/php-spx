@@ -31,7 +31,7 @@
 #   error "Only x86-64 and ARM64 architectures are supported"
 #endif
 
-#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20210903
+#if ZEND_MODULE_API_NO < 20131226 || ZEND_MODULE_API_NO > 20220830
 #   error "Only the following PHP versions are supported: 5.6 to 8.2"
 #endif
 
