@@ -2,14 +2,16 @@ name: CI
 
 on:
   push:
+    branches:
+      - '**'
+    tags:
+      - '*'
     paths-ignore:
       - '**.md'
       - '**.txt'
   pull_request:
     branches:
       - master
-  tags:
-      - '*'
 
 jobs:
   build:
