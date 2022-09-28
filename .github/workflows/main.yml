@@ -2,10 +2,16 @@ name: CI
 
 on:
   push:
+    branches:
+      - '**'
+    tags:
+      - '*'
     paths-ignore:
       - '**.md'
       - '**.txt'
   pull_request:
+    branches:
+      - master
 
 jobs:
   build:
@@ -142,5 +148,5 @@ jobs:
           tag: ${{ steps.get-version.outputs.version }}
           bodyFile: "./release-notes.md"
           allowUpdates: true
-          artifacts: "./build-artifacts/*.zip"
+          artifacts: "./build-artifacts/*/*.zip"
           artifactContentType: application/octet-stream

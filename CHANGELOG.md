@@ -4,13 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.0...HEAD)
+## [Unreleased](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.13...HEAD)
+
+
+## [v0.4.13](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.12...0.4.13)
 
 ### Added
 - Github Actions workflow ([#180](https://github.com/NoiseByNorthwest/php-spx/issues/180))
+- Added support for php 8.2.0 RC2 [#198](https://github.com/NoiseByNorthwest/php-spx/issues/198)
+- Added PHP 8.2 support [#196](https://github.com/NoiseByNorthwest/php-spx/issues/196)
+
+### Changed
+- Documentation: Clarified what Inc. and Exc. mean in the table [#193](https://github.com/NoiseByNorthwest/php-spx/issues/193)
 
 ### Removed
-- Travis CI
+- Travis CI [#195](https://github.com/NoiseByNorthwest/php-spx/issues/195)
 
 
 ## [v0.4.0](https://github.com/NoiseByNorthwest/php-spx/compare/0.3.0...0.4.0)
