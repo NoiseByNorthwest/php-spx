@@ -209,6 +209,8 @@ To do that SPX exposes the `spx_profiler_full_report_custom_metadata_str(string 
 
 As you may have notificed, this function accepts a string as custom metadata, for the sake of flexibility and simplicity on SPX side. It is up to you to encode any structured data to a string, for instance using JSON format.
 
+The metadata string is limited to 16KB, which is large enough for most use cases. If you pass a string exceeding this limit it will be discarded and a notice log will be emitted.
+
 This string will be stored among other current report's metadata and you will retrieve it in the report list on web UI side.
 
 `spx_profiler_full_report_custom_metadata_str()` can be called at any moment as long as the profiler is already started and not finished yet, which means:
@@ -237,7 +239,6 @@ while ($task = get_next_ready_task()) {
 }
 
 ```
-
 
 
 ## Advanced usage
