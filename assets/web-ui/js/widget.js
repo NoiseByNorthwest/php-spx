@@ -408,6 +408,7 @@ class Widget {
         this.resizingTimeouts = [];
         this.colorSchemeMode = null;
         this.highlightedFunctionName = null;
+        this.searchQuery = null;
         this.functionColorResolver = (functionName, defaultColor) => {
             let color;
             switch (this.colorSchemeMode) {
@@ -425,6 +426,10 @@ class Widget {
                     .mult(functionName == this.highlightedFunctionName ? 1.5 : 0.33)
                     .toHTMLColor()
                 ;
+            }
+
+            if (this.searchQuery && (functionName.toLowerCase()).indexOf(this.searchQuery.toLowerCase()) > -1) {
+                color = '#fcc'
             }
 
             return color;
@@ -457,6 +462,35 @@ class Widget {
             this.highlightedFunctionName = highlightedFunctionName;
 
             this.onHighlightedFunctionUpdate();
+        });
+
+        $(window).on('spx-search', (e) => {
+            this.searchQuery = $('#search_query').val();
+            console.log('Search For', this.searchQuery);
+            if (this.searchQuery) {
+                this.repaint();
+            }
+        });
+
+        $(window).on('spx-search-clear', (e) => {
+            this.searchQuery = null;
+            $('#search_query').val(null);
+            $('#search_query_button_clear').css('display', 'none');
+            this.repaint();
+        });
+
+        $(document).on('focus keyup', '#search_query', (e) => {
+            if (this.searchQuery) {
+                $('#search_query_button_clear').css('display', 'inline-block');
+            }
+        });
+
+        $(document).on('keyup', '#search_query', (e) => {
+            var key = e.key || e.keyCode;
+            if (key === 'Enter' || key === 13) {
+                var eventName = $('#search_query').val() ? 'spx-search' : 'spx-search-clear';
+                $(window).trigger(eventName);
+            }
         });
     }
 
@@ -1643,7 +1677,13 @@ export class FlatProfile extends Widget {
 <table width="${this.container.width() - 20}px"><tbody>
         `;
 
-        const functionsStats = this.timeRangeStats.getFunctionsStats().getValues();
+        const functionsStats = this
+            .timeRangeStats
+            .getFunctionsStats()
+            .getValues()
+            .filter(stats => !(
+                this.searchQuery && (stats.functionName.toLowerCase()).indexOf(this.searchQuery.toLowerCase()) < 0
+            ));
 
         functionsStats.sort((a, b) => {
             switch (this.sortCol) {
@@ -1677,7 +1717,7 @@ export class FlatProfile extends Widget {
         });
 
         const formatter = this.profileData.getMetricFormatter(this.currentMetric);
-        const limit = Math.min(100, functionsStats.length);
+        const limit = this.searchQuery ? functionsStats.length : Math.min(100, functionsStats.length);
 
         const cumCostStats = this.timeRangeStats.getCumCostStats();
 
