@@ -171,7 +171,7 @@ table.data_table td > a {
     border-color: #089;
 }
 
-#colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea {
+#colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea, #search-container input {
     font-family: monospace;
     font-size: 12px;
     background-color: #000;
@@ -198,7 +198,35 @@ table.data_table td > a {
 #category-legend {
     display: none;
 }
-
+#search-container {
+    border: none;
+    text-align: left;
+    height: 26px;
+    z-index: 100;
+    position: relative;
+}
+#search-container input {
+    border: none;
+    width: calc(100% - 5px);
+    height: 100%;
+}
+#search-container button {
+    cursor: pointer;
+    width: 30px;
+    margin: 0;
+    background: #089;
+}
+#search-container > * {
+    min-height: 20px;
+}
+#search_query_button_clear {
+    color: black;
+    font-weight: bold;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
 #flatprofile table {
     border-collapse: collapse;
     border-spacing: 0;
