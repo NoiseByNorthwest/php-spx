@@ -171,6 +171,7 @@ static PHP_RSHUTDOWN_FUNCTION(spx);
 static PHP_MINFO_FUNCTION(spx);
 static PHP_FUNCTION(spx_profiler_start);
 static PHP_FUNCTION(spx_profiler_stop);
+static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str);
 
 static int check_access(void);
 
@@ -207,15 +208,24 @@ static execution_handler_t http_ui_handler = {
     http_ui_handler_shutdown
 };
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_start, ZEND_SEND_BY_VAL, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_start, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_stop, ZEND_SEND_BY_VAL, ZEND_RETURN_VALUE, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_stop, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_full_report_set_custom_metadata_str, 0, 0, 1)
+#if PHP_API_VERSION >= 20151012
+    ZEND_ARG_TYPE_INFO(0, customMetadataStr, IS_STRING, 0)
+#else
+    ZEND_ARG_INFO(0, customMetadataStr)
+#endif
 ZEND_END_ARG_INFO()
 
 static zend_function_entry spx_functions[] = {
     PHP_FE(spx_profiler_start, arginfo_spx_profiler_start)
     PHP_FE(spx_profiler_stop, arginfo_spx_profiler_stop)
+    PHP_FE(spx_profiler_full_report_set_custom_metadata_str, arginfo_spx_profiler_full_report_set_custom_metadata_str)
     PHP_FE_END
 };
 
@@ -433,6 +443,54 @@ static PHP_FUNCTION(spx_profiler_stop)
         RETURN_STRING(context.profiling_handler.full_report_key, 1);
 #endif
     }
+}
+
+static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str)
+{
+    char * custom_metadata_str;
+#if PHP_API_VERSION >= 20151012
+    size_t custom_metadata_str_len;
+#else
+    int custom_metadata_str_len;
+#endif
+
+#if PHP_API_VERSION >= 20170718
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_STRING(custom_metadata_str, custom_metadata_str_len)
+    ZEND_PARSE_PARAMETERS_END();
+#else
+    if (
+        zend_parse_parameters(
+            ZEND_NUM_ARGS() TSRMLS_CC,
+            "s",
+            &custom_metadata_str,
+            &custom_metadata_str_len
+        ) == FAILURE
+    ) {
+        return;
+    }
+#endif
+
+    if (context.config.report != SPX_CONFIG_REPORT_FULL) {
+        spx_php_log_notice(
+            "spx_profiler_full_report_set_custom_metadata_str(): `full` report required"
+        );
+
+        return;
+    }
+
+    if (custom_metadata_str_len > 4 * 1024) {
+        spx_php_log_notice(
+            "spx_profiler_full_report_set_custom_metadata_str(): too large $customMetadataStr string, it must not exceed 4KB"
+        );
+
+        return;
+    }
+
+    spx_reporter_full_set_custom_metadata_str(
+        context.profiling_handler.reporter,
+        custom_metadata_str
+    );
 }
 
 static int check_access(void)

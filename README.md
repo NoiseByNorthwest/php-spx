@@ -199,6 +199,48 @@ Side notes:
 - in CLI context, when automatic start is disabled, no signal handlers (i.e. on SIGINT/SIGTERM) are registered by SPX.
 
 
+#### Add custom metadata to the current full report
+
+When profiling with _full_ report as output, it could be handy to add custom metadata to the current report so that you will be able to easily retrieve it or differentiate it from other similar reports.
+
+This is especially true for the long-living process use case which otherwise would not allow to differentiate a report from other ones of the same process.
+
+To do that SPX exposes the `spx_profiler_full_report_set_custom_metadata_str(string $customMetadataStr): void` function.
+
+As you may have notificed, this function accepts a string as custom metadata, for the sake of flexibility and simplicity on SPX side. It is up to you to encode any structured data to a string, for instance using JSON format.
+
+The metadata string is limited to 4KB, which is large enough for most use cases. If you pass a string exceeding this limit it will be discarded and a notice log will be emitted.
+
+This string will be stored among other current report's metadata and you will retrieve it in the report list on web UI side.
+
+`spx_profiler_full_report_set_custom_metadata_str()` can be called at any moment as long as the profiler is already started and not finished yet, which means:
+- at any moment during the script execution when automatic start is enabled (default mode).
+- at any moment after the call of `spx_profiler_start()` and before the call of `spx_profiler_stop()` when automatic start is disabled.
+
+Here is an example:
+
+```php
+<?php
+
+while ($task = get_next_ready_task()) {
+  spx_profiler_start();
+
+  spx_profiler_full_report_set_custom_metadata_str(json_encode(
+    [
+      'taskId' => $task->getId(),
+    ]
+  ));
+
+  try {
+    $task->process();
+  } finally {
+    spx_profiler_stop();
+  }
+}
+
+```
+
+
 ## Advanced usage
 
 ### Configuration
