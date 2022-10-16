@@ -23,14 +23,12 @@
 
 char * spx_utils_json_escape(char * dst, const char * src, size_t limit)
 {
-    if (limit < 3) {
-        dst[0] = 0;
-
-        return dst;
-    }
-
     size_t i = 0;
-    while (*src && i < limit - 2) {
+    while (*src) {
+        if (i >= limit) {
+            goto limit_reached;
+        }
+
         char escaped_char = 0;
 
         switch (*src) {
@@ -69,6 +67,11 @@ char * spx_utils_json_escape(char * dst, const char * src, size_t limit)
 
         if (escaped_char != 0) {
             dst[i++] = '\\';
+
+            if (i >= limit) {
+                goto limit_reached;
+            }
+
             dst[i++] = escaped_char;
         } else {
             dst[i++] = *src;
@@ -77,9 +80,19 @@ char * spx_utils_json_escape(char * dst, const char * src, size_t limit)
         src++;
     }
 
+    if (i >= limit) {
+        goto limit_reached;
+    }
+
     dst[i] = 0;
 
     return dst;
+
+limit_reached:
+    spx_utils_die("The provided buffer is too small to contain the escaped JSON string");
+
+    /* unreacheable */
+    return NULL;
 }
 
 int spx_utils_str_starts_with(const char * str, const char * prefix)

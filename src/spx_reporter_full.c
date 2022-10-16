@@ -55,6 +55,7 @@ typedef struct {
     char * http_request_uri;
     char * http_method;
     char * http_host;
+    char * custom_metadata_str;
     size_t wall_time_ms;
     size_t peak_memory_usage;
     size_t called_function_count;
@@ -210,6 +211,15 @@ error:
     return NULL;
 }
 
+void spx_reporter_full_set_custom_metadata_str(
+    const spx_profiler_reporter_t * base_reporter,
+    const char * custom_metadata_str
+) {
+    const full_reporter_t * reporter = (const full_reporter_t *) base_reporter;
+
+    reporter->metadata->custom_metadata_str = strdup(custom_metadata_str);
+}
+
 const char * spx_reporter_full_get_key(const spx_profiler_reporter_t * base_reporter)
 {
     const full_reporter_t * reporter = (const full_reporter_t *) base_reporter;
@@ -350,6 +360,7 @@ static metadata_t * metadata_create(void)
     metadata->http_request_uri = NULL;
     metadata->http_method = NULL;
     metadata->http_host = NULL;
+    metadata->custom_metadata_str = NULL;
 
     metadata->exec_ts = time(NULL);
 
@@ -454,6 +465,7 @@ static void metadata_destroy(metadata_t * metadata)
     free(metadata->http_request_uri);
     free(metadata->http_method);
     free(metadata->http_host);
+    free(metadata->custom_metadata_str);
 
     free(metadata);
 }
@@ -545,6 +557,21 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
         "http_host",
         spx_utils_json_escape(buf, metadata->http_host, sizeof(buf))
     );
+
+    if (metadata->custom_metadata_str) {
+        fprintf(
+            fp,
+            "  \"%s\": \"%s\",\n",
+            "custom_metadata_str",
+            spx_utils_json_escape(buf, metadata->custom_metadata_str, sizeof(buf))
+        );
+    } else {
+        fprintf(
+            fp,
+            "  \"%s\": null,\n",
+            "custom_metadata_str"
+        );
+    }
 
     fprintf(
         fp,

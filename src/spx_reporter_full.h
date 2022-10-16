@@ -42,6 +42,11 @@ int spx_reporter_full_build_file_name(
 
 spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir);
 
+void spx_reporter_full_set_custom_metadata_str(
+    const spx_profiler_reporter_t * base_reporter,
+    const char * custom_metadata_str
+);
+
 const char * spx_reporter_full_get_key(const spx_profiler_reporter_t * base_reporter);
 
 #endif /* SPX_REPORTER_FULL_H_DEFINED */
