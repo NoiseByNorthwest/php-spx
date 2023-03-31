@@ -471,6 +471,11 @@ However, whatever the platform, if you want to maximize accuracy to find a time 
 - try sampling mode with different sampling periods.
 - try to play with maximum depth parameter to stop profiling at a given depth.
 
+## Stubs
+
+Stubs for SPX functions to be used with [Intelephense](https://www.npmjs.com/package/intelephense)
+
+    composer require --dev 8ctopus/php-spx-stubs
 
 ## Credits
 
