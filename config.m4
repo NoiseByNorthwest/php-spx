@@ -1,6 +1,9 @@
 PHP_ARG_ENABLE(SPX, whether to enable SPX extension,
 [ --enable-spx   Enable SPX extension])
 
+PHP_ARG_ENABLE(SPX-DEV, whether to enable SPX developer build flags,
+[  --enable-spx-dev   Compile SPX with debugging symbols])
+
 if test -z "$PHP_ZLIB_DIR"; then
 PHP_ARG_WITH(zlib-dir, for ZLIB,
 [  --with-zlib-dir[=DIR]   Set the path to ZLIB install prefix.], no)
@@ -18,6 +21,11 @@ if test "$PHP_SPX" = "yes"; then
     if test "$CONTINUOUS_INTEGRATION" = "true"
     then
         CFLAGS="$CFLAGS -DCONTINUOUS_INTEGRATION"
+    fi
+
+    if test "$PHP_SPX_DEV" = "yes"
+    then
+        CFLAGS="$CFLAGS -g"
     fi
 
     AC_MSG_CHECKING([for zlib header])
