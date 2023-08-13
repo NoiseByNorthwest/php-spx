@@ -233,10 +233,10 @@ size_t spx_str_builder_append_str(spx_str_builder_t * str_builder, const char * 
 
         p[c++] = *str;
         str++;
+        str_builder->size++;
     }
 
     p[c] = 0;
-    str_builder->size += c;
 
     return c;
 }
