@@ -18,6 +18,7 @@ runs:
     - uses: docker/build-push-action@v4
       with:
         push: false
+        load: true
         tags: builder:${{ matrix.php }}
         file: ./.github/workflows/build-debian-ext/Dockerfile
         build-args: |
