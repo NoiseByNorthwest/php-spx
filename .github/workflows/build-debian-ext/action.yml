@@ -8,7 +8,7 @@ runs:
       with:
         push: false
         tags: builder:${{ matrix.php }}
-        file: ${{ github.workspace }}/.github/workflows/build-debian-ext/Dockerfile
+        file: ./.github/workflows/build-debian-ext/Dockerfile
         build-args: |
           PHP_VERSION=${{ matrix.php }}
 
