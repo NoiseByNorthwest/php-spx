@@ -49,11 +49,11 @@ jobs:
           echo "spx_file_name=spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}" >> $GITHUB_OUTPUT
 
       - name: Build extension for Ubuntu and macOS
-        if: ${{ matrix.name }} != 'debian'
+        if: matrix.name != 'debian'
         uses: ./.github/workflows/build-linux-mac-ext
 
       - name: Build extension for Debian using docker
-        if: ${{ matrix.name }} == 'debian'
+        if: matrix.name == 'debian'
         uses: ./.github/workflows/build-debian-ext
 
       - name: Upload build artifacts after Failure

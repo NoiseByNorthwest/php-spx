@@ -11,8 +11,6 @@ runs:
         file: ${{ github.workspace }}/.github/workflows/build-debian-ext/Dockerfile
         build-args: |
           PHP_VERSION=${{ matrix.php }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
 
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
