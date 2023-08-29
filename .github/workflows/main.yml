@@ -26,13 +26,16 @@ jobs:
 
         name:
           - linux
+          - debian
           - mac
 
         include:
           # Linux
-          - { name: linux, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          # Debian (docker)
+          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
           # macOS
-          - { name: mac,   ts: 'nts', compiler: 'clang', os: macos-11 }
+          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-11 }
 
     steps:
       - uses: actions/checkout@v3
@@ -45,8 +48,13 @@ jobs:
         run: |
           echo "spx_file_name=spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}" >> $GITHUB_OUTPUT
 
-      - name: Build extension
-        uses: ./.github/workflows/build-linux-mac-ext          
+      - name: Build extension for Ubuntu and macOS
+        if: ${{ matrix.name }} != 'debian'
+        uses: ./.github/workflows/build-linux-mac-ext
+
+      - name: Build extension for Debian using docker
+        if: ${{ matrix.name }} == 'debian'
+        uses: ./.github/workflows/build-debian-ext
 
       - name: Upload build artifacts after Failure
         if: failure()

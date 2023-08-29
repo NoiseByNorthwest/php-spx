@@ -1,0 +1,27 @@
+name: 'PHP Extension build action'
+description: 'Build PHP extension for debian using docker'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: docker/build-push-action@v2
+      with:
+        push: false
+        tags: builder:${{ matrix.php }}
+        file: ${{ github.workspace }}/.github/workflows/build-debian-ext/Dockerfile
+        build-args: |
+          PHP_VERSION=${{ matrix.php }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run the build process with Docker
+      shell: bash
+      uses: addnab/docker-run-action@v3
+      with:
+          image: builder:${{ matrix.php }}
+          options: -v ${{ github.workspace }}:/php-spx
+          run: |
+              cd /php-spx
+              phpize
+              ./configure
+              make -j"$(getconf _NPROCESSORS_ONLN)"
