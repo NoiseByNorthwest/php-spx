@@ -12,6 +12,9 @@ runs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
     - uses: docker/build-push-action@v4
       with:
         push: false
