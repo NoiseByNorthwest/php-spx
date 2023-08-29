@@ -15,13 +15,12 @@ runs:
         cache-to: type=gha,mode=max
 
     - name: Run the build process with Docker
-      shell: bash
       uses: addnab/docker-run-action@v3
       with:
-          image: builder:${{ matrix.php }}
-          options: -v ${{ github.workspace }}:/php-spx
-          run: |
-              cd /php-spx
-              phpize
-              ./configure
-              make -j"$(getconf _NPROCESSORS_ONLN)"
+        image: builder:${{ matrix.php }}
+        options: -v ${{ github.workspace }}:/php-spx
+        run: |
+            cd /php-spx
+            phpize
+            ./configure
+            make -j"$(getconf _NPROCESSORS_ONLN)"
