@@ -4,13 +4,29 @@ description: 'Build PHP extension for debian using docker'
 runs:
   using: 'composite'
   steps:
-    - uses: docker/build-push-action@v2
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - uses: docker/build-push-action@v4
       with:
         push: false
         tags: builder:${{ matrix.php }}
         file: ./.github/workflows/build-debian-ext/Dockerfile
         build-args: |
           PHP_VERSION=${{ matrix.php }}
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+    - name: Move buildx cache
+      shell: bash
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
     - name: Run the build process with Docker
       uses: addnab/docker-run-action@v3
