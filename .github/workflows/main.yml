@@ -82,7 +82,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.setup-artifact.outputs.spx_file_name }}
+          name: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
           path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
 
   release:
