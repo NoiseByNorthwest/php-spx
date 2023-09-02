@@ -25,65 +25,39 @@ jobs:
 
         name:
           - linux
+          - debian
           - mac
 
         include:
           # Linux
-          - { name: linux, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          # Debian (docker)
+          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
           # macOS
-          - { name: mac,   ts: 'nts', compiler: 'clang', os: macos-11 }
+          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-11 }
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # configure spx artifact name in next format:
       #   {php}-{ts}-{os.name}-{compiler}
-      #   spx-php-8.1-nts-Linux-gcc
+      #   spx-php-8.1-nts-linux-gcc
       - name: Set artifact name
         id: setup-artifact
         run: |
-          echo "::set-output name=spx_file_name::spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}"
+          echo "spx_file_name=spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}" >> $GITHUB_OUTPUT
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
+      - name: Build extension for Ubuntu and macOS
+        if: matrix.name != 'debian'
+        uses: ./.github/workflows/build-linux-mac-ext
 
-      - name: Install dependencies
-        if: runner.os == 'macOS'
-        run: brew install zlib
-
-      - name: phpize
-        run: phpize
-
-      - name: Configure
-        run: |
-          if [ "${{ runner.os }}" = "macOS" ]; then
-            ./configure --with-zlib-dir=$(brew --prefix)/opt/zlib
-          else
-            ./configure
-          fi
-
-      - name: Compile
-        run: |
-          make -j"$(getconf _NPROCESSORS_ONLN)"
-          sudo make install
-
-      - name: Extension Info
-        run: |
-          php --ini
-          php -d extension=./modules/spx.so --ri spx
-
-      - name: Run Tests
-        run: make test
-        env:
-          NO_INTERACTION: 1
-          REPORT_EXIT_STATUS: 1
-          TEST_PHP_ARGS: "--show-diff"
+      - name: Build extension for Debian using docker
+        if: matrix.name == 'debian'
+        uses: ./.github/workflows/build-debian-ext
 
       - name: Upload build artifacts after Failure
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: debug-${{ steps.setup-artifact.outputs.spx_file_name }}
           path: |
@@ -106,9 +80,9 @@ jobs:
           ./.github/release-notes.sh ./CHANGELOG.md
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.setup-artifact.outputs.spx_file_name }}
+          name: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
           path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
 
   release:
@@ -120,18 +94,18 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
 
       - name: Get the release version
         id: get-version
         run: |
-          echo ::set-output name=version::${GITHUB_REF#refs/tags/}
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Download SPX build artifacts
         id: download
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: ./build-artifacts
 

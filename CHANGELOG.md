@@ -4,7 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.13...HEAD)
+## [Unreleased](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.14...HEAD)
+
+### Added
+- Added Debian builds to github workflow
+
+
+## [v0.4.14](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.13...0.4.14)
+
+### Added
+- Added simple search feature
+- Added custom metadata storage implementation
+- Added `--enable-spx-dev` to compile with debug symbols
+
+### Fixed
+- Fixed buffer overflow in str_builder
 
 
 ## [v0.4.13](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.12...0.4.13)

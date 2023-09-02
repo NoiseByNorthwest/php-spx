@@ -1,0 +1,48 @@
+name: 'PHP Extension build action'
+description: 'Build PHP extension for linux/mac'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+    
+    - name: Install dependencies
+      shell: bash
+      if: runner.os == 'macOS'
+      run: brew install zlib
+
+    - name: phpize
+      shell: bash
+      run: phpize
+
+    - name: Configure
+      shell: bash
+      run: |
+        if [ "${{ runner.os }}" = "macOS" ]; then
+          ./configure --with-zlib-dir=$(brew --prefix)/opt/zlib
+        else
+          ./configure
+        fi
+
+    - name: Compile
+      shell: bash
+      run: |
+        make -j"$(getconf _NPROCESSORS_ONLN)"
+        sudo make install
+
+    - name: Extension Info
+      shell: bash
+      run: |
+        php --ini
+        php -d extension=./modules/spx.so --ri spx
+
+    - name: Run Tests
+      shell: bash
+      run: make test
+      env:
+        NO_INTERACTION: 1
+        REPORT_EXIT_STATUS: 1
+        TEST_PHP_ARGS: "--show-diff"
