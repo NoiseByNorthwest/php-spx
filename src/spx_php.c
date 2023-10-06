@@ -65,7 +65,9 @@ typedef void (*execute_internal_func_t) (
 #if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
 #else
+#if ZEND_MODULE_API_NO >= 20121212
     struct _zend_fcall_info * fci,
+#endif
     int ret
 #endif
     TSRMLS_DC
@@ -79,7 +81,11 @@ static struct {
     size_t (*block_size) (void * ptr);
 #endif
 
+#if ZEND_MODULE_API_NO < 20121212
+    void (*execute) (zend_op_array * op_array TSRMLS_DC);
+#else
     void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
+#endif
     execute_internal_func_t previous_zend_execute_internal;
     execute_internal_func_t execute_internal;
 
@@ -175,13 +181,19 @@ static void tls_hook_free(void * ptr);
 static void * tls_hook_realloc(void * ptr, size_t size);
 #endif
 
+#if ZEND_MODULE_API_NO < 20121212
+static void global_hook_execute(zend_op_array * op_array TSRMLS_DC);
+#else
 static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
+#endif
 static void global_hook_execute_internal(
     zend_execute_data * execute_data,
 #if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
 #else
+#if ZEND_MODULE_API_NO >= 20121212
     struct _zend_fcall_info * fci,
+#endif
     int ret
 #endif
     TSRMLS_DC
@@ -553,8 +565,13 @@ size_t spx_php_zend_error_count(void)
 
 void spx_php_global_hooks_set(void)
 {
+#if ZEND_MODULE_API_NO < 20121212
+    ze_hooked_func.execute = zend_execute;
+    zend_execute = global_hook_execute;
+#else
     ze_hooked_func.execute_ex = zend_execute_ex;
     zend_execute_ex = global_hook_execute_ex;
+#endif
 
     ze_hooked_func.previous_zend_execute_internal = zend_execute_internal;
     ze_hooked_func.execute_internal = zend_execute_internal ?
@@ -579,10 +596,17 @@ void spx_php_global_hooks_set(void)
 
 void spx_php_global_hooks_unset(void)
 {
+#if ZEND_MODULE_API_NO < 20121212
+    if (ze_hooked_func.execute) {
+        zend_execute = ze_hooked_func.execute;
+        ze_hooked_func.execute = NULL;
+    }
+#else
     if (ze_hooked_func.execute_ex) {
         zend_execute_ex = ze_hooked_func.execute_ex;
         ze_hooked_func.execute_ex = NULL;
     }
+#endif
 
     if (ze_hooked_func.execute_internal) {
         zend_execute_internal = ze_hooked_func.previous_zend_execute_internal;
@@ -1034,10 +1058,18 @@ static void * tls_hook_realloc(void * ptr, size_t size)
 }
 #endif
 
+#if ZEND_MODULE_API_NO < 20121212
+static void global_hook_execute(zend_op_array * op_array TSRMLS_DC)
+#else
 static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
+#endif
 {
     if (!context.global_hooks_enabled) {
+    #if ZEND_MODULE_API_NO < 20121212
+        ze_hooked_func.execute(op_array TSRMLS_CC);
+    #else
         ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
+    #endif
 
         return;
     }
@@ -1052,7 +1084,11 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
         context.ex_hook.user.before();
     }
 
+#if ZEND_MODULE_API_NO < 20121212
+    ze_hooked_func.execute(op_array TSRMLS_CC);
+#else
     ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
+#endif
 
     if (context.ex_hook.user.after) {
         context.ex_hook.user.after();
@@ -1079,7 +1115,9 @@ static void global_hook_execute_internal(
 #if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
 #else
+#if ZEND_MODULE_API_NO >= 20121212
     struct _zend_fcall_info * fci,
+#endif
     int ret
 #endif
     TSRMLS_DC
@@ -1090,7 +1128,9 @@ static void global_hook_execute_internal(
     #if ZEND_MODULE_API_NO >= 20151012
             return_value
     #else
+    #if ZEND_MODULE_API_NO >= 20121212
             fci,
+    #endif
             ret
     #endif
             TSRMLS_CC
@@ -1112,7 +1152,9 @@ static void global_hook_execute_internal(
 #if ZEND_MODULE_API_NO >= 20151012
         return_value
 #else
+#if ZEND_MODULE_API_NO >= 20121212
         fci,
+#endif
         ret
 #endif
         TSRMLS_CC

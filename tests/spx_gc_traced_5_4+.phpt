@@ -1,12 +1,12 @@
 --TEST--
-GC is traced (PHP 5.6)
+GC is traced (PHP 5.4 - 5.6)
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '5.6') < 0
+    version_compare(PHP_VERSION, '5.4') < 0
     || version_compare(PHP_VERSION, '7.0') >= 0
 ) {
-    die('skip this test is for PHP 5.6 only');
+    die('skip this test is for PHP ^5.4 only');
 }
 ?>
 --ENV--
