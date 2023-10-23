@@ -52,7 +52,7 @@ jobs:
         uses: ./.github/workflows/build-linux-mac-ext
 
       - name: Build extension for Debian using docker
-        if: matrix.name == 'debian'
+        if: matrix.name == 'debian' && matrix.php != '5.4' && matrix.php != '5.5'
         uses: ./.github/workflows/build-debian-ext
 
       - name: Upload build artifacts after Failure
