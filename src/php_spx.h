@@ -32,7 +32,7 @@
 #endif
 
 #if ZEND_MODULE_API_NO < 20100525 || ZEND_MODULE_API_NO > 20220830
-#   error "Only the following PHP versions are supported: 5.4 to 8.2"
+#   error "Only the following PHP versions are supported: 5.4 to 8.3"
 #endif
 
 #if defined(ZTS) && !defined(CONTINUOUS_INTEGRATION)
