@@ -15,10 +15,15 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+function getImportUrl(path) {
+    const rootUrl = new URL(import.meta.url);
+    rootUrl.searchParams.set('SPX_UI_URI', path);
+    return rootUrl.toString();
+}
 
-import * as utils from './?SPX_UI_URI=/js/utils.js';
-import * as fmt from './?SPX_UI_URI=/js/fmt.js';
-import * as math from './?SPX_UI_URI=/js/math.js';
+const utils = await import(getImportUrl('/js/utils.js'));
+const fmt = await import(getImportUrl('/js/fmt.js'));
+const math = await import(getImportUrl('/js/math.js'));
 
 class MetricValueSet {
 

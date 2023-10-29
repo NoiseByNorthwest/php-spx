@@ -15,8 +15,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+function getImportUrl(path) {
+    const rootUrl = new URL(import.meta.url);
+    rootUrl.searchParams.set('SPX_UI_URI', path);
+    return rootUrl.toString();
+}
 
-import * as math from './?SPX_UI_URI=/js/math.js';
+const math = await import(getImportUrl('/js/math.js'));
 
 export function getCookieVar(name) {
     let m = document.cookie.match(new RegExp('(^|\\b)' + name + '=([^;]+)'));
