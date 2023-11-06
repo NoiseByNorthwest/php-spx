@@ -15,9 +15,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+function getImportUrl(path) {
+    const rootUrl = new URL(import.meta.url);
+    rootUrl.searchParams.set('SPX_UI_URI', path);
+    return rootUrl.toString();
+}
 
-
-import {round} from './?SPX_UI_URI=/js/math.js';
+const {round} = await import(getImportUrl('/js/math.js'));
 
 export function lpad(str, len, char) {
     str = str + '';
