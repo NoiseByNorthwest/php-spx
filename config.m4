@@ -40,7 +40,7 @@ if test "$PHP_SPX" = "yes"; then
             AC_MSG_ERROR([Can't find ZLIB headers under "$PHP_ZLIB_DIR"])
         fi
     else
-        for i in /usr/local /usr; do
+        for i in /usr/local /usr /opt/local; do
             if test -f "$i/include/zlib/zlib.h"; then
                 PHP_ZLIB_DIR="$i"
                 PHP_ZLIB_INCDIR="$i/include/zlib"
