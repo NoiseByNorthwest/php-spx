@@ -4,10 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.14...HEAD)
+## [v0.4.15](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.14...0.4.15)
 
 ### Added
-- Added Debian builds to github workflow
+- Added Debian builds to github workflow [#222](https://github.com/NoiseByNorthwest/php-spx/pull/222)
+- Added PHP8.3 support [#230](https://github.com/NoiseByNorthwest/php-spx/pull/230)
+- Added PHP5.4 support [#227](https://github.com/NoiseByNorthwest/php-spx/pull/227)
+
+### Fixed
+- Fixed ESM module imports in Web UI [#233](https://github.com/NoiseByNorthwest/php-spx/issues/233)
+- Fixed zlib.h path resolution for macOS/Macport [#238](https://github.com/NoiseByNorthwest/php-spx/issues/238)
+- Fixed non-portable path expectation in tests [#221](https://github.com/NoiseByNorthwest/php-spx/pull/221)
 
 
 ## [v0.4.14](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.13...0.4.14)
