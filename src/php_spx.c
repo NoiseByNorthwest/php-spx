@@ -924,6 +924,10 @@ static void http_ui_handler_shutdown(void)
         ui_uri = "/index.html";
     }
 
+    if (ui_uri[0] != '/' || strstr(ui_uri, "/../") != NULL) {
+        goto error_404;
+    }
+
     if (0 == http_ui_handler_data(SPX_G(data_dir), ui_uri)) {
         goto finish;
     }
