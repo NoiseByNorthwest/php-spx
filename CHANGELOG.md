@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.4.16](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.15...0.4.16)
+
+### Added
+- Local snapshots of jQuery & jscolor in order to remove the internet access dependency of the Web UI [#217](https://github.com/NoiseByNorthwest/php-spx/issues/217)
+
+### Fixed
+- Fixed unconfined server file access from WEB UI [#251](https://github.com/NoiseByNorthwest/php-spx/issues/251)
+
 ## [v0.4.15](https://github.com/NoiseByNorthwest/php-spx/compare/0.4.14...0.4.15)
 
 ### Added
