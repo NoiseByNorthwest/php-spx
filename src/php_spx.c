@@ -17,6 +17,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #ifndef ZTS
@@ -924,7 +925,7 @@ static void http_ui_handler_shutdown(void)
         ui_uri = "/index.html";
     }
 
-    if (ui_uri[0] != '/' || strstr(ui_uri, "/../") != NULL) {
+    if (ui_uri[0] != '/') {
         goto error_404;
     }
 
@@ -941,7 +942,29 @@ static void http_ui_handler_shutdown(void)
         ui_uri
     );
 
-    if (0 == http_ui_handler_output_file(local_file_name)) {
+    char local_file_absolute_path[PATH_MAX + 1];
+    if (realpath(local_file_name, local_file_absolute_path) == NULL) {
+        goto error_404;
+    }
+
+    char http_ui_assets_dir_absolute_path[PATH_MAX + 1];
+    if (realpath(SPX_G(http_ui_assets_dir), http_ui_assets_dir_absolute_path) == NULL) {
+        goto error_404;
+    }
+
+    char expected_path_prefix[512];
+    snprintf(
+        expected_path_prefix,
+        sizeof(expected_path_prefix),
+        "%s/",
+        http_ui_assets_dir_absolute_path
+    );
+
+    if (! spx_utils_str_starts_with(local_file_absolute_path, expected_path_prefix)) {
+        goto error_404;
+    }
+
+    if (0 == http_ui_handler_output_file(local_file_absolute_path)) {
         goto finish;
     }
 
