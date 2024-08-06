@@ -7,6 +7,7 @@ spx.http_key="dev"
 spx.http_ip_var="HTTP_X_FORWARDED_FOR"
 spx.http_trusted_proxies="0000:0000:0000:0000:0000:ffff:127.0.0.2,0000:0000:0000:0000:0000:ffff:127.0.0.3,0000:0000:0000:0000:0000:ffff:127.0.0.4"
 spx.http_ip_whitelist="0000:0000:0000:0000:0000:ffff:127.0.0.5"
+spx.http_ui_assets_dir="{PWD}/../assets/web-ui"
 log_errors=on
 --ENV--
 return <<<END

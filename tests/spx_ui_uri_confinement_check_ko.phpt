@@ -5,6 +5,7 @@ UI: URI confinement
 spx.http_enabled=1
 spx.http_key="dev"
 spx.http_ip_whitelist="127.0.0.1"
+spx.http_ui_assets_dir="{PWD}/../assets/web-ui"
 log_errors=on
 --ENV--
 return <<<END
