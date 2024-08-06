@@ -20,6 +20,7 @@
 #define SPX_UTILS_H_DEFINED
 
 #include <stddef.h>
+#include <limits.h> /* PATH_MAX */
 
 #define SPX_UTILS_TOKENIZE_STRING(str, delim, token, size, block) \
 do {                                                              \
@@ -48,6 +49,14 @@ do {                                                              \
         c_++;                                                     \
     }                                                             \
 } while (0)
+
+char * spx_utils_resolve_confined_file_absolute_path(
+    const char * root_dir,
+    const char * relative_path,
+    const char * suffix,
+    char * dst,
+    size_t size
+);
 
 char * spx_utils_json_escape(char * dst, const char * src, size_t limit);
 int spx_utils_str_starts_with(const char * str, const char * prefix);

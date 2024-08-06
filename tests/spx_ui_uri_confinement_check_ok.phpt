@@ -1,21 +1,25 @@
 --TEST--
-Log hidden
+UI: URI confinement
 --CGI--
 --INI--
 spx.http_enabled=1
 spx.http_key="dev"
 spx.http_ip_whitelist="127.0.0.1"
 spx.http_ui_assets_dir="/var/www/php-spx/assets/web-ui"
+log_errors=on
 --ENV--
 return <<<END
 REMOTE_ADDR=127.0.0.1
 REQUEST_URI=/
 END;
 --GET--
-SPX_KEY=&SPX_UI_URI=/
+SPX_KEY=dev&SPX_UI_URI=/js/fmt.js
 --FILE--
 <?php
-echo 'Normal output';
+// noop
 ?>
---EXPECT--
-Normal output
+--EXPECTF--
+/* SPX - A simple profiler for PHP
+%a
+export function quantity(n) {
+%a

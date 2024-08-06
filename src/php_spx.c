@@ -17,7 +17,6 @@
 
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 #ifndef ZTS
@@ -933,34 +932,17 @@ static void http_ui_handler_shutdown(void)
         goto finish;
     }
 
-    char local_file_name[512];
-    snprintf(
-        local_file_name,
-        sizeof(local_file_name),
-        "%s%s",
-        SPX_G(http_ui_assets_dir),
-        ui_uri
-    );
+    char local_file_absolute_path[PATH_MAX];
 
-    char local_file_absolute_path[PATH_MAX + 1];
-    if (realpath(local_file_name, local_file_absolute_path) == NULL) {
-        goto error_404;
-    }
-
-    char http_ui_assets_dir_absolute_path[PATH_MAX + 1];
-    if (realpath(SPX_G(http_ui_assets_dir), http_ui_assets_dir_absolute_path) == NULL) {
-        goto error_404;
-    }
-
-    char expected_path_prefix[512];
-    snprintf(
-        expected_path_prefix,
-        sizeof(expected_path_prefix),
-        "%s/",
-        http_ui_assets_dir_absolute_path
-    );
-
-    if (! spx_utils_str_starts_with(local_file_absolute_path, expected_path_prefix)) {
+    if (
+        spx_utils_resolve_confined_file_absolute_path(
+            SPX_G(http_ui_assets_dir),
+            ui_uri,
+            NULL,
+            local_file_absolute_path,
+            sizeof(local_file_absolute_path)
+        ) == NULL
+    ) {
         goto error_404;
     }
 
@@ -1052,26 +1034,34 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
 
     const char * get_report_metadata_uri = "/data/reports/metadata/";
     if (spx_utils_str_starts_with(relative_path, get_report_metadata_uri)) {
-        char file_name[512];
-        spx_reporter_full_build_metadata_file_name(
-            data_dir,
-            relative_path + strlen(get_report_metadata_uri),
-            file_name,
-            sizeof(file_name)
-        );
+        char file_name[PATH_MAX];
+        if (
+            spx_reporter_full_build_metadata_file_name(
+                data_dir,
+                relative_path + strlen(get_report_metadata_uri),
+                file_name,
+                sizeof(file_name)
+            ) == NULL
+        ) {
+            return -1;
+        }
 
         return http_ui_handler_output_file(file_name);
     }
 
     const char * get_report_uri = "/data/reports/get/";
     if (spx_utils_str_starts_with(relative_path, get_report_uri)) {
-        char file_name[512];
-        spx_reporter_full_build_file_name(
-            data_dir,
-            relative_path + strlen(get_report_uri),
-            file_name,
-            sizeof(file_name)
-        );
+        char file_name[PATH_MAX];
+        if (
+            spx_reporter_full_build_file_name(
+                data_dir,
+                relative_path + strlen(get_report_uri),
+                file_name,
+                sizeof(file_name)
+            ) == NULL
+        ) {
+            return -1;
+        }
 
         return http_ui_handler_output_file(file_name);
     }
