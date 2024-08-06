@@ -5,7 +5,7 @@ Authentication: OK (wildcard IP)
 spx.http_enabled=1
 spx.http_key="dev"
 spx.http_ip_whitelist="*"
-spx.http_ui_assets_dir="/var/www/php-spx/assets/web-ui"
+spx.http_ui_assets_dir="{PWD}/../assets/web-ui"
 log_errors=on
 --ENV--
 return <<<END
