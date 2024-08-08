@@ -43,6 +43,50 @@ Current requirements are:
 * PHP 5.4 to 8.3
 * Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
 
+## Quick demo in Docker
+
+To see PHP-SPX in action on any operating system using Docker, follow the steps below in any directory on your computer.
+
+- Create `index.php` with the content below:
+  ```php
+  <?php
+    phpinfo();
+  ```
+- Create `php.ini` with the content below:
+  ```ini
+  error_reporting = E_ALL
+  display_errors = off
+  log_errors = on
+  error_log = log.log
+
+  extension=spx.so
+  spx.http_enabled = 1
+  spx.http_ip_whitelist="*"
+  spx.http_key="dev"
+  ```
+- Create `dockerfile` with the content below:
+  ```sh
+  FROM --platform=linux/amd64 php:8.3
+  RUN    apt update \
+      && apt install zlib1g-dev git -y \
+      && cd / \
+      && git clone https://github.com/NoiseByNorthwest/php-spx.git \
+      && cd php-spx \
+      && git checkout release/latest \
+      && phpize \
+      && ./configure \
+      && make \
+      && make install
+  ```
+- Run the commands below in a terminal in the folder containing these files.
+  ```sh
+  docker build --platform linux/amd64 -t phpspx -f dockerfile .
+
+  docker run --name phpbox --rm -v ".:/app" -p 8000:8000 --platform linux/amd64 phpspx php -S 0.0.0.0:8000 -t /app -c /app/php.ini
+  ```
+- In a Chromium-based browser or Firefox, browse to both http://localhost:8000 and, in a separate tab, http://localhost:8000/?SPX_KEY=dev&SPX_UI_URI=/.
+- In the second tab you can see the PHP-SPX web UI. Refresh the first tab, then refresh the second tab again. Now you will see at the bottom of the screen a report line you can click on to open a report. Every time you want to see a new report, you have to refresh both tabs.
+
 ## Installation
 
 ### Prerequisites
@@ -165,8 +209,8 @@ SPX_ENABLED=1 SPX_REPORT=full ./bin/console cache:clear
 
 #### Handle long-living / daemon processes
 
-If your CLI script is long-living and/or daemonized (e.g. via supervisord), profiling its whole lifespan could be meaningless. This is especially true in case of a service waiting for tasks to process.  
-To handle this case, SPX allows to disable the automatic start of profiling and exposes 2 userland functions, `spx_profiler_start(): void` & `spx_profiler_stop(): ?string`, in order to respectively control the start and the end of the profiled spans.  
+If your CLI script is long-living and/or daemonized (e.g. via supervisord), profiling its whole lifespan could be meaningless. This is especially true in case of a service waiting for tasks to process.
+To handle this case, SPX allows to disable the automatic start of profiling and exposes 2 userland functions, `spx_profiler_start(): void` & `spx_profiler_stop(): ?string`, in order to respectively control the start and the end of the profiled spans.
 
 Here is how you can instrument your script:
 
@@ -195,7 +239,7 @@ Automatic start can also be disabled for web requests via the `spx.http_profilin
 
 Side notes:
 - `spx_profiler_start()` and `spx_profiler_stop()` can safely be nested.
-- when profiling with the _full_ report type, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.  
+- when profiling with the _full_ report type, `spx_profiler_stop()` returns the report key so that you will be able to store it somewhere, for instance among other information related to the profiled span. With the report key you can build the analysis screen URL which ends with this pattern `/?SPX_UI_URI=/report.html&key=<report key>`.
 - in CLI context, when automatic start is disabled, no signal handlers (i.e. on SIGINT/SIGTERM) are registered by SPX.
 
 
