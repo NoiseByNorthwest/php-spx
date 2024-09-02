@@ -41,7 +41,6 @@ Current requirements are:
 * **GNU/Linux**, **macOS** or **FreeBSD**
 * zlib dev package (e.g. zlib1g-dev on Debian based distros)
 * PHP 5.4 to 8.3
-* Non-ZTS (threaded) build of PHP (ZTS support is theoretical)
 
 ## Installation
 
@@ -66,6 +65,16 @@ sudo make install
 
 Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
 You may also want to override [default SPX configuration](#configuration) to be able to profile a web request, with [this one](#private-environment) for example for a local development environment.
+
+
+### ZTS PHP (multi-thread)
+
+ZTS PHP is supported, with these extra limitations:
+- a little overhead (theorically unnoticeable in most cases) is added when SPX is loaded, even if it is not enabled.
+- Ctrl-C a CLI script will not make the possible profiling session to be properly finished.
+- segfaults are more likely than for NTS PHP. In this regard, avoid more than ever mixing SPX with other instrumenting extensions (debuggers, profilers...).
+
+Also, consider ZTS PHP support as still being in beta.
 
 ### Linux, PHP-FPM & I/O stats
 
@@ -324,7 +333,7 @@ Here is the list below:
 
 | Name  | Default  | Description  |
 | ----- | -------- | ------------ |
-| _SPX_ENABLED_ | `0` | Whether to enable SPX profiler (i.e. triggering profiling). When disabled there is no performance impact on your application. |
+| _SPX_ENABLED_ | `0` | Whether to enable SPX profiler (i.e. triggering profiling). When disabled there is no performance impact on your application (except for ZTS PHP where a disabled SPX still adds a little overhead). |
 | _SPX_AUTO_START_ | `1` | Whether to enable SPX profiler's automatic start. When automatic start is disabled, you have to start & stop profiling on your own at runtime via the `spx_profiler_start()` & `spx_profiler_stop()` functions. [See here](#handle-long-living--daemon-processes) for more details. |
 | _SPX_BUILTINS_ | `0` | Whether to profile internal functions, script compilations, GC runs and request shutdown. |
 | _SPX_DEPTH_ | `0` | The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls). 0 (default value) means unlimited. |

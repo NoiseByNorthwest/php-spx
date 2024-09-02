@@ -10,18 +10,9 @@ PHP_ARG_WITH(zlib-dir, for ZLIB,
 fi
 
 if test "$PHP_SPX" = "yes"; then
-    if test "$PHP_THREAD_SAFETY" != "no" -a "$CONTINUOUS_INTEGRATION" != "true"
-    then
-        AC_MSG_ERROR([SPX does not work with ZTS PHP build])
-    fi
-
     AC_DEFINE(HAVE_SPX, 1, [spx])
 
     CFLAGS="-Werror -Wall -O3 -pthread -std=gnu90"
-    if test "$CONTINUOUS_INTEGRATION" = "true"
-    then
-        CFLAGS="$CFLAGS -DCONTINUOUS_INTEGRATION"
-    fi
 
     if test "$PHP_SPX_DEV" = "yes"
     then
