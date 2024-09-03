@@ -552,7 +552,7 @@ static int check_access(void)
         int found = 0;
 
         SPX_UTILS_TOKENIZE_STRING(SPX_G(http_trusted_proxies), ',', trusted_proxy_ip_str, 64, {
-            if (0 == strcmp(proxy_ip_str, trusted_proxy_ip_str)) {
+            if (spx_utils_ip_match(proxy_ip_str, trusted_proxy_ip_str)) {
                 found = 1;
             }
         });
@@ -586,17 +586,12 @@ static int check_access(void)
     }
 
     SPX_UTILS_TOKENIZE_STRING(authorized_ips_str, ',', authorized_ip_str, 64, {
-        if (0 == strcmp(ip_str, authorized_ip_str)) {
+        if (spx_utils_ip_match(ip_str, authorized_ip_str)) {
             /* ip authorized (OK, as well as all previous checks) -> granted */
 
             return 1;
         }
     });
-
-    if (0 == strcmp(authorized_ips_str, "*")) {
-        /* all ips authorized */
-        return 1;
-    }
 
     spx_php_log_notice(
         "access not granted: \"%s\" IP is not in white list (\"%s\")",

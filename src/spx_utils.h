@@ -50,6 +50,8 @@ do {                                                              \
     }                                                             \
 } while (0)
 
+int spx_utils_ip_match(const char * ip_address, const char * target);
+
 char * spx_utils_resolve_confined_file_absolute_path(
     const char * root_dir,
     const char * relative_path,
