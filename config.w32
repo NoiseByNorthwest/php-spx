@@ -1,0 +1,40 @@
+ARG_ENABLE("spx", "Enable SPX extension", "no");
+
+ARG_ENABLE("spx-dev", "Compile SPX with debugging symbols", "no");
+
+if (PHP_SPX == "yes") {
+    //if (PHP_ZTS != "no"&& CONTINUOUS_INTEGRATION != "true") {
+    //    AC_MSG_ERROR('SPX does not work with ZTS PHP build');
+    //}
+
+    AC_DEFINE("HAVE_SPX", 1, "spx");
+
+    ADD_FLAG("CFLAGS", "/WX /Wall /Ox /std:c11");
+    //if (CONTINUOUS_INTEGRATION == "true") {
+    //    ADD_FLAG("CFLAGS", "-DCONTINUOUS_INTEGRATION");
+    //}
+
+    if (PHP_SPX_DEV == "yes") {
+        ADD_FLAG("CFLAGS", "/Zi");
+    }
+
+    EXTENSION("spx", "src/php_spx.c \
+        src/spx_profiler.c \
+        src/spx_profiler_tracer.c \
+        src/spx_profiler_sampler.c \
+        src/spx_reporter_full.c \
+        src/spx_reporter_fp.c \
+        src/spx_reporter_trace.c \
+        src/spx_metric.c \
+        src/spx_resource_stats.c \
+        src/spx_hmap.c \
+        src/spx_str_builder.c \
+        src/spx_output_stream.c \
+        src/spx_php.c \
+        src/spx_stdio.c \
+        src/spx_config.c \
+        src/spx_utils.c \
+        src/spx_fmt.c", true);
+
+    ADD_MAKEFILE_FRAGMENT();
+}
