@@ -7,9 +7,8 @@ jobs:
     runs-on: windows-latest
     name: build for Windows PHP 8.3
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Build the extension
-        uses: php/php-windows-builder/extension@v1
+        uses: php/php-windows-builder/extension@5106db21e6a35781bff937be3c9e1e56d7b17789
         with:
           #extension-url: https://github.com/xdebug/xdebug
           #extension-ref: '3.3.1'
