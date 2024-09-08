@@ -16,6 +16,6 @@ jobs:
           ts: nts
           run-tests: false
           arch: x64
-          args: --enable-xdebug
+          args: --enable-spx
           libs: zlib
     
