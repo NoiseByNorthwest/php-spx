@@ -35,10 +35,6 @@
 #   error "Only the following PHP versions are supported: 5.4 to 8.3"
 #endif
 
-#if defined(ZTS) && !defined(CONTINUOUS_INTEGRATION)
-#   error "ZTS is not yet supported"
-#endif
-
 #define PHP_SPX_EXTNAME "SPX"
 #define PHP_SPX_VERSION "0.4.16"
 

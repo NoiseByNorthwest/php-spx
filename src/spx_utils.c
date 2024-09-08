@@ -19,6 +19,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef ZTS
+#   include <pthread.h>
+#endif
+
 #include "spx_utils.h"
 
 char * spx_utils_resolve_confined_file_absolute_path(
@@ -162,13 +167,13 @@ int spx_utils_str_ends_with(const char * str, const char * suffix)
     return 0;
 }
 
-#ifdef ZTS
-/* We just cannot kill other threads */
-#   error "Fair error handling is required for ZTS"
-#endif
 void spx_utils_die_(const char * msg, const char * file, size_t line)
 {
     fprintf(stderr, "SPX Fatal error at %s:%lu - %s\n", file, line, msg);
 
+#ifdef ZTS
+    pthread_exit(NULL);
+#else
     exit(EXIT_FAILURE);
+#endif
 }
