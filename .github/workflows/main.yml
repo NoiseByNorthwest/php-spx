@@ -1,126 +1,20 @@
 name: CI
 
-on:
-  push:
-    branches:
-      - '**'
-    tags:
-      - '*'
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-  pull_request:
-    branches:
-      - master
+on: [push, pull_request]
 
 jobs:
   build:
-    name: build / php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}
-
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        php: [ '5.4', '5.5', '5.6', '7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3' ]
-
-        name:
-          - linux
-          - debian
-          - mac
-
-        include:
-          # Linux
-          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
-          # Debian (docker)
-          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
-          # macOS
-          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-12 }
-
+    runs-on: windows-latest
+    name: build for Windows PHP 8.3
     steps:
-      - uses: actions/checkout@v3
-
-      # configure spx artifact name in next format:
-      #   {php}-{ts}-{os.name}-{compiler}
-      #   spx-php-8.1-nts-linux-gcc
-      - name: Set artifact name
-        id: setup-artifact
-        run: |
-          echo "spx_file_name=spx-php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}" >> $GITHUB_OUTPUT
-
-      - name: Build extension for Ubuntu and macOS
-        if: matrix.name != 'debian'
-        uses: ./.github/workflows/build-linux-mac-ext
-
-      - name: Build extension for Debian using docker
-        if: matrix.name == 'debian' && matrix.php != '5.4' && matrix.php != '5.5'
-        uses: ./.github/workflows/build-debian-ext
-
-      - name: Upload build artifacts after Failure
-        if: failure()
-        uses: actions/upload-artifact@v3
+      - name: Build the extension
+        uses: php/php-windows-builder/extension@v1
         with:
-          name: debug-${{ steps.setup-artifact.outputs.spx_file_name }}
-          path: |
-            ${{ github.workspace }}/*.log
-            ${{ github.workspace }}/tests/*.log
-          retention-days: 7
-
-      - name: Create ZIP archive with build artifact
-        run: |
-          zip -rvj ${{ steps.setup-artifact.outputs.spx_file_name }}.zip \
-            ./modules/spx.so LICENSE $ZIP_EXCLUDE
-          zip -rv ${{ steps.setup-artifact.outputs.spx_file_name }}.zip \
-            ./assets $ZIP_EXCLUDE
-        env:
-          ZIP_EXCLUDE: -x ".*" -x "__MACOSX" -x "*.DS_Store"
-
-      - name: Check Release notes
-        run: |
-          echo "-- Parsing Release Notes from CHANGELOG"
-          ./.github/release-notes.sh ./CHANGELOG.md
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
-          path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
-
-  release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-
-    needs: [ build ]
-    name: Create Release
-    runs-on: ubuntu-20.04
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - name: Get the release version
-        id: get-version
-        run: |
-          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Download SPX build artifacts
-        id: download
-        uses: actions/download-artifact@v3
-        with:
-          path: ./build-artifacts
-
-      - name: Prepare Release notes
-        run: |
-          echo "-- Creating Release Notes"
-          ./.github/release-notes.sh ./CHANGELOG.md > ./release-notes.md
-
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: ${{ steps.get-version.outputs.version }}
-          tag: ${{ steps.get-version.outputs.version }}
-          bodyFile: "./release-notes.md"
-          allowUpdates: true
-          artifacts: "./build-artifacts/*/*.zip"
-          artifactContentType: application/octet-stream
+          #extension-url: https://github.com/xdebug/xdebug
+          #extension-ref: '3.3.1'
+          php-version: '8.3'
+          ts: nts
+          arch: x64
+          args: --enable-xdebug
+          libs: zlib
+    
