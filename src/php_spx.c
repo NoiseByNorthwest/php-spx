@@ -1038,7 +1038,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
         if (
             spx_reporter_full_build_metadata_file_name(
                 data_dir,
-                relative_path + strlen(get_report_metadata_uri),
+                relative_path + strlen(get_report_metadata_uri) - 1,
                 file_name,
                 sizeof(file_name)
             ) == NULL
@@ -1055,7 +1055,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
         if (
             spx_reporter_full_build_file_name(
                 data_dir,
-                relative_path + strlen(get_report_uri),
+                relative_path + strlen(get_report_uri) - 1,
                 file_name,
                 sizeof(file_name)
             ) == NULL
