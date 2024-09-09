@@ -10,12 +10,10 @@ jobs:
       - name: Build the extension
         uses: php/php-windows-builder/extension@5106db21e6a35781bff937be3c9e1e56d7b17789
         with:
-          #extension-url: https://github.com/xdebug/xdebug
-          #extension-ref: '3.3.1'
+          extension-url: https://github.com/xdebug/xdebug
+          extension-ref: '3.3.1'
           php-version: '8.3'
           ts: nts
-          run-tests: false
           arch: x64
-          args: --enable-spx
+          args: --enable-xdebug
           libs: zlib
-    
