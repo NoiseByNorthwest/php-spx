@@ -260,8 +260,8 @@ while ($task = get_next_ready_task()) {
 | _spx.http_enabled_      | `0`  | _PHP_INI_SYSTEM_ | Whether to enable web UI and HTTP request profiling. |
 | _spx.http_key_          |  | _PHP_INI_SYSTEM_ | The secret key used for authentication (see [security concern](#security-concern) for more details). You can use the following command to generate a 16 bytes random key as an hex string: `openssl rand -hex 16`. |
 | _spx.http_ip_var_       | `REMOTE_ADDR` | _PHP_INI_SYSTEM_ | The `$_SERVER` key holding the client IP address used for authentication (see [security concern](#security-concern) for more details). Overriding the default value is required when your application is behind a reverse proxy. |
-| _spx.http_trusted_proxies_       | `127.0.0.1` | _PHP_INI_SYSTEM_ | The trusted proxy list as a comma separated list of IP addresses. This setting is ignored when `spx.http_ip_var`'s value is `REMOTE_ADDR`. |
-| _spx.http_ip_whitelist_ |  | _PHP_INI_SYSTEM_ | The IP address white list used for authentication as a comma separated list of IP addresses, use `*` to allow all IP addresses. |
+| _spx.http_trusted_proxies_       | `127.0.0.1` | _PHP_INI_SYSTEM_ | The trusted proxy list as a comma separated list of IP addresses<b>*</b>. This setting is ignored when `spx.http_ip_var`'s value is `REMOTE_ADDR`. |
+| _spx.http_ip_whitelist_ |  | _PHP_INI_SYSTEM_ | The IP address white list used for authentication as a comma separated list of IP addresses<b>*</b>. |
 | _spx.http_ui_assets_dir_ | `/usr/local/share/misc/php-spx/assets/web-ui` | _PHP_INI_SYSTEM_ | The directory where the [web UI](#web-ui) files are installed. In most cases you do not have to change it. |
 | _spx.http_profiling_enabled_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_ENABLED` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 | _spx.http_profiling_auto_start_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_AUTO_START` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
@@ -270,6 +270,7 @@ while ($task = get_next_ready_task()) {
 | _spx.http_profiling_depth_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_DEPTH` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 | _spx.http_profiling_metrics_ | _NULL_ | _PHP_INI_SYSTEM_ | The INI level counterpart of the `SPX_METRICS` parameter, for HTTP requests only. See [here for more details](#available-parameters). |
 
+_\*: `*` (match all) and subnet masks (e.g. `192.168.1.0/24`) are supported._
 
 #### Private environment
 
