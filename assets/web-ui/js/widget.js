@@ -572,9 +572,13 @@ class Widget {
 
         this.repaintTimeout = setTimeout(
             () => {
+                let initialScrollPos = 0;
                 this.repaintTimeout = null;
 
                 const id = this.container.attr('id');
+                if (id === 'flatprofile') {
+                    initialScrollPos = document.querySelector('#flatprofile > div').scrollTop;
+                }
                 console.time('repaint ' + id);
                 console.time('clear ' + id);
                 this.clear();
@@ -583,6 +587,9 @@ class Widget {
                 this.render();
                 console.timeEnd('render ' + id);
                 console.timeEnd('repaint ' + id);
+                if (id === 'flatprofile') {
+                    document.querySelector('#flatprofile > div').scrollTop = initialScrollPos;
+                }
             },
             0
         );
