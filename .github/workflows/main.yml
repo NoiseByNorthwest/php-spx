@@ -34,7 +34,7 @@ jobs:
           # Debian (docker)
           - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
           # macOS
-          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-12 }
+          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-13 }
 
     steps:
       - uses: actions/checkout@v3
