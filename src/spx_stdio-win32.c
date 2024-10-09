@@ -15,15 +15,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#pragma warning(push, 0)
 
-#if defined(linux)
-#   include "spx_resource_stats-linux.c"
-#elif defined(__APPLE__) && defined(__MACH__)
-#   include "spx_resource_stats-macos.c"
-#elif defined(__FreeBSD__)
-#   include "spx_resource_stats-freebsd.c"
-#elif defined(_WIN32)
-#   include "spx_resource_stats-win32.c"
-#else
-#   error "Your platform is not supported. Please open an issue."
-#endif
+int spx_stdio_disabling_supported(void)
+{
+    return 0;
+}
+
+int spx_stdio_disable(int fd)
+{
+    return -1;
+}
+
+int spx_stdio_restore(int fd, int copy)
+{
+    return -1;
+}
+
+#pragma warning(pop)

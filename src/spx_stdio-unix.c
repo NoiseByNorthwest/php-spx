@@ -15,27 +15,49 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <unistd.h>
 
-#ifdef HAVE_CONFIG_H
-#   include "config.h"
-#endif
+static FILE * null_output;
+static int null_output_initialized;
 
-#include "main/php.h"
+int spx_stdio_disabling_supported(void)
+{
+    return 1;
+}
 
-/* linux 2.6+ or OSX */
-#if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__) && !defined(_WIN32)
-#   error "Only Linux-based OSes, Apple MacOS, FreeBSD and Windows are supported"
-#endif
+int spx_stdio_disable(int fd)
+{
+    if (!null_output_initialized) {
+        null_output_initialized = 1;
+        null_output = fopen("/dev/null", "w");
+    }
 
-#if (defined(_MSC_VER) && !(defined(_M_X64) || defined(_M_ARM64))) || (!defined(_MSC_VER) && !(defined(__x86_64__) || defined(__aarch64__)))
-#   error "Only x86-64 and ARM64 architectures are supported"
-#endif
+    if (!null_output) {
+        return -1;
+    }
 
-#if ZEND_MODULE_API_NO < 20100525 || ZEND_MODULE_API_NO > 20240924
-#   error "Only the following PHP versions are supported: 5.4 to 8.4"
-#endif
+    int copy = dup(fd);
+    if (copy == -1) {
+        return -1;
+    }
 
-#define PHP_SPX_EXTNAME "SPX"
-#define PHP_SPX_VERSION "0.4.17"
+    if (dup2(fileno(null_output), fd) == -1) {
+        close(copy);
 
-extern zend_module_entry spx_module_entry;
+        return -1;
+    }
+
+    return copy;
+}
+
+int spx_stdio_restore(int fd, int copy)
+{
+    if (dup2(copy, fd) == -1) {
+        return -1;
+    }
+
+    close(copy);
+
+    return fd;
+}

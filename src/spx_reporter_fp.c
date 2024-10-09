@@ -20,11 +20,12 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include <unistd.h>
+// #include <unistd.h>
 
 #include "spx_reporter_fp.h"
 #include "spx_resource_stats.h"
 #include "spx_output_stream.h"
+#include "spx_php.h"
 #include "spx_stdio.h"
 #include "spx_thread.h"
 #include "spx_utils.h"
@@ -81,8 +82,13 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
     reporter->inc = inc;
     reporter->rel = rel;
     reporter->limit = limit;
-    reporter->live = live && isatty(STDOUT_FILENO);
-    reporter->color = color && isatty(STDOUT_FILENO);
+
+    reporter->live = live
+        && spx_php_are_ansi_sequences_supported()
+        && spx_stdio_disabling_supported()
+    ;
+
+    reporter->color = color && spx_php_are_ansi_sequences_supported();
 
     reporter->fd_backup.stdout_fd = -1;
     reporter->fd_backup.stderr_fd = -1;
@@ -392,7 +398,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
             snprintf(
                 cycle_depth_str,
                 sizeof(cycle_depth_str),
-                "%lu@",
+                "%zu@",
                 entry->stats.max_cycle_depth
             );
         }

@@ -22,6 +22,10 @@
 #include <stddef.h>
 #include <limits.h> /* PATH_MAX */
 
+#ifdef _WIN32
+#   define PATH_MAX MAXPATHLEN
+#endif
+
 #define SPX_UTILS_TOKENIZE_STRING(str, delim, token, size, block) \
 do {                                                              \
     const char * c_ = str;                                        \
