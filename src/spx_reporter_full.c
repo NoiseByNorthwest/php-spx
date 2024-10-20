@@ -492,7 +492,7 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
 
     fprintf(
         fp,
-        "  \"%s\": %lu,\n",
+        "  \"%s\": %zu,\n",
         "exec_ts",
         metadata->exec_ts
     );
@@ -577,35 +577,35 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
 
     fprintf(
         fp,
-        "  \"%s\": %lu,\n",
+        "  \"%s\": %zu,\n",
         "wall_time_ms",
         metadata->wall_time_ms
     );
 
     fprintf(
         fp,
-        "  \"%s\": %lu,\n",
+        "  \"%s\": %zu,\n",
         "peak_memory_usage",
         metadata->peak_memory_usage
     );
 
     fprintf(
         fp,
-        "  \"%s\": %lu,\n",
+        "  \"%s\": %zu,\n",
         "called_function_count",
         metadata->called_function_count
     );
 
     fprintf(
         fp,
-        "  \"%s\": %lu,\n",
+        "  \"%s\": %zu,\n",
         "call_count",
         metadata->call_count
     );
 
     fprintf(
         fp,
-        "  \"%s\": %lu,\n",
+        "  \"%s\": %zu,\n",
         "recorded_call_count",
         metadata->recorded_call_count
     );

@@ -15,27 +15,37 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "spx_resource_stats.h"
 
-#ifdef HAVE_CONFIG_H
-#   include "config.h"
-#endif
+void spx_resource_stats_init(void)
+{
+}
 
-#include "main/php.h"
+void spx_resource_stats_shutdown(void)
+{
+}
 
-/* linux 2.6+ or OSX */
-#if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__) && !defined(_WIN32)
-#   error "Only Linux-based OSes, Apple MacOS, FreeBSD and Windows are supported"
-#endif
+size_t spx_resource_stats_wall_time(void)
+{
+    // FIXME implement it
+    return 0;
+}
 
-#if (defined(_MSC_VER) && !(defined(_M_X64) || defined(_M_ARM64))) || (!defined(_MSC_VER) && !(defined(__x86_64__) || defined(__aarch64__)))
-#   error "Only x86-64 and ARM64 architectures are supported"
-#endif
+size_t spx_resource_stats_cpu_time(void)
+{
+    // FIXME implement it if possible
+    return 0;
+}
 
-#if ZEND_MODULE_API_NO < 20100525 || ZEND_MODULE_API_NO > 20240924
-#   error "Only the following PHP versions are supported: 5.4 to 8.4"
-#endif
+size_t spx_resource_stats_own_rss(void)
+{
+    // FIXME implement it if possible
+    return 0;
+}
 
-#define PHP_SPX_EXTNAME "SPX"
-#define PHP_SPX_VERSION "0.4.17"
-
-extern zend_module_entry spx_module_entry;
+void spx_resource_stats_io(size_t * in, size_t * out)
+{
+    // FIXME implement it if possible
+    *in = 0;
+    *out = 0;
+}
