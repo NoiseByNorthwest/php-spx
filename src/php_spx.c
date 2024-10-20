@@ -17,9 +17,8 @@
 
 
 #include <stdio.h>
-#include <unistd.h>
 
-#ifndef ZTS
+#if ! defined(ZTS) && ! defined(_WIN32)
 #   define USE_SIGNAL
 #endif
 
@@ -215,7 +214,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_stop, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_full_report_set_custom_metadata_str, 0, 0, 1)
-#if PHP_API_VERSION >= 20151012
+#if ZEND_MODULE_API_NO >= 20151012
     ZEND_ARG_TYPE_INFO(0, customMetadataStr, IS_STRING, 0)
 #else
     ZEND_ARG_INFO(0, customMetadataStr)
@@ -437,7 +436,7 @@ static PHP_FUNCTION(spx_profiler_stop)
     profiling_handler_stop();
 
     if (context.profiling_handler.full_report_key[0]) {
-#if PHP_API_VERSION >= 20151012
+#if ZEND_MODULE_API_NO >= 20151012
         RETURN_STRING(context.profiling_handler.full_report_key);
 #else
         RETURN_STRING(context.profiling_handler.full_report_key, 1);
@@ -448,13 +447,13 @@ static PHP_FUNCTION(spx_profiler_stop)
 static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str)
 {
     char * custom_metadata_str;
-#if PHP_API_VERSION >= 20151012
+#if ZEND_MODULE_API_NO >= 20151012
     size_t custom_metadata_str_len;
 #else
     int custom_metadata_str_len;
 #endif
 
-#if PHP_API_VERSION >= 20170718
+#if ZEND_MODULE_API_NO >= 20170718
     ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_STRING(custom_metadata_str, custom_metadata_str_len)
     ZEND_PARSE_PARAMETERS_END();

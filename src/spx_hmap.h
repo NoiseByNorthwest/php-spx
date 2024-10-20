@@ -19,10 +19,12 @@
 #ifndef SPX_HMAP_H_DEFINED
 #define SPX_HMAP_H_DEFINED
 
+#include <stdint.h>
+
 typedef struct spx_hmap_t spx_hmap_t;
 typedef struct spx_hmap_entry_t spx_hmap_entry_t;
 
-typedef unsigned long (*spx_hmap_hash_key_func_t) (const void *);
+typedef uint64_t (*spx_hmap_hash_key_func_t) (const void *);
 typedef int (*spx_hmap_cmp_key_func_t) (const void *, const void *);
 
 spx_hmap_t * spx_hmap_create(
