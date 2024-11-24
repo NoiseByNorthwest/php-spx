@@ -74,13 +74,6 @@ typedef void (*execute_internal_func_t) (
 );
 
 static struct {
-#if ZEND_MODULE_API_NO >= 20151012
-    void * (*malloc) (size_t size);
-    void (*free) (void * ptr);
-    void * (*realloc) (void * ptr, size_t size);
-    size_t (*block_size) (void * ptr);
-#endif
-
 #if ZEND_MODULE_API_NO < 20121212
     void (*execute) (zend_op_array * op_array TSRMLS_DC);
 #else
@@ -124,9 +117,6 @@ static struct {
 #endif
     );
 } ze_hooked_func = {
-#if ZEND_MODULE_API_NO >= 20151012
-    NULL, NULL, NULL, NULL,
-#endif
     NULL, NULL, NULL,
     NULL, NULL,
 #if ZEND_MODULE_API_NO >= 20151012
@@ -134,6 +124,17 @@ static struct {
 #endif
     NULL
 };
+
+#if ZEND_MODULE_API_NO >= 20151012
+static SPX_THREAD_TLS struct {
+    void * (*malloc) (size_t size);
+    void (*free) (void * ptr);
+    void * (*realloc) (void * ptr, size_t size);
+    size_t (*block_size) (void * ptr);
+} ze_tls_hooked_func = {
+    NULL, NULL, NULL, NULL
+};
+#endif
 
 static SPX_THREAD_TLS struct {
     struct {
@@ -664,24 +665,28 @@ void spx_php_execution_init(void)
 #if ZEND_MODULE_API_NO >= 20151012
     zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
 
+    /*
+     * FIXME document why we need ze_mm_custom_block_size instead of ze_mm_block_size
+     * when there is no previous MM custom handler.
+     */
+    ze_tls_hooked_func.block_size = ze_mm_custom_block_size;
+
     zend_mm_get_custom_handlers(
         ze_mm_heap,
-        &ze_hooked_func.malloc,
-        &ze_hooked_func.free,
-        &ze_hooked_func.realloc
+        &ze_tls_hooked_func.malloc,
+        &ze_tls_hooked_func.free,
+        &ze_tls_hooked_func.realloc
     );
 
-    ze_hooked_func.block_size = ze_mm_custom_block_size;
-
     if (
-        !ze_hooked_func.malloc
-        || !ze_hooked_func.free
-        || !ze_hooked_func.realloc
+        !ze_tls_hooked_func.malloc
+        || !ze_tls_hooked_func.free
+        || !ze_tls_hooked_func.realloc
     ) {
-        ze_hooked_func.malloc = ze_mm_malloc;
-        ze_hooked_func.free = ze_mm_free;
-        ze_hooked_func.realloc = ze_mm_realloc;
-        ze_hooked_func.block_size = ze_mm_block_size;
+        ze_tls_hooked_func.malloc = ze_mm_malloc;
+        ze_tls_hooked_func.free = ze_mm_free;
+        ze_tls_hooked_func.realloc = ze_mm_realloc;
+        ze_tls_hooked_func.block_size = ze_mm_block_size;
     }
 
     zend_mm_set_custom_handlers(
@@ -697,24 +702,24 @@ void spx_php_execution_shutdown(void)
 {
 #if ZEND_MODULE_API_NO >= 20151012
     if (
-        ze_hooked_func.malloc
-        && ze_hooked_func.free
-        && ze_hooked_func.realloc
+        ze_tls_hooked_func.malloc
+        && ze_tls_hooked_func.free
+        && ze_tls_hooked_func.realloc
     ) {
         zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
 
         if (
             /*
-             * ze_hooked_func.malloc was defaulted to ze_mm_malloc only if there were no
+             * ze_tls_hooked_func.malloc was defaulted to ze_mm_malloc only if there were no
              * previous custom handlers.
              */
-            ze_hooked_func.malloc != ze_mm_malloc
+            ze_tls_hooked_func.malloc != ze_mm_malloc
         ) {
             zend_mm_set_custom_handlers(
                 ze_mm_heap,
-                ze_hooked_func.malloc,
-                ze_hooked_func.free,
-                ze_hooked_func.realloc
+                ze_tls_hooked_func.malloc,
+                ze_tls_hooked_func.free,
+                ze_tls_hooked_func.realloc
             );
         } else {
             /*
@@ -733,9 +738,10 @@ void spx_php_execution_shutdown(void)
             }
         }
 
-        ze_hooked_func.malloc = NULL;
-        ze_hooked_func.free = NULL;
-        ze_hooked_func.realloc = NULL;
+        ze_tls_hooked_func.malloc = NULL;
+        ze_tls_hooked_func.free = NULL;
+        ze_tls_hooked_func.realloc = NULL;
+        ze_tls_hooked_func.block_size = NULL;
     }
 #endif
 
@@ -1013,11 +1019,11 @@ static void * ze_mm_realloc(void * ptr, size_t size)
 
 static void * tls_hook_malloc(size_t size)
 {
-    void * ptr = ze_hooked_func.malloc(size);
+    void * ptr = ze_tls_hooked_func.malloc(size);
 
     if (ptr) {
         context.alloc_count++;
-        context.alloc_bytes += ze_hooked_func.block_size(ptr);
+        context.alloc_bytes += ze_tls_hooked_func.block_size(ptr);
     }
 
     return ptr;
@@ -1027,17 +1033,17 @@ static void tls_hook_free(void * ptr)
 {
     if (ptr) {
         context.free_count++;
-        context.free_bytes += ze_hooked_func.block_size(ptr);
+        context.free_bytes += ze_tls_hooked_func.block_size(ptr);
     }
 
-    ze_hooked_func.free(ptr);
+    ze_tls_hooked_func.free(ptr);
 }
 
 static void * tls_hook_realloc(void * ptr, size_t size)
 {
-    const size_t old_size = ptr ? ze_hooked_func.block_size(ptr) : 0;
-    void * new = ze_hooked_func.realloc(ptr, size);
-    const size_t new_size = new ? ze_hooked_func.block_size(new) : 0;
+    const size_t old_size = ptr ? ze_tls_hooked_func.block_size(ptr) : 0;
+    void * new = ze_tls_hooked_func.realloc(ptr, size);
+    const size_t new_size = new ? ze_tls_hooked_func.block_size(new) : 0;
 
     if (ptr && new) {
         if (ptr != new) {
