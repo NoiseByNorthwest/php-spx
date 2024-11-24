@@ -125,22 +125,16 @@ static struct {
     NULL
 };
 
-static SPX_THREAD_TLS struct {
 #if ZEND_MODULE_API_NO >= 20151012
+static SPX_THREAD_TLS struct {
     void * (*malloc) (size_t size);
     void (*free) (void * ptr);
     void * (*realloc) (void * ptr, size_t size);
     size_t (*block_size) (void * ptr);
-#else
-    int unused;
-#endif
 } ze_tls_hooked_func = {
-#if ZEND_MODULE_API_NO >= 20151012
     NULL, NULL, NULL, NULL
-#else
-    0
-#endif
 };
+#endif
 
 static SPX_THREAD_TLS struct {
     struct {
