@@ -256,7 +256,7 @@ static void print_row(
     snprintf(
         format,
         sizeof(format),
-        "%%%lus%%s%%s%%s",
+        "%%%zus%%s%%s%%s",
         depth + 1
     );
 

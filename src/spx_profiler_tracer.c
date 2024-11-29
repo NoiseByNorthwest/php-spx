@@ -32,34 +32,34 @@
 
 #define METRIC_VALUES_ZERO(m)                \
 do {                                         \
-    SPX_METRIC_FOREACH(i, {                  \
-        (m).values[i] = 0;                   \
+    SPX_METRIC_FOREACH(i_, {                 \
+        (m).values[i_] = 0;                  \
     });                                      \
 } while (0)
 
 #define METRIC_VALUES_ADD(a, b)              \
 do {                                         \
-    SPX_METRIC_FOREACH(i, {                  \
-        (a).values[i] += (b).values[i];      \
+    SPX_METRIC_FOREACH(i_, {                 \
+        (a).values[i_] += (b).values[i_];    \
     });                                      \
 } while (0)
 
-#define METRIC_VALUES_SUB(a, b)              \
-do {                                         \
-    SPX_METRIC_FOREACH(i, {                  \
-        (a).values[i] -= (b).values[i];      \
-    });                                      \
+#define METRIC_VALUES_SUB(a, b)               \
+do {                                          \
+    SPX_METRIC_FOREACH(i_, {                  \
+        (a).values[i_] -= (b).values[i_];     \
+    });                                       \
 } while (0)
 
-#define METRIC_VALUES_MAX(a, b)              \
-do {                                         \
-    SPX_METRIC_FOREACH(i, {                  \
-        (a).values[i] =                      \
-            (a).values[i] > (b).values[i] ?  \
-                (a).values[i] :              \
-                (b).values[i]                \
-        ;                                    \
-    });                                      \
+#define METRIC_VALUES_MAX(a, b)               \
+do {                                          \
+    SPX_METRIC_FOREACH(i_, {                  \
+        (a).values[i_] =                      \
+            (a).values[i_] > (b).values[i_] ? \
+                (a).values[i_] :              \
+                (b).values[i_]                \
+        ;                                     \
+    });                                       \
 } while (0)
 
 typedef struct {
@@ -119,7 +119,7 @@ static spx_profiler_reporter_cost_t null_reporter_notify(
 
 static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * function);
 
-static unsigned long func_table_hmap_hash_key(const void * v);
+static uint64_t func_table_hmap_hash_key(const void * v);
 static int func_table_hmap_cmp_key(const void * va, const void * vb);
 
 static spx_profiler_func_table_entry_t * func_table_get_entry(
@@ -444,8 +444,8 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
 
     avg_noise = (spx_resource_stats_cpu_time() - start) / iter_count;
 
-    profiler->call_start_noise.values[SPX_METRIC_WALL_TIME] = avg_noise;
-    profiler->call_start_noise.values[SPX_METRIC_CPU_TIME] = avg_noise;
+    profiler->call_start_noise.values[SPX_METRIC_WALL_TIME] = (double) avg_noise;
+    profiler->call_start_noise.values[SPX_METRIC_CPU_TIME] = (double) avg_noise;
 
     start = spx_resource_stats_cpu_time();
 
@@ -456,8 +456,8 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
 
     avg_noise = (spx_resource_stats_cpu_time() - start) / iter_count;
 
-    profiler->call_end_noise.values[SPX_METRIC_WALL_TIME] = avg_noise;
-    profiler->call_end_noise.values[SPX_METRIC_CPU_TIME] = avg_noise;
+    profiler->call_end_noise.values[SPX_METRIC_WALL_TIME] = (double) avg_noise;
+    profiler->call_end_noise.values[SPX_METRIC_CPU_TIME] = (double) avg_noise;
 
     profiler->reporter = orig_reporter;
     profiler->called = 0;
@@ -465,7 +465,7 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
     func_table_reset(&profiler->func_table);
 }
 
-static unsigned long func_table_hmap_hash_key(const void * v)
+static uint64_t func_table_hmap_hash_key(const void * v)
 {
     return ((const spx_php_function_t *) v)->hash_code;
 }

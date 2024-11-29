@@ -19,12 +19,17 @@
 #ifndef SPX_PHP_H_DEFINED
 #define SPX_PHP_H_DEFINED
 
+#include <stdint.h>
+
+#include "main/php.h"
+
+
 /*
 	TSRMLS_* macros, which were deprecated since PHP7, are removed in PHP8.
 	More details here:
 	https://github.com/php/php-src/blob/PHP-8.0/UPGRADING.INTERNALS#L50
 */
-#if PHP_API_VERSION >= 20200930
+#if ZEND_MODULE_API_NO >= 20200930
 #define TSRMLS_CC
 #define TSRMLS_C
 #define TSRMLS_DC
@@ -33,13 +38,14 @@
 #endif
 
 typedef struct {
-    unsigned long hash_code;
+    uint64_t hash_code;
 
     const char * func_name;
     const char * class_name;
 } spx_php_function_t;
 
 int spx_php_is_cli_sapi(void);
+int spx_php_are_ansi_sequences_supported(void);
 
 void spx_php_current_function(spx_php_function_t * function);
 
