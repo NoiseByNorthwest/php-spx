@@ -119,7 +119,7 @@ static spx_profiler_reporter_cost_t null_reporter_notify(
 
 static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * function);
 
-static unsigned long func_table_hmap_hash_key(const void * v);
+static uint64_t func_table_hmap_hash_key(const void * v);
 static int func_table_hmap_cmp_key(const void * va, const void * vb);
 
 static spx_profiler_func_table_entry_t * func_table_get_entry(
