@@ -27,7 +27,7 @@
 #   error "Only Linux-based OSes, Apple MacOS and FreeBSD are supported"
 #endif
 
-#if !defined(__x86_64__) && !defined(__aarch64__)
+#if (defined(_MSC_VER) && !(defined(_M_X64) || defined(_M_ARM64))) || (!defined(_MSC_VER) && !(defined(__x86_64__) || defined(__aarch64__)))
 #   error "Only x86-64 and ARM64 architectures are supported"
 #endif
 

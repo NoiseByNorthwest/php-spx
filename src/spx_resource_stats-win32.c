@@ -15,15 +15,37 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "spx_resource_stats.h"
 
-#if defined(linux)
-#   include "spx_resource_stats-linux.c"
-#elif defined(__APPLE__) && defined(__MACH__)
-#   include "spx_resource_stats-macos.c"
-#elif defined(__FreeBSD__)
-#   include "spx_resource_stats-freebsd.c"
-#elif defined(_WIN32)
-#   include "spx_resource_stats-win32.c"
-#else
-#   error "Your platform is not supported. Please open an issue."
-#endif
+void spx_resource_stats_init(void)
+{
+}
+
+void spx_resource_stats_shutdown(void)
+{
+}
+
+size_t spx_resource_stats_wall_time(void)
+{
+    // FIXME implement it
+    return 0;
+}
+
+size_t spx_resource_stats_cpu_time(void)
+{
+    // FIXME implement it if possible
+    return 0;
+}
+
+size_t spx_resource_stats_own_rss(void)
+{
+    // FIXME implement it if possible
+    return 0;
+}
+
+void spx_resource_stats_io(size_t * in, size_t * out)
+{
+    // FIXME implement it if possible
+    *in = 0;
+    *out = 0;
+}

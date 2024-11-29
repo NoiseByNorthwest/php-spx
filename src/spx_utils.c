@@ -229,7 +229,7 @@ int spx_utils_str_ends_with(const char * str, const char * suffix)
 
 void spx_utils_die_(const char * msg, const char * file, size_t line)
 {
-    fprintf(stderr, "SPX Fatal error at %s:%lu - %s\n", file, line, msg);
+    fprintf(stderr, "SPX Fatal error at %s:%zu - %s\n", file, line, msg);
 
 #ifdef ZTS
     pthread_exit(NULL);
