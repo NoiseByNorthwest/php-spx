@@ -19,6 +19,8 @@
 #ifndef SPX_PHP_H_DEFINED
 #define SPX_PHP_H_DEFINED
 
+#include <stdint.h>
+
 #include "main/php.h"
 
 
