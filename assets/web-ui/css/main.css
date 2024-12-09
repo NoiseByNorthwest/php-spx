@@ -1,3 +1,25 @@
+:root {
+    --gradient-begin: #023;
+    --gradient-end: #000;
+    --text-color: #089;
+    --form-element-background: #000;
+    --table-sort-field-background: #033;
+    --progress-bar-color: #0d0;
+    --hover-color: #0aa;
+    --border-color: #044;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --gradient-begin: white;
+        --gradient-end: silver;
+        --text-color: black;
+        --form-element-background: #FFF;
+        --table-sort-field-background: #EFF;
+        --progress-bar-color: #151;
+    }
+}
+
 html {
     height: 99%;
 }
@@ -10,15 +32,12 @@ body {
 }
 
 * {
-    color: #089;
+    color: var(--text-color);
 }
 
 body, #colorscheme-panel {
     background: #023;
-    background: -webkit-linear-gradient(#023, #000);
-    background: -o-linear-gradient(#023, #000);
-    background: -moz-linear-gradient(#023, #000);
-    background: linear-gradient(#023, #000);
+    background: linear-gradient(var(--gradient-begin), var(--gradient-end));
     background-repeat: no-repeat;
     background-attachment: fixed;
 }
@@ -36,20 +55,20 @@ form#config em {
     display: inline-block;
     vertical-align: top;
     width: 300px;
-    margin-left: 10px; 
-    margin-bottom: 20px; 
+    margin-left: 10px;
+    margin-bottom: 20px;
 }
 
 form#config input,
 form#config textarea {
     vertical-align: top;
-    border: 1px solid #044;
-    background-color: #000;
+    border: 1px solid var(--border-color);
+    background-color: var(--form-element-background);
 }
 
 form#config select {
     margin-bottom: 10px;
-    background-color: #000;
+    background-color: var(--form-element-background);
     width: 280px;
 }
 
@@ -66,18 +85,18 @@ table.data_table tr {
 
 table.data_table th,
 table.data_table td {
-   border: 1px solid #044;
+   border: 1px solid var(--border-color);
    margin: 0;
    padding: 3px;
 }
 
 table.data_table th.data_table-sort,
 table.data_table th:hover {
-    background-color: #023;
+    background-color: var(--table-sort-field-background);
 }
 
 table.data_table tbody > tr:hover {
-    background-color: #033;
+    background-color: var(--table-sort-field-background);
 }
 
 table.data_table td.breakable-text {
@@ -98,8 +117,8 @@ table.data_table td > a {
     position: relative;
     left: -50%;
     top: 200px;
-    border: solid 1px #0aa;
-    background-color: #023;
+    border: solid 1px var(--border-color);
+    background-color: var(--gradient-end);
     width: 400px;
     height: 200px;
     padding: 10px;
@@ -111,13 +130,13 @@ table.data_table td > a {
     display: none;
     width: 100%;
     height: 20px;
-    border: solid 1px #099;
+    border: solid 1px var(--border-color);
     padding: 1px;
 }
 
 #init-report div.progress > div {
     height: 100%;
-    background-color: #0d0;
+    background-color: var(--progress-bar-color);
 }
 
 #overview,
@@ -137,7 +156,7 @@ table.data_table td > a {
 }
 
 .widget:hover {
-    border: solid 1px #0aa;
+    border: solid 1px var(--hover-color);
 }
 
 .visualization {
@@ -150,7 +169,7 @@ table.data_table td > a {
 }
 
 #metric-selector select {
-    background-color: #000;
+    background-color: var(--form-element-background);
 }
 
 #colorscheme-panel {
@@ -174,7 +193,7 @@ table.data_table td > a {
 #colorscheme-panel button, #colorscheme-panel input, #colorscheme-panel textarea, #search-container input {
     font-family: monospace;
     font-size: 12px;
-    background-color: #000;
+    background-color: var(--form-element-background);
     border: 1px solid #0898;
 }
 
@@ -235,7 +254,7 @@ table.data_table td > a {
 
 #flatprofile table th,
 #flatprofile table td {
-   border: 1px solid #044;
+   border: 1px solid var(--border-color);
    margin: 0;
    padding-left: 2px;
    padding-right: 2px;
@@ -247,7 +266,7 @@ table.data_table td > a {
 
 #flatprofile table th.sort,
 #flatprofile table th.sortable:hover {
-    background-color: #023;
+    background-color: var(--table-sort-field-background);
 }
 
 #flatprofile table td {
