@@ -1,0 +1,42 @@
+ARG_ENABLE("spx", "Enable SPX extension", "no");
+
+ARG_ENABLE("spx-dev", "Compile SPX with debugging symbols", "no");
+
+if (PHP_SPX == "yes") {
+    AC_DEFINE("HAVE_SPX", 1, "spx");
+
+    ADD_FLAG("CFLAGS", "/Ox /Wall /W2 /wd4820 /wd4774 /wd4711 /wd4710 /wd4464 /wd4005");
+
+    if (PHP_SPX_DEV == "yes") {
+        ADD_FLAG("CFLAGS", "/Zi");
+    }
+
+    if (
+        ! CHECK_LIB("zlib_a.lib;zlib.lib", "zlib", PHP_ZLIB) ||
+        ! CHECK_HEADER_ADD_INCLUDE("zlib.h", "CFLAGS", "..\\zlib;" + php_usual_include_suspects)
+    ) {
+        ERROR("zlib not found");
+    }
+
+    AC_DEFINE("SPX_HTTP_UI_ASSETS_DIR", PHP_PREFIX.replace(/\\/g, "/") + "/share/misc/php-spx/assets/web-ui");
+
+    EXTENSION("spx", "src/php_spx.c \
+        src/spx_profiler.c \
+        src/spx_profiler_tracer.c \
+        src/spx_profiler_sampler.c \
+        src/spx_reporter_full.c \
+        src/spx_reporter_fp.c \
+        src/spx_reporter_trace.c \
+        src/spx_metric.c \
+        src/spx_resource_stats.c \
+        src/spx_hmap.c \
+        src/spx_str_builder.c \
+        src/spx_output_stream.c \
+        src/spx_php.c \
+        src/spx_stdio.c \
+        src/spx_config.c \
+        src/spx_utils.c \
+        src/spx_fmt.c", true);
+
+    ADD_MAKEFILE_FRAGMENT();
+}
