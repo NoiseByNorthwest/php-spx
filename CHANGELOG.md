@@ -1,8 +1,17 @@
 # Change Log
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
+
+## [v0.4.18](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.17...v0.4.18)
+
+### Added
+- Light theme [#280](https://github.com/NoiseByNorthwest/php-spx/pull/280)
+
+### Fixed
+- Segfault occurring in ZTS context [#278](https://github.com/NoiseByNorthwest/php-spx/pull/278) and thus contributing to the stable support of FrankenPHP [#258](https://github.com/NoiseByNorthwest/php-spx/issues/258)
 
 ## [v0.4.17](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.16...v0.4.17)
 
