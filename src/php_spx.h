@@ -1,5 +1,5 @@
 /* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2024 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,6 @@
 #endif
 
 #define PHP_SPX_EXTNAME "SPX"
-#define PHP_SPX_VERSION "0.4.17"
+#define PHP_SPX_VERSION "0.4.18"
 
 extern zend_module_entry spx_module_entry;
