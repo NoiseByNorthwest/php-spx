@@ -24,11 +24,19 @@ typedef struct spx_output_stream_t spx_output_stream_t;
 typedef enum {
     SPX_OUTPUT_STREAM_COMPRESSION_NONE,
     SPX_OUTPUT_STREAM_COMPRESSION_GZIP,
+#ifdef HAVE_ZSTD
     SPX_OUTPUT_STREAM_COMPRESSION_ZSTD,
+#endif
 #ifdef HAVE_LZ4
     SPX_OUTPUT_STREAM_COMPRESSION_LZ4,
 #endif
 } spx_output_stream_compression_type_t;
+
+#ifdef HAVE_ZSTD
+#   define SPX_OUTPUT_STREAM_COMPRESSION_BEST SPX_OUTPUT_STREAM_COMPRESSION_ZSTD
+#else
+#   define SPX_OUTPUT_STREAM_COMPRESSION_BEST SPX_OUTPUT_STREAM_COMPRESSION_GZIP
+#endif
 
 const char * spx_output_stream_compression_format_ext(spx_output_stream_compression_type_t compression_type);
 

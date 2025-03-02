@@ -28,7 +28,9 @@
 
 #include <zlib.h>
 
-#include <zstd.h>
+#ifdef HAVE_ZSTD
+#   include <zstd.h>
+#endif
 
 #ifdef HAVE_LZ4
 #   include <lz4frame.h>
@@ -73,6 +75,8 @@ static int gz_file_driver_print(void * file, const char * str);
 static int gz_file_driver_vprintf(void * file, const char * fmt, va_list ap);
 static int gz_file_driver_write(void * file, const void * buf, size_t len);
 
+#ifdef HAVE_ZSTD
+
 typedef struct {
     FILE * file;
     size_t buffer_capacity;
@@ -92,6 +96,8 @@ static int zstd_file_driver_vprintf(void * file, const char * fmt, va_list ap);
 static int zstd_file_driver_write(void * file, const void * buf, size_t len);
 static int zstd_file_driver_write_to_buffer(zstd_file_t * zstd_file, const void * buf, size_t len);
 static int zstd_file_driver_flush_buffer(zstd_file_t * zstd_file, int flush_zstd_buffer);
+
+#endif
 
 #ifdef HAVE_LZ4
 
@@ -138,6 +144,7 @@ static file_driver_t gz_file_driver = {
     gz_file_driver_write
 };
 
+#ifdef HAVE_ZSTD
 static file_driver_t zstd_file_driver = {
     zstd_file_driver_open,
     zstd_file_driver_dopen,
@@ -147,6 +154,7 @@ static file_driver_t zstd_file_driver = {
     zstd_file_driver_vprintf,
     zstd_file_driver_write
 };
+#endif
 
 #ifdef HAVE_LZ4
 static file_driver_t lz4_file_driver = {
@@ -167,8 +175,10 @@ const char * spx_output_stream_compression_format_ext(spx_output_stream_compress
         case SPX_OUTPUT_STREAM_COMPRESSION_GZIP:
             return "gz";
 
+#ifdef HAVE_ZSTD
         case SPX_OUTPUT_STREAM_COMPRESSION_ZSTD:
             return "zst";
+#endif
 
 #ifdef HAVE_LZ4
         case SPX_OUTPUT_STREAM_COMPRESSION_LZ4:
@@ -241,8 +251,10 @@ static file_driver_t * resolve_file_driver(spx_output_stream_compression_type_t 
         case SPX_OUTPUT_STREAM_COMPRESSION_GZIP:
             return &gz_file_driver;
 
+#ifdef HAVE_ZSTD
         case SPX_OUTPUT_STREAM_COMPRESSION_ZSTD:
             return &zstd_file_driver;
+#endif
 
 #ifdef HAVE_LZ4
         case SPX_OUTPUT_STREAM_COMPRESSION_LZ4:
@@ -362,6 +374,8 @@ static int gz_file_driver_write(void * file, const void * buf, size_t len)
 {
     return gzwrite(file, buf, len);
 }
+
+#ifdef HAVE_ZSTD
 
 static void * zstd_file_driver_open(const char * file_name)
 {
@@ -547,6 +561,8 @@ static int zstd_file_driver_flush_buffer(zstd_file_t * zstd_file, int flush_zstd
 
     return 0;
 }
+
+#endif
 
 #ifdef HAVE_LZ4
 

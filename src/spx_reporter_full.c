@@ -152,7 +152,7 @@ char * spx_reporter_full_build_file_name(
         suffix,
         sizeof(suffix),
         ".txt.%s",
-        spx_output_stream_compression_format_ext(SPX_OUTPUT_STREAM_COMPRESSION_ZSTD)
+        spx_output_stream_compression_format_ext(SPX_OUTPUT_STREAM_COMPRESSION_BEST)
     );
 
     return spx_utils_resolve_confined_file_absolute_path(
@@ -191,7 +191,7 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
         "%s/%s.txt.%s",
         data_dir,
         reporter->metadata->key,
-        spx_output_stream_compression_format_ext(SPX_OUTPUT_STREAM_COMPRESSION_ZSTD)
+        spx_output_stream_compression_format_ext(SPX_OUTPUT_STREAM_COMPRESSION_BEST)
     );
 
     snprintf(
@@ -203,7 +203,7 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
     );
 
     (void) mkdir(data_dir, 0777);
-    reporter->output = spx_output_stream_open(file_name, SPX_OUTPUT_STREAM_COMPRESSION_ZSTD);
+    reporter->output = spx_output_stream_open(file_name, SPX_OUTPUT_STREAM_COMPRESSION_BEST);
     if (!reporter->output) {
         goto error;
     }

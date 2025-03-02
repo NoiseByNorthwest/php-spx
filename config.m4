@@ -2,7 +2,7 @@ PHP_ARG_ENABLE(SPX, whether to enable SPX extension,
 [ --enable-spx   Enable SPX extension])
 
 PHP_ARG_ENABLE(SPX-DEV, whether to enable SPX developer build flags,
-[  --enable-spx-dev   Compile SPX with debugging symbols])
+[  --enable-spx-dev   Compile SPX with debugging symbols],, no)
 
 if test -z "$PHP_ZLIB_DIR"; then
 PHP_ARG_WITH(zlib-dir, for ZLIB,
@@ -70,15 +70,18 @@ if test "$PHP_SPX" = "yes"; then
         AC_MSG_WARN([Zstandard header not found])
     else
         AC_MSG_RESULT([$zstd_header_file])
+        CPPFLAGS="$CPPFLAGS -DHAVE_ZSTD=1"
     fi
 
-    AC_MSG_CHECKING([for Zstandard binary])
-    zstd_binary_file=$(find /usr/ -type f | grep '/libzstd.a$')
-    if test -z "$zstd_binary_file"; then
-        AC_MSG_ERROR([Zstandard binary not found])
-    else
-        AC_MSG_RESULT([$zstd_binary_file])
-        LDFLAGS=-lzstd
+    if test "$zstd_header_file" != ""; then
+        AC_MSG_CHECKING([for Zstandard binary])
+        zstd_binary_file=$(find /usr/ -type f | grep '/libzstd.a$')
+        if test -z "$zstd_binary_file"; then
+            AC_MSG_ERROR([Zstandard binary not found])
+        else
+            AC_MSG_RESULT([$zstd_binary_file])
+            LDFLAGS=-lzstd
+        fi
     fi
 
     PHP_NEW_EXTENSION(spx,
