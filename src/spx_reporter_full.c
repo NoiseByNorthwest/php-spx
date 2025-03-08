@@ -396,7 +396,9 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
 
         spx_output_stream_printf(
             reporter->output,
-            "%s%s%s\n",
+            "%s:%u:%s%s%s\n",
+            entry->function.file_name,
+            entry->function.line,
             entry->function.class_name,
             entry->function.class_name[0] ? "::" : "",
             entry->function.func_name

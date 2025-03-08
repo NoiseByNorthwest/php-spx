@@ -233,9 +233,18 @@
                             }
 
                             if (type == 'function') {
+                                const parts = line.split(':');
+                                const file = parts.shift();
+                                const lineNumber = parseInt(parts.shift());
+
+                                let functionName = parts.join(':');
+                                if (functionName === '{closure}') {
+                                    functionName = `{closure:${file}:${lineNumber}}`;
+                                }
+
                                 profileDataBuilder.setFunctionName(
                                     currentFunctionIdx++,
-                                    line
+                                    functionName
                                 );
 
                                 continue;

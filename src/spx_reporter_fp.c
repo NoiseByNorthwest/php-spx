@@ -410,15 +410,29 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
         char func_name[256];
 
-        snprintf(
-            func_name,
-            sizeof(func_name),
-            "%s%s%s%s",
-            cycle_depth_str,
-            entry->function.class_name,
-            entry->function.class_name[0] ? "::" : "",
-            entry->function.func_name
-        );
+        if (strcmp(entry->function.func_name, "{closure}") == 0) {
+            snprintf(
+                func_name,
+                sizeof(func_name),
+                "%s%s%s{closure:%s%s%u}",
+                cycle_depth_str,
+                entry->function.class_name,
+                entry->function.class_name[0] ? "::" : "",
+                entry->function.class_name[0] ? "" : entry->function.file_name,
+                entry->function.class_name[0] ? "" : ":",
+                entry->function.line
+            );
+        } else {
+            snprintf(
+                func_name,
+                sizeof(func_name),
+                "%s%s%s%s",
+                cycle_depth_str,
+                entry->function.class_name,
+                entry->function.class_name[0] ? "::" : "",
+                entry->function.func_name
+            );
+        }
 
         spx_fmt_row_add_tcell(fmt_row, 0, func_name);
 

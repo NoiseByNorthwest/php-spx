@@ -875,6 +875,10 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
     if (zend_is_executing(TSRMLS_C)) {
 #if ZEND_MODULE_API_NO >= 20151012
         const zend_function * func = execute_data->func;
+
+        function->file_name = ZSTR_VAL(func->op_array.filename);
+        function->line = func->op_array.line_start;
+
         switch (func->type) {
             case ZEND_USER_FUNCTION:
             case ZEND_INTERNAL_FUNCTION:
@@ -901,6 +905,9 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
                 function->func_name = ZSTR_VAL(func->common.function_name);
         }
 #else
+        function->file_name = execute_data->function_state.function->op_array.filename;
+        function->line = execute_data->function_state.function->op_array.line_start;
+
         switch (execute_data->function_state.function->type) {
             case ZEND_USER_FUNCTION:
             case ZEND_INTERNAL_FUNCTION:
