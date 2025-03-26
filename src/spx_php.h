@@ -61,6 +61,7 @@ const char * spx_php_global_array_get(const char * name, const char * key);
 char * spx_php_build_command_line(void);
 
 size_t spx_php_zend_memory_usage(void);
+size_t spx_php_zend_memory_peak_usage(void);
 size_t spx_php_zend_memory_alloc_count(void);
 size_t spx_php_zend_memory_alloc_bytes(void);
 size_t spx_php_zend_memory_free_count(void);

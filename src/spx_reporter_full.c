@@ -417,7 +417,7 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
         );
     }
 
-    reporter->metadata->peak_memory_usage = spx_php_zend_memory_usage();
+    reporter->metadata->peak_memory_usage = spx_php_zend_memory_peak_usage();
     reporter->metadata->wall_time_ms = event->cum->values[SPX_METRIC_WALL_TIME] / 1000;
 
     reporter->metadata->called_function_count = event->func_table.size;

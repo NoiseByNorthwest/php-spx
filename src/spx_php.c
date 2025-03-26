@@ -613,6 +613,12 @@ size_t spx_php_zend_memory_usage(void)
     return zend_memory_usage(0 TSRMLS_CC);
 }
 
+size_t spx_php_zend_memory_peak_usage(void)
+{
+    TSRMLS_FETCH();
+
+    return zend_memory_peak_usage(0 TSRMLS_CC);
+}
 
 size_t spx_php_zend_memory_alloc_count(void)
 {
