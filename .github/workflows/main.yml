@@ -36,6 +36,7 @@ jobs:
           - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-13 }
     env:
       DOCKER_BUILD_RECORD_UPLOAD: false   # disable docker buildx record upload as build artifact
+      DOCKER_BUILD_SUMMARY: false         # disable docker buildx summary
 
     steps:
       - uses: actions/checkout@v4
