@@ -16,7 +16,6 @@ on:
 jobs:
   build:
     name: build / php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}
-
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,14 +29,17 @@ jobs:
 
         include:
           # Linux
-          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }
           # Debian (docker)
-          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-20.04 }
+          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }
           # macOS
           - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-13 }
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: false   # disable docker buildx record upload as build artifact
+      DOCKER_BUILD_SUMMARY: false         # disable docker buildx summary
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # configure spx artifact name in next format:
       #   {php}-{ts}-{os.name}-{compiler}
@@ -57,7 +59,7 @@ jobs:
 
       - name: Upload build artifacts after Failure
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: debug-${{ steps.setup-artifact.outputs.spx_file_name }}
           path: |
@@ -80,7 +82,7 @@ jobs:
           ./.github/release-notes.sh ./CHANGELOG.md
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
           path: ${{ steps.setup-artifact.outputs.spx_file_name }}.zip
@@ -90,11 +92,11 @@ jobs:
 
     needs: [ build ]
     name: Create Release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
@@ -105,7 +107,7 @@ jobs:
 
       - name: Download SPX build artifacts
         id: download
-        uses: actions/download-artifact@v4.1.7
+        uses: actions/download-artifact@v4
         with:
           path: ./build-artifacts
 
