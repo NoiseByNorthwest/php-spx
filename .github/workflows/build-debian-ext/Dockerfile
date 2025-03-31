@@ -1,4 +1,4 @@
-FROM debian:11.5-slim as builder
+FROM debian:11.5-slim AS builder
 
 LABEL Description="Base image with custom PHP version based on Debian"
 LABEL name="spx-profiler-debian11"
