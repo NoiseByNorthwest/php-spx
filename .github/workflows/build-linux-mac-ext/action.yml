@@ -8,7 +8,7 @@ runs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php }}
-    
+
     - name: Install dependencies
       shell: bash
       if: runner.os == 'macOS'
