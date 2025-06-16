@@ -82,16 +82,16 @@ const char * spx_str_builder_str(const spx_str_builder_t * str_builder)
 
 size_t spx_str_builder_append_double(spx_str_builder_t * str_builder, double d, size_t nb_dec)
 {
+    if (d == 0) {
+        return spx_str_builder_append_char(str_builder, '0');
+    }
+
     const size_t remaining = REMAINING_CHARS(str_builder);
     if (remaining == 0) {
         return 0;
     }
 
     char * p = str_builder->buffer + str_builder->size;
-
-    if (d == 0) {
-        return spx_str_builder_append_char(str_builder, '0');
-    }
 
     size_t dec_factor = 1;
     size_t i = nb_dec;
@@ -165,16 +165,16 @@ size_t spx_str_builder_append_double(spx_str_builder_t * str_builder, double d, 
 
 size_t spx_str_builder_append_long(spx_str_builder_t * str_builder, long l)
 {
+    if (0 <= l && l < 10) {
+        return spx_str_builder_append_char(str_builder, '0' + l);
+    }
+
     const size_t remaining = REMAINING_CHARS(str_builder);
     if (remaining == 0) {
         return 0;
     }
 
     char * p = str_builder->buffer + str_builder->size;
-
-    if (l == 0) {
-        return spx_str_builder_append_char(str_builder, '0');
-    }
 
     long v = l;
     int neg = v < 0;    

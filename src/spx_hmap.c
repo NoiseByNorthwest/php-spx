@@ -18,15 +18,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "spx_hmap.h"
 
-#define HMAP_BUCKET_SIZE 4
+#define HMAP_BUCKET_SIZE 8
 
 struct spx_hmap_entry_t {
     const void * key;
     void * value;
-    int free;
+    uint8_t free;
 };
 
 typedef struct hmap_bucket_t {

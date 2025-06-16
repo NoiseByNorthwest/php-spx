@@ -33,6 +33,7 @@
 
 struct spx_metric_collector_t {
     int enabled_metrics[SPX_METRIC_COUNT];
+    size_t last_enabled_metric_idx;
     double ref_values[SPX_METRIC_COUNT];
     double last_values[SPX_METRIC_COUNT];
     double current_fixed_noise[SPX_METRIC_COUNT];
@@ -47,7 +48,7 @@ static size_t metric_handler_io_w_bytes(void);
 static void memoize_io_stats(void);
 static size_t memoized_metric_value(spx_metric_t metric);
 
-static void collect_raw_values(const int * enabled_metrics, double * current_values);
+static void collect_raw_values(const int * enabled_metrics, size_t last_enabled_metric_idx, double * current_values);
 
 const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
     ARRAY_INIT_INDEX(SPX_METRIC_WALL_TIME) {
@@ -251,10 +252,20 @@ spx_metric_collector_t * spx_metric_collector_create(const int * enabled_metrics
         return NULL;
     }
 
-    collect_raw_values(enabled_metrics, collector->last_values);
-
     SPX_METRIC_FOREACH(i, {
         collector->enabled_metrics[i] = enabled_metrics[i];
+        if (enabled_metrics[i]) {
+            collector->last_enabled_metric_idx = i;
+        }
+    });
+
+    collect_raw_values(
+        collector->enabled_metrics,
+        collector->last_enabled_metric_idx,
+        collector->last_values
+    );
+
+    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
         collector->ref_values[i] = collector->last_values[i];
         collector->current_fixed_noise[i] = 0;
     });
@@ -271,7 +282,11 @@ void spx_metric_collector_collect(spx_metric_collector_t * collector, double * v
 {
     double current_values[SPX_METRIC_COUNT];
 
-    collect_raw_values(collector->enabled_metrics, current_values);
+    collect_raw_values(
+        collector->enabled_metrics,
+        collector->last_enabled_metric_idx,
+        current_values
+    );
 
     /*
      *  This branch is required to fix cpu / wall time inconsistency (cpu > wall time within a single thread).
@@ -291,7 +306,7 @@ void spx_metric_collector_collect(spx_metric_collector_t * collector, double * v
         }
     }
 
-    SPX_METRIC_FOREACH(i, {
+    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
         if (!collector->enabled_metrics[i]) {
             continue;
         }
@@ -314,16 +329,21 @@ void spx_metric_collector_collect(spx_metric_collector_t * collector, double * v
 void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector)
 {
     double current_values[SPX_METRIC_COUNT];
-    collect_raw_values(collector->enabled_metrics, current_values);
 
-    SPX_METRIC_FOREACH(i, {
+    collect_raw_values(
+        collector->enabled_metrics,
+        collector->last_enabled_metric_idx,
+        current_values
+    );
+
+    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
         collector->current_fixed_noise[i] += current_values[i] - collector->last_values[i];
     });
 }
 
 void spx_metric_collector_add_fixed_noise(spx_metric_collector_t * collector, const double * noise)
 {
-    SPX_METRIC_FOREACH(i, {
+    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
         collector->current_fixed_noise[i] += noise[i];
     });
 }
@@ -381,13 +401,13 @@ static size_t memoized_metric_value(spx_metric_t metric)
     return memoized_metric_values[metric].value;
 }
 
-static void collect_raw_values(const int * enabled_metrics, double * current_values)
+static void collect_raw_values(const int * enabled_metrics, size_t last_enabled_metric_idx, double * current_values)
 {
-    SPX_METRIC_FOREACH(i, {
+    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
         memoized_metric_values[i].memoized = 0;
     });
 
-    SPX_METRIC_FOREACH(i, {
+    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
         if (!enabled_metrics[i]) {
             current_values[i] = 0;
 

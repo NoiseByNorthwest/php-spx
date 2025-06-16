@@ -30,30 +30,30 @@
 #define STACK_CAPACITY 2048
 #define FUNC_TABLE_CAPACITY 65536
 
-#define METRIC_VALUES_ZERO(m)                \
+#define METRIC_VALUES_ZERO(m, last_idx)      \
 do {                                         \
-    SPX_METRIC_FOREACH(i_, {                 \
+    SPX_METRIC_FOREACH_L(i_, last_idx, {     \
         (m).values[i_] = 0;                  \
     });                                      \
 } while (0)
 
-#define METRIC_VALUES_ADD(a, b)              \
+#define METRIC_VALUES_ADD(a, b, last_idx)    \
 do {                                         \
-    SPX_METRIC_FOREACH(i_, {                 \
+    SPX_METRIC_FOREACH_L(i_, last_idx, {     \
         (a).values[i_] += (b).values[i_];    \
     });                                      \
 } while (0)
 
-#define METRIC_VALUES_SUB(a, b)               \
-do {                                          \
-    SPX_METRIC_FOREACH(i_, {                  \
-        (a).values[i_] -= (b).values[i_];     \
-    });                                       \
+#define METRIC_VALUES_SUB(a, b, last_idx)    \
+do {                                         \
+    SPX_METRIC_FOREACH_L(i_, last_idx, {     \
+        (a).values[i_] -= (b).values[i_];    \
+    });                                      \
 } while (0)
 
-#define METRIC_VALUES_MAX(a, b)               \
+#define METRIC_VALUES_MAX(a, b, last_idx)     \
 do {                                          \
-    SPX_METRIC_FOREACH(i_, {                  \
+    SPX_METRIC_FOREACH_L(i_, last_idx, {      \
         (a).values[i_] =                      \
             (a).values[i_] > (b).values[i_] ? \
                 (a).values[i_] :              \
@@ -81,6 +81,7 @@ typedef struct {
     int active;
 
     int enabled_metrics[SPX_METRIC_COUNT];
+    size_t last_enabled_metric_idx;
     spx_metric_collector_t * metric_collector;
 
     int calibrated;
@@ -124,7 +125,7 @@ static uint64_t func_table_hmap_hash_key(const void * v);
 static int func_table_hmap_cmp_key(const void * va, const void * vb);
 
 static spx_profiler_func_table_entry_t * func_table_get_entry(
-    func_table_t * func_table,
+    tracing_profiler_t * profiler,
     const spx_php_function_t * function
 );
 
@@ -162,13 +163,16 @@ spx_profiler_t * spx_profiler_tracer_create(
 
     SPX_METRIC_FOREACH(i, {
         profiler->enabled_metrics[i] = enabled_metrics[i];
+        if (enabled_metrics[i]) {
+            profiler->last_enabled_metric_idx = i;
+        }
     });
 
     profiler->metric_collector = NULL;
 
     profiler->calibrated = 0;
-    METRIC_VALUES_ZERO(profiler->call_start_noise);
-    METRIC_VALUES_ZERO(profiler->call_end_noise);
+    METRIC_VALUES_ZERO(profiler->call_start_noise, SPX_METRIC_COUNT - 1);
+    METRIC_VALUES_ZERO(profiler->call_end_noise, SPX_METRIC_COUNT - 1);
 
     profiler->max_depth = max_depth > 0 && max_depth < STACK_CAPACITY ? max_depth : STACK_CAPACITY;
     profiler->called = 0;
@@ -235,14 +239,25 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
     }
 
     profiler->cum_metric_values = cur_metric_values;
-    METRIC_VALUES_SUB(profiler->cum_metric_values, profiler->first_metric_values);
-    METRIC_VALUES_MAX(profiler->max_metric_values, cur_metric_values);
+    METRIC_VALUES_SUB(
+        profiler->cum_metric_values,
+        profiler->first_metric_values,
+        profiler->last_enabled_metric_idx
+    );
+
+    if (profiler->full_stats_required) {
+        METRIC_VALUES_MAX(
+            profiler->max_metric_values,
+            cur_metric_values,
+            profiler->last_enabled_metric_idx
+        );
+    }
 
     profiler->called++;
 
     stack_frame_t * frame = &profiler->stack.frames[profiler->stack.depth];
     frame->func_table_entry = func_table_get_entry(
-        &profiler->func_table,
+        profiler,
         function
     );
 
@@ -250,8 +265,10 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
         goto end;
     }
 
-    frame->start_metric_values = cur_metric_values;
-    METRIC_VALUES_ZERO(frame->children_metric_values);
+    if (profiler->full_stats_required) {
+        frame->start_metric_values = cur_metric_values;
+        METRIC_VALUES_ZERO(frame->children_metric_values, profiler->last_enabled_metric_idx);
+    }
 
     fill_event(
         &profiler->event,
@@ -302,8 +319,20 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
     );
 
     profiler->cum_metric_values = cur_metric_values;
-    METRIC_VALUES_SUB(profiler->cum_metric_values, profiler->first_metric_values);
-    METRIC_VALUES_MAX(profiler->max_metric_values, cur_metric_values);
+    
+    METRIC_VALUES_SUB(
+        profiler->cum_metric_values,
+        profiler->first_metric_values,
+        profiler->last_enabled_metric_idx
+    );
+    
+    if (profiler->full_stats_required) {
+        METRIC_VALUES_MAX(
+            profiler->max_metric_values,
+            cur_metric_values,
+            profiler->last_enabled_metric_idx
+        );
+    }
 
     stack_frame_t * frame = &profiler->stack.frames[profiler->stack.depth];
     if (!frame->func_table_entry) {
@@ -318,11 +347,19 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
 
         spx_profiler_metric_values_t inc_metric_values = cur_metric_values;
         inc_metric_values_p = &inc_metric_values;
-        METRIC_VALUES_SUB(inc_metric_values, frame->start_metric_values);
+        METRIC_VALUES_SUB(
+            inc_metric_values,
+            frame->start_metric_values,
+            profiler->last_enabled_metric_idx
+        );
 
         spx_profiler_metric_values_t exc_metric_values = inc_metric_values;
         exc_metric_values_p = &exc_metric_values;
-        METRIC_VALUES_SUB(exc_metric_values, frame->children_metric_values);
+        METRIC_VALUES_SUB(
+            exc_metric_values,
+            frame->children_metric_values,
+            profiler->last_enabled_metric_idx
+        );
 
         size_t cycle_depth = 0;
         int i;
@@ -333,14 +370,22 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
             }
 
             if (i == profiler->stack.depth - 1) {
-                METRIC_VALUES_ADD(parent_frame->children_metric_values, inc_metric_values);
+                METRIC_VALUES_ADD(
+                    parent_frame->children_metric_values,
+                    inc_metric_values,
+                    profiler->last_enabled_metric_idx
+                );
             }
 
             if (parent_frame->func_table_entry == entry) {
                 cycle_depth++;
 
                 if (cycle_depth == 1) {
-                    METRIC_VALUES_SUB(parent_frame->children_metric_values, exc_metric_values);
+                    METRIC_VALUES_SUB(
+                        parent_frame->children_metric_values,
+                        exc_metric_values,
+                        profiler->last_enabled_metric_idx
+                    );
                 }
             }
         }
@@ -351,8 +396,17 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
         }
 
         if (cycle_depth == 0) {
-            METRIC_VALUES_ADD(entry->stats.inc, inc_metric_values);
-            METRIC_VALUES_ADD(entry->stats.exc, exc_metric_values);
+            METRIC_VALUES_ADD(
+                entry->stats.inc,
+                inc_metric_values,
+                profiler->last_enabled_metric_idx
+            );
+
+            METRIC_VALUES_ADD(
+                entry->stats.exc,
+                exc_metric_values,
+                profiler->last_enabled_metric_idx
+            );
         }
     }
 
@@ -427,9 +481,9 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
     spx_profiler_reporter_t * const orig_reporter = profiler->reporter;
     profiler->reporter = &null_reporter;
 
-    const size_t iter_count = 50000;
+    const size_t iter_count = 10000;
     int i;
-    size_t start, avg_noise;
+    size_t start, end, avg_noise;
 
     start = spx_resource_stats_cpu_time();
 
@@ -440,7 +494,9 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
         }
     }
 
-    avg_noise = (spx_resource_stats_cpu_time() - start) / iter_count;
+    end = spx_resource_stats_cpu_time();
+
+    avg_noise = (end - start) / iter_count;
 
     profiler->call_start_noise.values[SPX_METRIC_WALL_TIME] = (double) avg_noise;
     profiler->call_start_noise.values[SPX_METRIC_CPU_TIME] = (double) avg_noise;
@@ -452,7 +508,9 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
         profiler->stack.depth++;
     }
 
-    avg_noise = (spx_resource_stats_cpu_time() - start) / iter_count;
+    end = spx_resource_stats_cpu_time();
+
+    avg_noise = (end - start) / iter_count;
 
     profiler->call_end_noise.values[SPX_METRIC_WALL_TIME] = (double) avg_noise;
     profiler->call_end_noise.values[SPX_METRIC_CPU_TIME] = (double) avg_noise;
@@ -489,9 +547,11 @@ static int func_table_hmap_cmp_key(const void * va, const void * vb)
 }
 
 static spx_profiler_func_table_entry_t * func_table_get_entry(
-    func_table_t * func_table,
+    tracing_profiler_t * profiler,
     const spx_php_function_t * function
 ) {
+    func_table_t * func_table = &profiler->func_table;
+
     if (func_table->size == FUNC_TABLE_CAPACITY) {
         return spx_hmap_get_value(func_table->hmap, function);
     }
@@ -535,10 +595,12 @@ static spx_profiler_func_table_entry_t * func_table_get_entry(
         spx_utils_die("Cannot dup function / class name\n");
     }
 
-    entry->stats.called = 0;
-    entry->stats.max_cycle_depth = 0;
-    METRIC_VALUES_ZERO(entry->stats.inc);
-    METRIC_VALUES_ZERO(entry->stats.exc);
+    if (profiler->full_stats_required) {
+        entry->stats.called = 0;
+        entry->stats.max_cycle_depth = 0;
+        METRIC_VALUES_ZERO(entry->stats.inc, profiler->last_enabled_metric_idx);
+        METRIC_VALUES_ZERO(entry->stats.exc, profiler->last_enabled_metric_idx);
+    }
 
     spx_hmap_entry_set_value(hmap_entry, entry);
     spx_hmap_set_entry_key(func_table->hmap, hmap_entry, &entry->function);
@@ -576,7 +638,11 @@ static void fill_event(
     event->enabled_metrics = profiler->enabled_metrics;
 
     event->called = profiler->called;
-    event->max = &profiler->max_metric_values;
+    
+    if (profiler->full_stats_required) {
+        event->max = &profiler->max_metric_values;
+    }
+    
     event->cum = &profiler->cum_metric_values;
 
     event->func_table.size = profiler->func_table.size;
@@ -587,6 +653,8 @@ static void fill_event(
 
     event->callee = callee;
 
-    event->inc = inc;
-    event->exc = exc;
+    if (profiler->full_stats_required) {
+        event->inc = inc;
+        event->exc = exc;
+    }
 }

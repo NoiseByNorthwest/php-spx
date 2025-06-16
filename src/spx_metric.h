@@ -29,6 +29,18 @@ do {                                             \
     }                                            \
 } while (0)
 
+
+#define SPX_METRIC_FOREACH_L(it, last_idx, block)  \
+do {                                               \
+    size_t it;                                     \
+    for (it = 0; it < SPX_METRIC_COUNT; it++) {    \
+        block                                      \
+        if (it == (last_idx)) {                    \
+            break;                                 \
+        }                                          \
+    }                                              \
+} while (0)
+
 typedef enum {
     SPX_METRIC_WALL_TIME,
     SPX_METRIC_CPU_TIME,
