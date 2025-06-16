@@ -39,6 +39,7 @@ int spx_output_stream_close(spx_output_stream_t * output);
 
 int spx_output_stream_print(spx_output_stream_t * output, const char * str);
 int spx_output_stream_printf(spx_output_stream_t * output, const char * format, ...);
+int spx_output_stream_write(spx_output_stream_t * output, const void * buf, size_t len);
 
 int spx_output_stream_flush(spx_output_stream_t * output);
 

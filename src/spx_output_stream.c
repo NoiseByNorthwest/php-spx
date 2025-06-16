@@ -44,6 +44,7 @@ typedef struct {
     int    (*flush)    (void * file);
     int    (*print)    (void * file, const char * str);
     int    (*vprintf)  (void * file, const char * fmt, va_list ap);
+    int    (*write)    (void * file, const void * buf, size_t len);
 } file_driver_t;
 
 struct spx_output_stream_t {
@@ -62,6 +63,7 @@ static int stdio_file_driver_close(void * file, int fd_owned);
 static int stdio_file_driver_flush(void * file);
 static int stdio_file_driver_print(void * file, const char * str);
 static int stdio_file_driver_vprintf(void * file, const char * fmt, va_list ap);
+static int stdio_file_driver_write(void * file, const void * buf, size_t len);
 
 static void * gz_file_driver_open(const char * file_name);
 static void * gz_file_driver_dopen(int fileno);
@@ -69,6 +71,7 @@ static int gz_file_driver_close(void * file, int fd_owned);
 static int gz_file_driver_flush(void * file);
 static int gz_file_driver_print(void * file, const char * str);
 static int gz_file_driver_vprintf(void * file, const char * fmt, va_list ap);
+static int gz_file_driver_write(void * file, const void * buf, size_t len);
 
 typedef struct {
     FILE * file;
@@ -86,6 +89,7 @@ static int zstd_file_driver_close(void * file, int fd_owned);
 static int zstd_file_driver_flush(void * file);
 static int zstd_file_driver_print(void * file, const char * str);
 static int zstd_file_driver_vprintf(void * file, const char * fmt, va_list ap);
+static int zstd_file_driver_write(void * file, const void * buf, size_t len);
 static int zstd_file_driver_write_to_buffer(zstd_file_t * zstd_file, const void * buf, size_t len);
 static int zstd_file_driver_flush_buffer(zstd_file_t * zstd_file, int flush_zstd_buffer);
 
@@ -108,6 +112,7 @@ static int lz4_file_driver_close(void * file, int fd_owned);
 static int lz4_file_driver_flush(void * file);
 static int lz4_file_driver_print(void * file, const char * str);
 static int lz4_file_driver_vprintf(void * file, const char * fmt, va_list ap);
+static int lz4_file_driver_write(void * file, const void * buf, size_t len);
 static int lz4_file_driver_write_to_buffer(lz4_file_t * lz4_file, const void * buf, size_t len);
 static int lz4_file_driver_flush_buffer(lz4_file_t * lz4_file, int flush_lz4_buffer);
 
@@ -119,7 +124,8 @@ static file_driver_t stdio_file_driver = {
     stdio_file_driver_close,
     stdio_file_driver_flush,
     stdio_file_driver_print,
-    stdio_file_driver_vprintf
+    stdio_file_driver_vprintf,
+    stdio_file_driver_write
 };
 
 static file_driver_t gz_file_driver = {
@@ -128,7 +134,8 @@ static file_driver_t gz_file_driver = {
     gz_file_driver_close,
     gz_file_driver_flush,
     gz_file_driver_print,
-    gz_file_driver_vprintf
+    gz_file_driver_vprintf,
+    gz_file_driver_write
 };
 
 static file_driver_t zstd_file_driver = {
@@ -137,7 +144,8 @@ static file_driver_t zstd_file_driver = {
     zstd_file_driver_close,
     zstd_file_driver_flush,
     zstd_file_driver_print,
-    zstd_file_driver_vprintf
+    zstd_file_driver_vprintf,
+    zstd_file_driver_write
 };
 
 #ifdef HAVE_LZ4
@@ -147,7 +155,8 @@ static file_driver_t lz4_file_driver = {
     lz4_file_driver_close,
     lz4_file_driver_flush,
     lz4_file_driver_print,
-    lz4_file_driver_vprintf
+    lz4_file_driver_vprintf,
+    lz4_file_driver_write
 };
 #endif
 
@@ -214,6 +223,11 @@ int spx_output_stream_printf(spx_output_stream_t * output, const char * format, 
     va_end(argp);
 
     return ret;
+}
+
+int spx_output_stream_write(spx_output_stream_t * output, const void * buf, size_t len)
+{
+    return output->file_driver->write(output->file, buf, len);
 }
 
 int spx_output_stream_flush(spx_output_stream_t * output)
@@ -294,6 +308,11 @@ static int stdio_file_driver_vprintf(void * file, const char * fmt, va_list ap)
     return vfprintf(file, fmt, ap);
 }
 
+static int stdio_file_driver_write(void * file, const void * buf, size_t len)
+{
+    return fwrite(buf, 1, len, file);
+}
+
 static void * gz_file_driver_open(const char * file_name)
 {
     // FIXME the level should be configurable
@@ -337,6 +356,11 @@ static int gz_file_driver_vprintf(void * file, const char * fmt, va_list ap)
     free(buf);
 
     return printed;
+}
+
+static int gz_file_driver_write(void * file, const void * buf, size_t len)
+{
+    return gzwrite(file, buf, len);
 }
 
 static void * zstd_file_driver_open(const char * file_name)
@@ -459,6 +483,11 @@ static int zstd_file_driver_vprintf(void * file, const char * fmt, va_list ap)
     free(buf);
 
     return printed;
+}
+
+static int zstd_file_driver_write(void * file, const void * buf, size_t len)
+{
+    return zstd_file_driver_write_to_buffer(file, buf, strlen(buf));
 }
 
 static int zstd_file_driver_write_to_buffer(zstd_file_t * zstd_file, const void * buf, size_t len)
@@ -698,6 +727,11 @@ static int lz4_file_driver_vprintf(void * file, const char * fmt, va_list ap)
     free(buf);
 
     return printed;
+}
+
+static int lz4_file_driver_write(void * file, const void * buf, size_t len)
+{
+    return lz4_file_driver_write_to_buffer(file, buf, strlen(buf));
 }
 
 static int lz4_file_driver_write_to_buffer(lz4_file_t * lz4_file, const void * buf, size_t len)

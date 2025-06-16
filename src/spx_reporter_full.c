@@ -365,15 +365,22 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
         spx_str_builder_append_str(reporter->str_builder, "\n");
 
         if (spx_str_builder_remaining(reporter->str_builder) < 128) {
-            // FIXME call spx_output_stream_write() in such cases to avoid the extra call
-            //  to strlen() (since the buf size is already known)
-            spx_output_stream_print(reporter->output, spx_str_builder_str(reporter->str_builder));
+            spx_output_stream_write(
+                reporter->output,
+                spx_str_builder_str(reporter->str_builder),
+                spx_str_builder_size(reporter->str_builder)
+            );
+
             spx_str_builder_reset(reporter->str_builder);
         }
     }
 
     if (spx_str_builder_size(reporter->str_builder) > 0) {
-        spx_output_stream_print(reporter->output, spx_str_builder_str(reporter->str_builder));
+        spx_output_stream_write(
+            reporter->output,
+            spx_str_builder_str(reporter->str_builder),
+            spx_str_builder_size(reporter->str_builder)
+        );
     }
 
     reporter->buffer_size = 0;
