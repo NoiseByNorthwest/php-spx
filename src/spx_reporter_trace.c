@@ -28,6 +28,7 @@
 
 typedef struct {
     spx_profiler_event_type_t event_type;
+    size_t call_site_line;
     const spx_php_function_t * function;
     size_t depth;
     spx_profiler_metric_values_t cum_metric_values;
@@ -59,6 +60,7 @@ static void print_header(spx_output_stream_t * output, const int * enabled_metri
 static void print_row(
     spx_output_stream_t * output,
     const char * prefix,
+    size_t call_site_line,
     const spx_php_function_t * function,
     size_t depth,
     const int * enabled_metrics,
@@ -114,6 +116,7 @@ static spx_profiler_reporter_cost_t trace_notify(spx_profiler_reporter_t * base_
         buffer_entry_t * current = &reporter->buffer[reporter->buffer_size];
 
         current->event_type        = event->type;
+        current->call_site_line    = event->call_site_line;
         current->function          = &event->callee->function;
         current->depth             = event->depth;
         current->cum_metric_values = *event->cum;
@@ -169,6 +172,7 @@ static void flush_buffer(trace_reporter_t * reporter, const int * enabled_metric
         print_row(
             reporter->output,
             entry->event_type == SPX_PROFILER_EVENT_CALL_START ? "+" : "-",
+            entry->call_site_line,
             entry->function,
             entry->depth,
             enabled_metrics,
@@ -211,6 +215,7 @@ static void print_header(spx_output_stream_t * output, const int * enabled_metri
     });
 
     spx_fmt_row_add_tcell(fmt_row, 1, "Depth");
+    spx_fmt_row_add_tcell(fmt_row, 1, "Line");
     spx_fmt_row_add_tcell(fmt_row, 0, "Function");
 
     spx_fmt_row_print(fmt_row, output);
@@ -221,6 +226,7 @@ static void print_header(spx_output_stream_t * output, const int * enabled_metri
 static void print_row(
     spx_output_stream_t * output,
     const char * prefix,
+    size_t call_site_line,
     const spx_php_function_t * function,
     size_t depth,
     const int * enabled_metrics,
@@ -264,6 +270,13 @@ static void print_row(
         1,
         SPX_FMT_QUANTITY,
         depth + 1
+    );
+
+    spx_fmt_row_add_ncell(
+        fmt_row,
+        1,
+        SPX_FMT_QUANTITY,
+        call_site_line
     );
 
     char format[32];

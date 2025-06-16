@@ -1,11 +1,12 @@
 --TEST--
-Memory (PHP 8.0+)
+Memory (PHP 7.0)
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '8.0') < 0 || version_compare(PHP_VERSION, '8.2') >= 0
+    version_compare(PHP_VERSION, '7.0') < 0 ||
+        version_compare(PHP_VERSION, '7.1') >= 0
 ) {
-    die('skip this test is for PHP 8.0-8.1 only');
+    die('skip this test is for PHP 7.0 only');
 }
 ?>
 --ENV--
@@ -40,13 +41,13 @@ f2();
 ZE memory usage                |
  Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
 ----------+----------+----------+----------+----------+----------
-       0B |       0B |       0B |        1 |        0 | +%s/tests/spx_memory_001_8_0+.php
-       0B |       0B |       0B |        2 |       17 |  +f2
-      32B |       0B |       0B |        3 |       12 |   +f1
-      32B |       0B |       0B |        3 |        0 |   -f1
+       0B |       0B |       0B |        1 |        0 | +%s/tests/spx_memory_001_7.0.php
+      56B |       0B |       0B |        2 |       17 |  +f2
+      80B |       0B |       0B |        3 |       12 |   +f1
+      80B |       0B |       0B |        3 |        0 |   -f1
     1.6KB |       0B |       0B |        3 |       14 |   +f1
     1.6KB |       0B |       0B |        3 |        0 |   -f1
     1.6KB |    1.6KB |    1.6KB |        2 |        0 |  -f2
-    1.6KB |    1.6KB |       0B |        1 |        0 | -%s/tests/spx_memory_001_8_0+.php
+    1.6KB |    1.6KB |      56B |        1 |        0 | -%s/tests/spx_memory_001_7.0.php
 
 SPX trace file: /dev/stdout

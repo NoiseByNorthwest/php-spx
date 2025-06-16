@@ -1,5 +1,13 @@
 --TEST--
-Function name
+Function name (PHP 7.0+)
+--SKIPIF--
+<?php
+if (
+    version_compare(PHP_VERSION, '7.0') < 0
+) {
+    die('skip this test is for PHP 7.0+ only');
+}
+?>
 --ENV--
 return <<<END
 SPX_ENABLED=1
@@ -70,8 +78,8 @@ Flat profile:
  Wall time           |
  *Inc.    | Exc.     | Called   | Function
 ----------+----------+----------+----------
- %w%s | %w%s |        1 | %s/tests/spx_function_name.php
- %w%s | %w%s |        2 | {closure:%s/tests/spx_function_name.php:40}
+ %w%s | %w%s |        1 | %s/tests/spx_function_name_7_0+.php
+ %w%s | %w%s |        2 | {closure:%s/tests/spx_function_name_7_0+.php:40}
  %w%s | %w%s |        2 | f
  %w%s | %w%s |        2 | class@anonymous::m1
  %w%s | %w%s |        2 | C1::sm1

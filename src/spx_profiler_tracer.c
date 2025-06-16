@@ -138,6 +138,7 @@ static void fill_event(
     spx_profiler_event_t * event,
     const tracing_profiler_t * profiler,
     spx_profiler_event_type_t type,
+    size_t call_site_line,
     const spx_profiler_func_table_entry_t * callee,
     const spx_profiler_metric_values_t * inc,
     const spx_profiler_metric_values_t * exc
@@ -302,6 +303,7 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
         &profiler->event,
         profiler,
         SPX_PROFILER_EVENT_CALL_START,
+        spx_php_function_call_site_line(function),
         profiler->stack.frames[profiler->stack.depth].func_table_entry,
         NULL,
         NULL
@@ -452,6 +454,7 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
         &profiler->event,
         profiler,
         SPX_PROFILER_EVENT_CALL_END,
+        0,
         profiler->stack.frames[profiler->stack.depth].func_table_entry,
         inc_metric_values_p,
         exc_metric_values_p
@@ -478,7 +481,16 @@ static void tracing_profiler_finalize(spx_profiler_t * base_profiler)
 
     profiler->finalized = 1;
 
-    fill_event(&profiler->event, profiler, SPX_PROFILER_EVENT_FINALIZE, NULL, NULL, NULL);
+    fill_event(
+        &profiler->event,
+        profiler,
+        SPX_PROFILER_EVENT_FINALIZE,
+        0,
+        NULL,
+        NULL,
+        NULL
+    );
+
     profiler->reporter->notify(profiler->reporter, &profiler->event);
 }
 
@@ -670,6 +682,7 @@ static void fill_event(
     spx_profiler_event_t * event,
     const tracing_profiler_t * profiler,
     spx_profiler_event_type_t type,
+    size_t call_site_line,
     const spx_profiler_func_table_entry_t * callee,
     const spx_profiler_metric_values_t * inc,
     const spx_profiler_metric_values_t * exc
@@ -694,6 +707,7 @@ static void fill_event(
 
     event->depth = profiler->stack.depth;
 
+    event->call_site_line = call_site_line;
     event->callee = callee;
 
     if (profiler->full_stats_required) {

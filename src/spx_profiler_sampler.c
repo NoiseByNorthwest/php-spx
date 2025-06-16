@@ -167,6 +167,8 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
 
         i = profiler->stack.current.size - 1;
 
+
+
         spx_php_current_function(&profiler->stack.current.frames[i]);
         for (;;) {
             i--;

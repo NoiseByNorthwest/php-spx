@@ -26,6 +26,7 @@ struct spx_str_builder_t {
     char * buffer;
 };
 
+/* the remaining count exclude the trailing \0 slot */
 #define REMAINING_CHARS(s) ((s)->capacity - (s)->size)
 
 spx_str_builder_t * spx_str_builder_create(size_t capacity)
@@ -220,6 +221,36 @@ size_t spx_str_builder_append_long(spx_str_builder_t * str_builder, long l)
     return c;
 }
 
+size_t spx_str_builder_append_uint16_hex(spx_str_builder_t * str_builder, uint16_t n)
+{
+    static const char * hex_symbols = "0123456789abcdef";
+
+    char * p = str_builder->buffer + str_builder->size;
+    size_t c = 0;
+    int i;
+
+    for (i = 12; i >= 0; i -= 4) {
+        const uint8_t digit_value = (n >> i) & 0xf;
+
+        if (digit_value == 0 && c == 0) {
+            continue;
+        }
+
+        if (REMAINING_CHARS(str_builder) == 0) {
+            str_builder->buffer[str_builder->size] = 0;
+
+            return 0;
+        }
+
+        p[c++] = hex_symbols[digit_value];
+    }
+
+    p[c] = 0;
+    str_builder->size += c;
+
+    return c;
+}
+
 size_t spx_str_builder_append_str(spx_str_builder_t * str_builder, const char * str)
 {
     char * p = str_builder->buffer + str_builder->size;
@@ -233,10 +264,10 @@ size_t spx_str_builder_append_str(spx_str_builder_t * str_builder, const char * 
 
         p[c++] = *str;
         str++;
-        str_builder->size++;
     }
 
     p[c] = 0;
+    str_builder->size += c;
 
     return c;
 }

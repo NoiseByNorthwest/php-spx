@@ -191,12 +191,18 @@
                                     event = line.split(' ').map(e => parseFloat(e));
                                 } else {
                                     // compressed format
+                                    const start = ! line.startsWith('-');
                                     const parts = line.split('|');
+
+                                    if (start) {
+                                        // ignoring call site line
+                                        parts.splice(0, 1);
+                                    }
+
                                     event = [];
                                     for (let i = 0; i < parts.length; i++) {
                                         let v = parts[i];
                                         if (i === 0) {
-                                            const start = ! v.startsWith('-');
                                             if (! start) {
                                                 v = v.substr(1);
                                             }

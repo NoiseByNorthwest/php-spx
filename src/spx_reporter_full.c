@@ -39,8 +39,9 @@
 
 typedef struct {
     size_t function_idx;
-    int start;
     spx_profiler_metric_values_t metric_values;
+    uint16_t call_site_line;
+    uint8_t start;
 } buffer_entry_t;
 
 typedef struct {
@@ -263,9 +264,10 @@ static spx_profiler_reporter_cost_t full_notify(
 
         buffer_entry_t * current = &reporter->buffer[reporter->buffer_size];
 
-        current->function_idx  = event->callee->idx;
-        current->start         = event->type == SPX_PROFILER_EVENT_CALL_START;
-        current->metric_values = *event->cum;
+        current->function_idx   = event->callee->idx;
+        current->start          = event->type == SPX_PROFILER_EVENT_CALL_START;
+        current->call_site_line = event->call_site_line;
+        current->metric_values  = *event->cum;
 
         reporter->buffer_size++;
 
@@ -316,7 +318,10 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
         const buffer_entry_t * prev = i > 0 ? &reporter->buffer[i - 1] : NULL;
         const buffer_entry_t * current = &reporter->buffer[i];
 
-        if (!current->start) {
+        if (current->start) {
+            spx_str_builder_append_uint16_hex(reporter->str_builder, current->call_site_line);
+            spx_str_builder_append_char(reporter->str_builder, '|');
+        } else {
             spx_str_builder_append_char(reporter->str_builder, '-');
         }
 

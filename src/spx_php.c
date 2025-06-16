@@ -166,6 +166,9 @@ static SPX_THREAD_TLS struct {
     int execution_disabled;
 
     size_t depth;
+#if ZEND_MODULE_API_NO < 20151012
+    const zend_op_array * bottom_op_array;
+#endif
     const zend_execute_data * old_execute_data;
     int request_shutdown;
     int collect_userland_stats;
@@ -186,7 +189,15 @@ static SPX_THREAD_TLS struct {
     const char * active_function_name;
 } context;
 
-static void execute_data_function(const zend_execute_data * execute_data, spx_php_function_t * function TSRMLS_DC);
+static void execute_data_function(
+    const zend_execute_data * execute_data,
+#if ZEND_MODULE_API_NO < 20151012
+    const zend_op_array * op_array,
+#endif
+    spx_php_function_t * function
+    TSRMLS_DC
+);
+
 static void reset_context(void);
 
 #if ZEND_MODULE_API_NO >= 20151012
@@ -328,9 +339,23 @@ void spx_php_current_function(spx_php_function_t * function)
             spx_utils_die("Stack inconsistency");
         }
 
-        execute_data_function(context.old_execute_data, function TSRMLS_CC);
+        execute_data_function(
+            context.old_execute_data,
+#if ZEND_MODULE_API_NO < 20151012
+            NULL,
+#endif
+            function
+            TSRMLS_CC
+        );
     } else {
-        execute_data_function(EG(current_execute_data), function TSRMLS_CC);
+        execute_data_function(
+            EG(current_execute_data),
+#if ZEND_MODULE_API_NO < 20151012
+            NULL,
+#endif
+            function
+            TSRMLS_CC
+        );
     }
 }
 
@@ -338,9 +363,11 @@ int spx_php_previous_function(const spx_php_function_t * current, spx_php_functi
 {
     TSRMLS_FETCH();
 
+#if ZEND_MODULE_API_NO >= 20151012
     if (!current->previous) {
         return 0;
     }
+#endif
 
     previous->previous = NULL;
     previous->hash_code = 0;
@@ -349,9 +376,82 @@ int spx_php_previous_function(const spx_php_function_t * current, spx_php_functi
     previous->file_name = "";
     previous->line = 0;
 
-    execute_data_function(current->previous, previous TSRMLS_CC);
+    const zend_execute_data * prev_execute_data = current->previous;
+
+#if ZEND_MODULE_API_NO < 20151012
+    if (
+        prev_execute_data &&
+        prev_execute_data->function_state.function == EG(current_execute_data)->function_state.function
+    ) {
+        /*
+            There is something weird about PHP 5's VM stack managment. I don't know why but the top 2
+            frames can point to the same function (call).
+        */
+        prev_execute_data = prev_execute_data->prev_execute_data;
+    }
+#endif
+
+    execute_data_function(
+        prev_execute_data,
+#if ZEND_MODULE_API_NO < 20151012
+        /*
+            With PHP 5 the bottom frame (top-level script) is a zend_op_array.
+        */
+        prev_execute_data ? NULL : context.bottom_op_array,
+#endif
+        previous TSRMLS_CC
+    );
 
     return 1;
+}
+
+size_t spx_php_function_call_site_line(const spx_php_function_t * function)
+{
+    const zend_execute_data * prev_execute_data = function->previous;
+
+#if ZEND_MODULE_API_NO < 20151012
+    const zend_execute_data * execute_data = EG(current_execute_data);
+
+    if (context.old_execute_data) {
+        execute_data = context.old_execute_data;
+    }
+
+    if (
+        !prev_execute_data &&
+        context.bottom_op_array &&
+        /* this str pointer comparison is intentional */
+        function->func_name == context.bottom_op_array->filename
+    ) {
+        /* bottom frame */
+        return 0;
+    }
+
+    while (execute_data) {
+        if (execute_data->prev_execute_data == prev_execute_data) {
+            if (
+                prev_execute_data &&
+                execute_data->function_state.function == prev_execute_data->function_state.function
+            ) {
+                /*
+                    See related comment in spx_php_previous_function().
+                */
+                return prev_execute_data->opline->lineno;
+            }
+
+            return execute_data->opline->lineno;
+        }
+
+        execute_data = execute_data->prev_execute_data;
+    }
+
+    return context.bottom_op_array ? context.bottom_op_array->line_start : 0;
+#endif
+
+    if (!prev_execute_data) {
+        return 0;
+    }
+
+    return prev_execute_data->opline->lineno;
 }
 
 const char * spx_php_ini_get_string(const char * name)
@@ -966,9 +1066,17 @@ void spx_php_log_notice(const char * fmt, ...)
     free(buf);
 }
 
-static void execute_data_function(const zend_execute_data * execute_data, spx_php_function_t * function TSRMLS_DC)
-{
-    function->previous = execute_data->prev_execute_data;
+static void execute_data_function(
+    const zend_execute_data * execute_data,
+#if ZEND_MODULE_API_NO < 20151012
+    const zend_op_array * op_array,
+#endif
+    spx_php_function_t * function
+    TSRMLS_DC
+) {
+    if (execute_data) {
+        function->previous = execute_data->prev_execute_data;
+    }
 
     int closure = 0;
 #if ZEND_MODULE_API_NO >= 20151012
@@ -976,7 +1084,7 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
     const zend_class_entry * ce = NULL;
 #endif
 
-    if (zend_is_executing(TSRMLS_C)) {
+    if (execute_data && zend_is_executing(TSRMLS_C)) {
 #if ZEND_MODULE_API_NO >= 20151012
         func = execute_data->func;
 
@@ -1030,11 +1138,7 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
         switch (execute_data->function_state.function->type) {
             case ZEND_USER_FUNCTION:
             {
-                const char * function_name = (
-                        (zend_op_array *) execute_data->function_state.function
-                    )
-                    ->function_name
-                ;
+                const char * function_name = execute_data->function_state.function->common.function_name;
 
                 if (function_name) {
                     function->func_name = function_name;
@@ -1084,7 +1188,9 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
             function->func_name = "[no active file]";
         }
 #else
-        if (EG(active_op_array)) {
+        if (op_array) {
+            function->func_name = op_array->filename;
+        } else if (EG(active_op_array)) {
             function->func_name = EG(active_op_array)->filename;
         } else {
             function->func_name = "[no active file]";
@@ -1133,6 +1239,9 @@ static void reset_context(void)
     context.global_hooks_enabled = 1;
     context.execution_disabled = 0;
     context.depth = 0;
+#if ZEND_MODULE_API_NO < 20151012
+    context.bottom_op_array = NULL;
+#endif
     context.old_execute_data = NULL;
     context.request_shutdown = 0;
     context.collect_userland_stats = 0;
@@ -1244,6 +1353,12 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
     }
 
     if (!context.use_observer_api) {
+#if ZEND_MODULE_API_NO < 20151012
+        if (context.depth == 0) {
+            context.bottom_op_array = EG(active_op_array);
+        }
+#endif
+
         context.depth++;
 
         if (context.ex_hook.user.before) {

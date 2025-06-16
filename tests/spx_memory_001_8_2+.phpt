@@ -38,15 +38,15 @@ f2();
 ?>
 --EXPECTF--
 ZE memory usage                |
- Cum.     | Inc.     | Exc.     | Depth    | Function
-----------+----------+----------+----------+----------
-       0B |       0B |       0B |        1 | +%s/tests/spx_memory_001_8_2+.php
-       0B |       0B |       0B |        2 |  +f2
-      32B |       0B |       0B |        3 |   +f1
-      32B |       0B |       0B |        3 |   -f1
-    1.5KB |       0B |       0B |        3 |   +f1
-    1.5KB |       0B |       0B |        3 |   -f1
-    1.5KB |    1.5KB |    1.5KB |        2 |  -f2
-    1.5KB |    1.5KB |       0B |        1 | -%s/tests/spx_memory_001_8_2+.php
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+       0B |       0B |       0B |        1 |        0 | +%s/tests/spx_memory_001_8_2+.php
+       0B |       0B |       0B |        2 |       17 |  +f2
+      32B |       0B |       0B |        3 |       12 |   +f1
+      32B |       0B |       0B |        3 |        0 |   -f1
+    1.5KB |       0B |       0B |        3 |       14 |   +f1
+    1.5KB |       0B |       0B |        3 |        0 |   -f1
+    1.5KB |    1.5KB |    1.5KB |        2 |        0 |  -f2
+    1.5KB |    1.5KB |       0B |        1 |        0 | -%s/tests/spx_memory_001_8_2+.php
 
 SPX trace file: /dev/stdout

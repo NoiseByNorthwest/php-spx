@@ -39,7 +39,7 @@
 
 typedef struct {
     uint64_t hash_code;
-    void * previous;
+    const void * previous;
 
     const char * func_name;
     const char * class_name;
@@ -53,6 +53,7 @@ int spx_php_are_ansi_sequences_supported(void);
 size_t spx_php_current_depth(void);
 void spx_php_current_function(spx_php_function_t * function);
 int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous);
+size_t spx_php_function_call_site_line(const spx_php_function_t * function);
 
 const char * spx_php_ini_get_string(const char * name);
 double spx_php_ini_get_double(const char * name);

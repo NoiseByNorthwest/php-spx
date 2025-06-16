@@ -65,6 +65,7 @@ typedef struct {
 
     size_t depth;
 
+    size_t call_site_line;
     const spx_profiler_func_table_entry_t * callee;
     
     const spx_profiler_metric_values_t * inc;
