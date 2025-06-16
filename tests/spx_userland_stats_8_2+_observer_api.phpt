@@ -1,15 +1,15 @@
 --TEST--
-Userland stats (PHP 8.0+) and instrumentation through ZE hooks
+Userland stats (PHP 8.2+) and instrumentation through observer API
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '8.0') < 0
+    version_compare(PHP_VERSION, '8.2') < 0
 ) {
-    die('skip this test is for PHP 8.0+ only');
+    die('skip this test is for PHP 8.2+ only');
 }
 ?>
 --INI--
-spx.use_observer_api=0
+spx.use_observer_api=1
 --ENV--
 return <<<END
 SPX_ENABLED=1
@@ -55,8 +55,8 @@ $d = 0;
 
 Global stats:
 
-  Called functions    :        5
-  Distinct functions  :        5
+  Called functions    :        4
+  Distinct functions  :        4
 
   ZE class count      :        1
   ZE func. count      :        3
@@ -70,5 +70,4 @@ Flat profile:
         0 |        0 |        2 |        2 |       12 |       12 |        1 | ::zend_compile_file
         1 |        1 |        1 |        1 |        5 |        5 |        1 | ::zend_compile_string
         1 |        0 |        1 |        0 |        5 |        0 |        1 | %s/spx_%s.php
-        0 |        0 |        0 |        0 |        0 |        0 |        1 | %s/spx_%s.php(%d) : eval()'d code
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::php_request_shutdown

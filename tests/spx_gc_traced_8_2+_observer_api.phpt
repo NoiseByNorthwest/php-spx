@@ -1,15 +1,15 @@
 --TEST--
-GC is traced (PHP 8.0+) and instrumentation through ZE hooks
+GC is traced (PHP 8.2+) and instrumentation through observer API
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '8.0') < 0
+    version_compare(PHP_VERSION, '8.2') < 0
 ) {
-    die('skip this test is for PHP 8.0+ only');
+    die('skip this test is for PHP 8.2+ only');
 }
 ?>
 --INI--
-spx.use_observer_api=0
+spx.use_observer_api=1
 --ENV--
 return <<<END
 SPX_ENABLED=1
@@ -27,6 +27,10 @@ function f1() {
 
     $a->b = $b;
     $b->a = $a;
+
+    for ($i = 0; $i < 100; $i++) {
+        // spin the CPU to ensure that its cost is > gc_collect_cycles
+    }
 }
 
 function f2() {
@@ -56,8 +60,8 @@ Flat profile:
  Wall time           | ZE GC runs          | ZE GC root buffer   | ZE GC collected     |
  *Inc.    | Exc.     | Inc.     | Exc.     | Inc.     | Exc.     | Inc.     | Exc.     | Called   | Function
 ----------+----------+----------+----------+----------+----------+----------+----------+----------+----------
- %w%s | %w%s |        9 |        0 |    10.0K |        0 |    90.0K |        0 |        1 | %s/tests/spx_gc_traced_8_0+.php
- %w%s | %w%s |        9 |        0 |    10.0K |        0 |    90.0K |        0 |    50.0K | f2
- %w%s | %w%s |        9 |        0 |    10.0K |   100.0K |    90.0K |        0 |    50.0K | f1
+ %w%s | %w%s |        9 |        0 |    10.0K |        0 |    90.0K |        0 |        1 | %s/tests/spx_gc_traced_8_2+_observer_api.php
+ %w%s | %w%s |        9 |        0 |    10.0K |   100.0K |    90.0K |        0 |    50.0K | f2
+ %w%s | %w%s |        0 |        0 |        0 |        0 |        0 |        0 |    50.0K | f1
  %w%s | %w%s |        9 |        9 |   -90.0K |   -90.0K |    90.0K |    90.0K |        9 | ::gc_collect_cycles
- %A
+%A

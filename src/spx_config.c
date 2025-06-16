@@ -153,6 +153,14 @@ static void init_config(spx_config_t * config, int cli)
 
 static void fix_config(spx_config_t * config, int cli)
 {
+    if (spx_php_global_array_get("_SERVER", "TEST_PHP_SRCDIR")) {
+        /* Force SPX disabling for tests "skip" scripts */
+        const char * script_file_name = spx_php_global_array_get("_SERVER", "SCRIPT_FILENAME");
+        if (script_file_name && spx_utils_str_ends_with(script_file_name, ".skip.php")) {
+            config->enabled = 0;
+        }
+    }
+
     if (cli) {
         config->ui_uri = NULL;
     }

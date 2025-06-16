@@ -17,6 +17,21 @@
 
 #include "main/php.h"
 #include "main/SAPI.h"
+
+/*
+    Observer API, despite being available since PHP 8.0, is not enough stable
+    with PHP 8.0 & 8.1. For instance tests/spx_auto_start_002_observer_api.phpt
+    crashes with observer API and PHP 8.0-8.1.
+    This is why SPX makes it available only for PHP 8.2+.
+*/
+#if ZEND_MODULE_API_NO >= 20220829
+#   define HAVE_PHP_OBSERVER_API
+#endif
+
+#ifdef HAVE_PHP_OBSERVER_API
+#   include "Zend/zend_observer.h"
+#endif
+
 #if defined(_WIN32) && ZEND_MODULE_API_NO >= 20170718
 #   include "win32/console.h"
 #endif
@@ -146,10 +161,12 @@ static SPX_THREAD_TLS struct {
         } user, internal;
     } ex_hook;
 
+    int use_observer_api;
     int global_hooks_enabled;
     int execution_disabled;
 
-    size_t user_depth;
+    size_t depth;
+    const zend_execute_data * old_execute_data;
     int request_shutdown;
     int collect_userland_stats;
 
@@ -189,18 +206,25 @@ static void global_hook_execute(zend_op_array * op_array TSRMLS_DC);
 #else
 static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
 #endif
+
 static void global_hook_execute_internal(
     zend_execute_data * execute_data,
 #if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
 #else
-#if ZEND_MODULE_API_NO >= 20121212
+#   if ZEND_MODULE_API_NO >= 20121212
     struct _zend_fcall_info * fci,
-#endif
+#   endif
     int ret
 #endif
     TSRMLS_DC
 );
+
+#ifdef HAVE_PHP_OBSERVER_API
+static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execute_data);
+static void observer_api_begin(zend_execute_data * execute_data);
+static void observer_api_end(zend_execute_data * execute_data, zval * return_value);
+#endif
 
 static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC);
 static zend_op_array * global_hook_zend_compile_string(
@@ -257,25 +281,90 @@ int spx_php_are_ansi_sequences_supported(void)
     ;
 }
 
+size_t spx_php_current_depth(void)
+{
+    TSRMLS_FETCH();
+
+    if (context.depth > 0) {
+        return context.depth;
+    }
+
+    size_t depth = 0;
+    const zend_execute_data * execute_data = EG(current_execute_data);
+
+    while (execute_data) {
+        depth++;
+        execute_data = execute_data->prev_execute_data;
+    }
+
+    return depth;
+}
+
 void spx_php_current_function(spx_php_function_t * function)
 {
     TSRMLS_FETCH();
 
+    function->previous = NULL;
     function->hash_code = 0;
     function->class_name = "";
     function->func_name = "";
+    function->file_name = "";
+    function->line = 0;
 
     if (context.active_function_name) {
+        function->previous = EG(current_execute_data);
         function->class_name = "";
         function->func_name = context.active_function_name;
+    } else if (
+        context.old_execute_data &&
+        /*
+            old_execute_data is equal to EG(current_execute_data) when instrumenting
+            via the observer API.
+        */
+        context.old_execute_data != EG(current_execute_data)
+    ) {
+        if (context.old_execute_data->prev_execute_data != EG(current_execute_data)) {
+            spx_utils_die("Stack inconsistency");
+        }
+
+        execute_data_function(context.old_execute_data, function TSRMLS_CC);
     } else {
         execute_data_function(EG(current_execute_data), function TSRMLS_CC);
     }
 
+    /*
+        Most of the cost of this function is here, we must find a way to have a good
+        hash code with less CPU cycles.
+    */
     function->hash_code =
-        zend_inline_hash_func(function->func_name, strlen(function->func_name)) ^
-        zend_inline_hash_func(function->class_name, strlen(function->class_name))
+        zend_inline_hash_func(function->func_name, strlen(function->func_name))
+            ^ zend_inline_hash_func(function->class_name, strlen(function->class_name))
     ;
+}
+
+int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous)
+{
+    TSRMLS_FETCH();
+
+    if (!current->previous) {
+        return 0;
+    }
+
+    previous->previous = NULL;
+    previous->hash_code = 0;
+    previous->class_name = "";
+    previous->func_name = "";
+    previous->file_name = "";
+    previous->line = 0;
+
+    execute_data_function(current->previous, previous TSRMLS_CC);
+
+    previous->hash_code =
+        zend_inline_hash_func(previous->func_name, strlen(previous->func_name))
+            ^ zend_inline_hash_func(previous->class_name, strlen(previous->class_name))
+    ;
+
+    return 1;
 }
 
 const char * spx_php_ini_get_string(const char * name)
@@ -577,21 +666,34 @@ size_t spx_php_zend_error_count(void)
     return context.error_count;
 }
 
-void spx_php_global_hooks_set(void)
+void spx_php_global_hooks_init(void)
 {
-#if ZEND_MODULE_API_NO < 20121212
-    ze_hooked_func.execute = zend_execute;
-    zend_execute = global_hook_execute;
-#else
-    ze_hooked_func.execute_ex = zend_execute_ex;
-    zend_execute_ex = global_hook_execute_ex;
+#ifdef HAVE_PHP_OBSERVER_API
+    zend_observer_fcall_register(observer_api_init);
+#endif
+}
+
+void spx_php_global_hooks_set(int use_observer_api)
+{
+#ifndef HAVE_PHP_OBSERVER_API
+    use_observer_api = 0;
 #endif
 
-    ze_hooked_func.previous_zend_execute_internal = zend_execute_internal;
-    ze_hooked_func.execute_internal = zend_execute_internal ?
-        zend_execute_internal : execute_internal
-    ;
-    zend_execute_internal = global_hook_execute_internal;
+    if (!use_observer_api) {
+#if ZEND_MODULE_API_NO < 20121212
+        ze_hooked_func.execute = zend_execute;
+        zend_execute = global_hook_execute;
+#else
+        ze_hooked_func.execute_ex = zend_execute_ex;
+        zend_execute_ex = global_hook_execute_ex;
+#endif
+
+        ze_hooked_func.previous_zend_execute_internal = zend_execute_internal;
+        ze_hooked_func.execute_internal = zend_execute_internal ?
+            zend_execute_internal : execute_internal
+        ;
+        zend_execute_internal = global_hook_execute_internal;
+    }
 
     ze_hooked_func.zend_compile_file = zend_compile_file;
     zend_compile_file = global_hook_zend_compile_file;
@@ -666,14 +768,21 @@ void spx_php_execution_finalize(void)
         context.active_function_name = "::php_request_shutdown";
         context.ex_hook.internal.after();
         context.active_function_name = NULL;
+        context.depth--;
     }
 
     context.request_shutdown = 0;
 }
 
-void spx_php_execution_init(void)
+void spx_php_execution_init(int use_observer_api)
 {
     reset_context();
+
+#ifndef HAVE_PHP_OBSERVER_API
+    use_observer_api = 0;
+#endif
+
+    context.use_observer_api = use_observer_api;
 
 #if ZEND_MODULE_API_NO >= 20151012
     zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
@@ -872,6 +981,8 @@ void spx_php_log_notice(const char * fmt, ...)
 
 static void execute_data_function(const zend_execute_data * execute_data, spx_php_function_t * function TSRMLS_DC)
 {
+    function->previous = execute_data->prev_execute_data;
+
     if (zend_is_executing(TSRMLS_C)) {
 #if ZEND_MODULE_API_NO >= 20151012
         const zend_function * func = execute_data->func;
@@ -992,9 +1103,11 @@ static void reset_context(void)
     context.ex_hook.internal.before = NULL;
     context.ex_hook.internal.after = NULL;
 
+    context.use_observer_api = 0;
     context.global_hooks_enabled = 1;
     context.execution_disabled = 0;
-    context.user_depth = 0;
+    context.depth = 0;
+    context.old_execute_data = NULL;
     context.request_shutdown = 0;
     context.collect_userland_stats = 0;
     context.file_count = 0;
@@ -1091,11 +1204,11 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
 #endif
 {
     if (!context.global_hooks_enabled) {
-    #if ZEND_MODULE_API_NO < 20121212
+#if ZEND_MODULE_API_NO < 20121212
         ze_hooked_func.execute(op_array TSRMLS_CC);
-    #else
+#else
         ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
-    #endif
+#endif
 
         return;
     }
@@ -1104,10 +1217,12 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
         return;
     }
 
-    context.user_depth++;
+    if (!context.use_observer_api) {
+        context.depth++;
 
-    if (context.ex_hook.user.before) {
-        context.ex_hook.user.before();
+        if (context.ex_hook.user.before) {
+            context.ex_hook.user.before();
+        }
     }
 
 #if ZEND_MODULE_API_NO < 20121212
@@ -1116,22 +1231,28 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
     ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
 #endif
 
-    if (context.ex_hook.user.after) {
-        context.ex_hook.user.after();
-    }
+    if (!context.use_observer_api) {
+        context.old_execute_data = execute_data;
 
-    context.user_depth--;
+        if (context.ex_hook.user.after) {
+            context.ex_hook.user.after();
+        }
 
-    /*
-     *  FIXME: it might not works with prepend files
-     */
-    if (context.user_depth == 0 && !context.request_shutdown) {
-        context.request_shutdown = 1;
+        context.old_execute_data = NULL;
+        context.depth--;
 
-        if (context.ex_hook.internal.before) {
-            context.active_function_name = "::php_request_shutdown";
-            context.ex_hook.internal.before();
-            context.active_function_name = NULL;
+        /*
+         *  FIXME: it might not works with prepend files
+         */
+        if (context.depth == 0 && !context.request_shutdown) {
+            context.request_shutdown = 1;
+
+            if (context.ex_hook.internal.before) {
+                context.depth++;
+                context.active_function_name = "::php_request_shutdown";
+                context.ex_hook.internal.before();
+                context.active_function_name = NULL;
+            }
         }
     }
 }
@@ -1151,14 +1272,14 @@ static void global_hook_execute_internal(
     if (!context.global_hooks_enabled) {
         ze_hooked_func.execute_internal(
             execute_data,
-    #if ZEND_MODULE_API_NO >= 20151012
+#if ZEND_MODULE_API_NO >= 20151012
             return_value
-    #else
-    #if ZEND_MODULE_API_NO >= 20121212
+#else
+#   if ZEND_MODULE_API_NO >= 20121212
             fci,
-    #endif
+#   endif
             ret
-    #endif
+#endif
             TSRMLS_CC
         );
 
@@ -1169,8 +1290,12 @@ static void global_hook_execute_internal(
         return;
     }
 
-    if (context.ex_hook.internal.before) {
-        context.ex_hook.internal.before();
+    if (!context.use_observer_api) {
+        context.depth++;
+
+        if (context.ex_hook.internal.before) {
+            context.ex_hook.internal.before();
+        }
     }
 
     ze_hooked_func.execute_internal(
@@ -1178,18 +1303,113 @@ static void global_hook_execute_internal(
 #if ZEND_MODULE_API_NO >= 20151012
         return_value
 #else
-#if ZEND_MODULE_API_NO >= 20121212
+#   if ZEND_MODULE_API_NO >= 20121212
         fci,
-#endif
+#   endif
         ret
 #endif
         TSRMLS_CC
     );
 
-    if (context.ex_hook.internal.after) {
-        context.ex_hook.internal.after();
+    if (!context.use_observer_api) {
+        context.old_execute_data = execute_data;
+
+        if (context.ex_hook.internal.after) {
+            context.ex_hook.internal.after();
+        }
+
+        context.old_execute_data = NULL;
+        context.depth--;
     }
 }
+
+#ifdef HAVE_PHP_OBSERVER_API
+
+static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execute_data)
+{
+    zend_observer_fcall_handlers handlers = {NULL, NULL};
+
+    /* FIXME should we really instrument everything ? */
+
+    handlers.begin = observer_api_begin;
+    handlers.end = observer_api_end;
+
+    return handlers;
+}
+
+static void observer_api_begin(zend_execute_data * execute_data)
+{
+    if (!context.use_observer_api) {
+        /* No noticeable instrumentation overhead when returning right here. */
+        return;
+    }
+
+    if (!context.global_hooks_enabled) {
+        return;
+    }
+
+    context.depth++;
+
+    void (* const before_hook)(void) =
+        execute_data->func &&
+        execute_data->func->type == ZEND_INTERNAL_FUNCTION ?
+        context.ex_hook.internal.before : context.ex_hook.user.before
+    ;
+
+    if (before_hook) {
+        before_hook();
+    }
+}
+
+static void observer_api_end(zend_execute_data * execute_data, zval * return_value)
+{
+    if (!context.use_observer_api) {
+        /* No noticeable instrumentation overhead when returning right here. */
+        return;
+    }
+
+    if (!context.global_hooks_enabled) {
+        return;
+    }
+
+    context.old_execute_data = execute_data;
+
+    const int internal_func_call =
+        execute_data->func &&
+        execute_data->func->type == ZEND_INTERNAL_FUNCTION
+    ;
+
+    void (* const after_hook)(void) = internal_func_call ?
+        context.ex_hook.internal.after : context.ex_hook.user.after
+    ;
+
+    if (after_hook) {
+        after_hook();
+    }
+
+    context.depth--;
+    context.old_execute_data = NULL;
+
+    if (internal_func_call) {
+        return;
+    }
+
+    /*
+     *  FIXME: it might not works with prepend files
+     */
+    if (context.depth == 0 && !context.request_shutdown) {
+        context.request_shutdown = 1;
+
+        if (context.ex_hook.internal.before) {
+            context.depth++;
+            context.active_function_name = "::php_request_shutdown";
+            context.ex_hook.internal.before();
+            context.active_function_name = NULL;
+        }
+    }
+}
+
+#endif
 
 static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC)
 {
@@ -1201,6 +1421,7 @@ static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_han
         return NULL;
     }
 
+    context.depth++;
     context.active_function_name = "::zend_compile_file";
 
     if (context.ex_hook.internal.before) {
@@ -1228,6 +1449,7 @@ static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_han
     }
 
     context.active_function_name = NULL;
+    context.depth--;
 
     return op_array;
 }
@@ -1260,6 +1482,7 @@ static zend_op_array * global_hook_zend_compile_string(
         return NULL;
     }
 
+    context.depth++;
     context.active_function_name = "::zend_compile_string";
 
     if (context.ex_hook.internal.before) {
@@ -1296,6 +1519,7 @@ static zend_op_array * global_hook_zend_compile_string(
     }
 
     context.active_function_name = NULL;
+    context.depth--;
 
     return op_array;
 }
@@ -1311,6 +1535,7 @@ static int global_hook_gc_collect_cycles(void)
         return 0;
     }
 
+    context.depth++;
     context.active_function_name = "::gc_collect_cycles";
 
     if (context.ex_hook.internal.before) {
@@ -1324,6 +1549,7 @@ static int global_hook_gc_collect_cycles(void)
     }
 
     context.active_function_name = NULL;
+    context.depth--;
 
     return count;
 }

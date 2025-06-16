@@ -30,15 +30,18 @@ do {                                             \
 } while (0)
 
 
-#define SPX_METRIC_FOREACH_L(it, last_idx, block)  \
-do {                                               \
-    size_t it;                                     \
-    for (it = 0; it < SPX_METRIC_COUNT; it++) {    \
-        block                                      \
-        if (it == (last_idx)) {                    \
-            break;                                 \
-        }                                          \
-    }                                              \
+#define SPX_METRIC_FOREACH_L(it, last_idx, block)        \
+do {                                                     \
+    size_t it;                                           \
+                                                         \
+    const size_t spx_metric_foreach_limit =              \
+        last_idx >= SPX_METRIC_COUNT ?                   \
+            SPX_METRIC_COUNT : last_idx + 1              \
+    ;                                                    \
+                                                         \
+    for (it = 0; it < spx_metric_foreach_limit; it++) {  \
+        block                                            \
+    }                                                    \
 } while (0)
 
 typedef enum {

@@ -133,6 +133,8 @@ static spx_profiler_reporter_cost_t trace_notify(spx_profiler_reporter_t * base_
     flush_buffer(reporter, event->enabled_metrics);
 
     if (event->type == SPX_PROFILER_EVENT_FINALIZE) {
+        spx_output_stream_flush(reporter->output);
+
         fprintf(
             stderr,
             "\nSPX trace file: %s\n",

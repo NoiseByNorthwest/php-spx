@@ -29,4 +29,6 @@ spx_profiler_t * spx_profiler_tracer_create(
     spx_profiler_reporter_t * reporter
 );
 
+void spx_profiler_tracer_freeze_metrics(spx_profiler_t * profiler, int freeze_metrics);
+
 #endif /* SPX_PROFILER_TRACER_H_DEFINED */

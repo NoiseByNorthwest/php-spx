@@ -39,6 +39,7 @@
 
 typedef struct {
     uint64_t hash_code;
+    void * previous;
 
     const char * func_name;
     const char * class_name;
@@ -49,7 +50,9 @@ typedef struct {
 int spx_php_is_cli_sapi(void);
 int spx_php_are_ansi_sequences_supported(void);
 
+size_t spx_php_current_depth(void);
 void spx_php_current_function(spx_php_function_t * function);
+int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous);
 
 const char * spx_php_ini_get_string(const char * name);
 double spx_php_ini_get_double(const char * name);
@@ -72,11 +75,12 @@ size_t spx_php_zend_opcode_count(void);
 size_t spx_php_zend_object_count(void);
 size_t spx_php_zend_error_count(void);
 
-void spx_php_global_hooks_set(void);
+void spx_php_global_hooks_init(void);
+void spx_php_global_hooks_set(int use_observer_api);
 void spx_php_global_hooks_unset(void);
 void spx_php_global_hooks_disable(void);
 
-void spx_php_execution_init(void);
+void spx_php_execution_init(int use_observer_api);
 void spx_php_execution_shutdown(void);
 
 void spx_php_execution_disable(void);

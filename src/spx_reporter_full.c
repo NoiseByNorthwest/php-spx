@@ -302,6 +302,13 @@ static void full_destroy(spx_profiler_reporter_t * base_reporter)
 
 static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics)
 {
+    size_t last_enabled_metric_idx = 0;
+    SPX_METRIC_FOREACH(i, {
+        if (enabled_metrics[i]) {
+            last_enabled_metric_idx = i;
+        }
+    });
+
     spx_str_builder_reset(reporter->str_builder);
 
     size_t i;
@@ -336,7 +343,7 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
             spx_str_builder_append_long(reporter->str_builder, current->function_idx);
         }
 
-        SPX_METRIC_FOREACH(i, {
+        SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
             if (!enabled_metrics[i]) {
                 continue;
             }

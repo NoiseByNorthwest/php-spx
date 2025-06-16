@@ -20,7 +20,9 @@
 
 #include <pthread.h>
 
+#include "spx_php.h"
 #include "spx_profiler_sampler.h"
+#include "spx_profiler_tracer.h"
 #include "spx_utils.h"
 
 
@@ -128,12 +130,9 @@ static void sampling_profiler_call_start(spx_profiler_t * base_profiler, const s
 {
     sampling_profiler_t * profiler = (sampling_profiler_t *) base_profiler;
 
-    if (profiler->stack.current.size == STACK_CAPACITY) {
-        spx_utils_die("STACK_CAPACITY exceeded");
+    if (!__atomic_load_n(&profiler->heartbeat.ready, __ATOMIC_SEQ_CST)) {
+        return;
     }
-
-    profiler->stack.current.frames[profiler->stack.current.size] = *function;
-    profiler->stack.current.size++;
 
     sampling_profiler_handle_sample(profiler, 0);
 }
@@ -142,18 +141,49 @@ static void sampling_profiler_call_end(spx_profiler_t * base_profiler)
 {
     sampling_profiler_t * profiler = (sampling_profiler_t *) base_profiler;
 
-    sampling_profiler_handle_sample(profiler, 1);
-
-    profiler->stack.current.size--;
-}
-
-static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int call_end)
-{
     if (!__atomic_load_n(&profiler->heartbeat.ready, __ATOMIC_SEQ_CST)) {
         return;
     }
 
+    sampling_profiler_handle_sample(profiler, 1);
+}
+
+static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int call_end)
+{
     __atomic_store_n(&profiler->heartbeat.ready, 0, __ATOMIC_SEQ_CST);
+
+    profiler->stack.current.size = spx_php_current_depth();
+
+    if (profiler->stack.current.size > STACK_CAPACITY) {
+        spx_utils_die("STACK_CAPACITY exceeded");
+    }
+
+    int i;
+
+    if (profiler->stack.current.size > 0) {
+        /*
+            Build current stack.
+        */
+
+        i = profiler->stack.current.size - 1;
+
+        spx_php_current_function(&profiler->stack.current.frames[i]);
+        for (;;) {
+            i--;
+
+            if (i < 0) {
+                break;
+            }
+
+            if (!spx_php_previous_function(&profiler->stack.current.frames[i + 1], &profiler->stack.current.frames[i])) {
+                spx_utils_die("Corrupted stack tracking: missing frame");
+            }
+        }
+
+        if (profiler->stack.current.frames[0].previous) {
+            spx_utils_die("Corrupted stack tracking: unexpected frame");
+        }
+    }
 
     int common_stack_top = 0;
     while (1) {
@@ -180,9 +210,15 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
         common_stack_top++;
     }
 
-    int i;
-
     /* end all previous stack calls down to common stack */
+
+    if (call_end) {
+        /*
+            In case of call end, we consider that the ended call has consummed most resources since the last sample.
+            So we freeze metrics until the start trace of the ended call.
+        */
+        spx_profiler_tracer_freeze_metrics(profiler->sampled_profiler, 1);
+    }
 
     if (profiler->stack.previous.size > 0) {
         for (i = profiler->stack.previous.size - 1; i >= common_stack_top; i--) {
@@ -205,6 +241,8 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
     profiler->stack.previous.size = profiler->stack.current.size;
 
     if (call_end) {
+        spx_profiler_tracer_freeze_metrics(profiler->sampled_profiler, 0);
+
         profiler->sampled_profiler->call_end(profiler->sampled_profiler);
         /* so we have to remove this frame from the future previous stack */
         profiler->stack.previous.size--;

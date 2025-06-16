@@ -46,8 +46,6 @@ typedef struct {
     void (*shutdown) (void);
 } execution_handler_t;
 
-#define STACK_CAPACITY 2048
-
 static SPX_THREAD_TLS struct {
     int cli_sapi;
     spx_config_t config;
@@ -73,7 +71,6 @@ static SPX_THREAD_TLS struct {
         char full_report_key[512];
         spx_profiler_reporter_t * reporter;
         spx_profiler_t * profiler;
-        spx_php_function_t stack[STACK_CAPACITY];
         size_t depth;
         size_t span_depth;
     } profiling_handler;
@@ -81,6 +78,7 @@ static SPX_THREAD_TLS struct {
 
 ZEND_BEGIN_MODULE_GLOBALS(spx)
     zend_bool debug;
+    zend_bool use_observer_api;
     const char * data_dir;
     zend_bool http_enabled;
     const char * http_key;
@@ -108,6 +106,10 @@ PHP_INI_BEGIN()
     STD_PHP_INI_ENTRY(
         "spx.debug", "0", PHP_INI_SYSTEM,
         OnUpdateBool, debug, zend_spx_globals, spx_globals
+    )
+    STD_PHP_INI_ENTRY(
+        "spx.use_observer_api", "1", PHP_INI_SYSTEM,
+        OnUpdateBool, use_observer_api, zend_spx_globals, spx_globals
     )
     STD_PHP_INI_ENTRY(
         "spx.data_dir", "/tmp/spx", PHP_INI_SYSTEM,
@@ -251,8 +253,10 @@ ZEND_GET_MODULE(spx)
 
 static PHP_MINIT_FUNCTION(spx)
 {
+    spx_php_global_hooks_init();
+
 #ifdef ZTS
-    spx_php_global_hooks_set();
+    spx_php_global_hooks_set(0);
 #endif
 
     REGISTER_INI_ENTRIES();
@@ -394,13 +398,59 @@ static PHP_FUNCTION(spx_profiler_start)
         return;
     }
 
-    size_t i;
-    for (i = 0; i < context.profiling_handler.depth; i++) {
+
+    if (context.profiling_handler.depth == 0) {
+        return;
+    }
+
+    const size_t actual_depth = context.profiling_handler.depth + (context.config.builtins ? 0 : 1);
+
+    spx_php_function_t * current_stack = malloc(actual_depth * sizeof(*current_stack));
+    if (!current_stack) {
+        spx_php_log_notice("spx_profiler_start(): allocation failure");
+
+        return;
+    }
+
+    int i = actual_depth - 1;
+
+    spx_php_current_function(&current_stack[i]);
+    for (;;) {
+        i--;
+
+        if (i < 0) {
+            break;
+        }
+
+        if (!spx_php_previous_function(&current_stack[i + 1], &current_stack[i])) {
+            spx_php_log_notice("spx_profiler_start(): corrupted stack tracking: missing frame");
+
+            goto end;
+        }
+    }
+
+    if (current_stack[0].previous) {
+        spx_php_log_notice("spx_profiler_start(): corrupted stack tracking: unexpected frame");
+
+        goto end;
+    }
+
+    for (i = 0; i < actual_depth; i++) {
+        if (i == actual_depth - 1 && !context.config.builtins) {
+            /*
+                Skip the spx_profiler_start() frame (i.e the top one) if builtin functions are not traced.
+            */
+            break;
+        }
+
         context.profiling_handler.profiler->call_start(
             context.profiling_handler.profiler,
-            &context.profiling_handler.stack[i]
+            &current_stack[i]
         );
     }
+
+end:
+    free(current_stack);
 }
 
 static PHP_FUNCTION(spx_profiler_stop)
@@ -730,10 +780,10 @@ static void profiling_handler_stop(void)
 static void profiling_handler_ex_set_context(void)
 {
 #ifndef ZTS
-    spx_php_global_hooks_set();
+    spx_php_global_hooks_set(SPX_G(use_observer_api));
 #endif
 
-    spx_php_execution_init();
+    spx_php_execution_init(SPX_G(use_observer_api));
 
     spx_php_execution_hook(
         profiling_handler_ex_hook_before,
@@ -776,25 +826,6 @@ static void profiling_handler_ex_unset_context(void)
 
 static void profiling_handler_ex_hook_before(void)
 {
-    /*
-        It might appear a bit unfair to resolve & copy the current function
-        name in the context.profiling_handler.stack array even for
-        non-profiled functions.
-        But I've no other choice since I currently don't know how to safely
-        & accuratly resolve the current stack (accordingly to SPX_BUILTINS)
-        via the Zend Engine.
-        The induced overhead will, however, not be noticable in most cases.
-    */
-
-    if (context.profiling_handler.depth == STACK_CAPACITY) {
-        spx_utils_die("STACK_CAPACITY exceeded");
-    }
-
-    spx_php_function_t function;
-    spx_php_current_function(&function);
-
-    context.profiling_handler.stack[context.profiling_handler.depth] = function;
-
     context.profiling_handler.depth++;
 
     if (!context.profiling_handler.profiler) {
@@ -805,7 +836,7 @@ static void profiling_handler_ex_hook_before(void)
     context.profiling_handler.sig_handling.probing = 1;
 #endif
 
-    context.profiling_handler.profiler->call_start(context.profiling_handler.profiler, &function);
+    context.profiling_handler.profiler->call_start(context.profiling_handler.profiler, NULL);
 
 #ifdef USE_SIGNAL
     context.profiling_handler.sig_handling.probing = 0;
@@ -895,10 +926,10 @@ static void profiling_handler_sig_unset_handler(void)
 static void http_ui_handler_init(void)
 {
 #ifndef ZTS
-    spx_php_global_hooks_set();
+    spx_php_global_hooks_set(0);
 #endif
 
-    spx_php_execution_init();
+    spx_php_execution_init(0);
     spx_php_execution_disable();
 }
 

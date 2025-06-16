@@ -302,7 +302,14 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     spx_output_stream_print(reporter->output, "\n\n");
     line_count += 2;
 
+    size_t last_enabled_metric_idx = 0;
     SPX_METRIC_FOREACH(i, {
+        if (event->enabled_metrics[i]) {
+            last_enabled_metric_idx = i;
+        }
+    });
+
+    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
         if (!event->enabled_metrics[i]) {
             continue;
         }
@@ -323,7 +330,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
     spx_fmt_row_t * fmt_row = spx_fmt_row_create();
 
-    SPX_METRIC_FOREACH(i, {
+    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
         if (!event->enabled_metrics[i]) {
             continue;
         }
@@ -334,7 +341,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     spx_fmt_row_print(fmt_row, reporter->output);
     spx_fmt_row_reset(fmt_row);
 
-    SPX_METRIC_FOREACH(i, {
+    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
         if (!event->enabled_metrics[i]) {
             continue;
         }
@@ -364,7 +371,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     for (i = 0; i < limit; i++) {
         const spx_profiler_func_table_entry_t * entry = reporter->top_entries[i];
 
-        SPX_METRIC_FOREACH(i, {
+        SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
             if (!event->enabled_metrics[i]) {
                 continue;
             }
