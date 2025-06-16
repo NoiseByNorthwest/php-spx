@@ -39,7 +39,8 @@ Current requirements are:
 
 * x86-64 or ARM64
 * **GNU/Linux**, **macOS** or **FreeBSD**
-* zlib dev package (e.g. zlib1g-dev on Debian based distros)
+* zlib dev package (e.g. zlib1g-dev on Debian-based distros)
+* Zstandard dev package (e.g. libzstd-dev on Debian-based distros)
 * PHP 5.4 to 8.4
 
 ## Installation

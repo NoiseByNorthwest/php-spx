@@ -147,10 +147,18 @@ char * spx_reporter_full_build_file_name(
     char * file_name,
     size_t size
 ) {
+    char suffix[32];
+    snprintf(
+        suffix,
+        sizeof(suffix),
+        ".txt.%s",
+        spx_output_stream_compression_format_ext(SPX_OUTPUT_STREAM_COMPRESSION_ZSTD)
+    );
+
     return spx_utils_resolve_confined_file_absolute_path(
         data_dir,
         key,
-        ".txt.gz",
+        suffix,
         file_name,
         size
     );
@@ -180,9 +188,10 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
     snprintf(
         file_name,
         sizeof(file_name),
-        "%s/%s.txt.gz",
+        "%s/%s.txt.%s",
         data_dir,
-        reporter->metadata->key
+        reporter->metadata->key,
+        spx_output_stream_compression_format_ext(SPX_OUTPUT_STREAM_COMPRESSION_ZSTD)
     );
 
     snprintf(
@@ -194,7 +203,7 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
     );
 
     (void) mkdir(data_dir, 0777);
-    reporter->output = spx_output_stream_open(file_name, 1);
+    reporter->output = spx_output_stream_open(file_name, SPX_OUTPUT_STREAM_COMPRESSION_ZSTD);
     if (!reporter->output) {
         goto error;
     }
@@ -323,6 +332,8 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
         spx_str_builder_append_str(reporter->str_builder, "\n");
 
         if (spx_str_builder_remaining(reporter->str_builder) < 128) {
+            // FIXME call spx_output_stream_write() in such cases to avoid the extra call
+            //  to strlen() (since the buf size is already known)
             spx_output_stream_print(reporter->output, spx_str_builder_str(reporter->str_builder));
             spx_str_builder_reset(reporter->str_builder);
         }

@@ -21,7 +21,7 @@
 
 #include "spx_hmap.h"
 
-#define HSET_BUCKET_SIZE 4
+#define HMAP_BUCKET_SIZE 4
 
 struct spx_hmap_entry_t {
     const void * key;
@@ -30,7 +30,7 @@ struct spx_hmap_entry_t {
 };
 
 typedef struct hmap_bucket_t {
-    spx_hmap_entry_t entries[HSET_BUCKET_SIZE];
+    spx_hmap_entry_t entries[HMAP_BUCKET_SIZE];
     struct hmap_bucket_t * next;
 } hmap_bucket_t;
 
@@ -45,7 +45,7 @@ static void bucket_init(hmap_bucket_t * bucket)
 {
     bucket->next = NULL;
     size_t i;
-    for (i = 0; i < HSET_BUCKET_SIZE; i++) {
+    for (i = 0; i < HMAP_BUCKET_SIZE; i++) {
         bucket->entries[i].free = 1;
     }
 }
@@ -68,7 +68,7 @@ static spx_hmap_entry_t * bucket_get_entry(
     int * new
 ) {
     size_t i;
-    for (i = 0; i < HSET_BUCKET_SIZE; i++) {
+    for (i = 0; i < HMAP_BUCKET_SIZE; i++) {
         spx_hmap_entry_t * entry = &bucket->entries[i];
         if (entry->free) {
             if (existing) {

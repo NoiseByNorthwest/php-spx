@@ -1094,7 +1094,9 @@ static int http_ui_handler_output_file(const char * file_name)
         file_name + (suffix_offset < 0 ? 0 : suffix_offset)
     );
 
-    const int compressed = spx_utils_str_ends_with(suffix, ".gz");
+    const int gz_compressed = spx_utils_str_ends_with(suffix, ".gz");
+    const int zstd_compressed = spx_utils_str_ends_with(suffix, ".zst");
+    const int compressed = gz_compressed || zstd_compressed;
     if (compressed) {
         *strrchr(suffix, '.') = 0;
     }
@@ -1113,7 +1115,11 @@ static int http_ui_handler_output_file(const char * file_name)
     spx_php_output_add_header_line("HTTP/1.1 200 OK");
     spx_php_output_add_header_linef("Content-Type: %s", content_type);
     if (compressed) {
-        spx_php_output_add_header_line("Content-Encoding: gzip");
+        if (gz_compressed) {
+            spx_php_output_add_header_line("Content-Encoding: gzip");
+        } else if (zstd_compressed) {
+            spx_php_output_add_header_line("Content-Encoding: zstd");
+        }
     }
 
     fseek(fp, 0L, SEEK_END);

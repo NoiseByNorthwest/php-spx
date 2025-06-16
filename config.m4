@@ -55,13 +55,30 @@ if test "$PHP_SPX" = "yes"; then
         done
     fi
 
-    AC_MSG_CHECKING([for zlib location])
+    AC_MSG_CHECKING([for zlib binary])
     if test "$PHP_ZLIB_DIR" != "no" && test "$PHP_ZLIB_DIR" != "yes"; then
         AC_MSG_RESULT([$PHP_ZLIB_DIR])
         PHP_ADD_LIBRARY_WITH_PATH(z, $PHP_ZLIB_DIR/$PHP_LIBDIR, SPX_SHARED_LIBADD)
         PHP_ADD_INCLUDE($PHP_ZLIB_INCDIR)
     else
         AC_MSG_ERROR([spx support requires ZLIB. Use --with-zlib-dir=<DIR> to specify the prefix where ZLIB headers and library are located])
+    fi
+
+    AC_MSG_CHECKING([for Zstandard include file])
+    zstd_header_file=$(find /usr/ -type f | grep '/zstd.h$')
+    if test "$zstd_header_file" == ""; then
+        AC_MSG_WARN([Zstandard header not found])
+    else
+        AC_MSG_RESULT([$zstd_header_file])
+    fi
+
+    AC_MSG_CHECKING([for Zstandard binary])
+    zstd_binary_file=$(find /usr/ -type f | grep '/libzstd.a$')
+    if test -z "$zstd_binary_file"; then
+        AC_MSG_ERROR([Zstandard binary not found])
+    else
+        AC_MSG_RESULT([$zstd_binary_file])
+        LDFLAGS=-lzstd
     fi
 
     PHP_NEW_EXTENSION(spx,

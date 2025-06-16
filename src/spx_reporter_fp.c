@@ -106,9 +106,9 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
             goto error;
         }
 
-        reporter->output = spx_output_stream_dopen(reporter->fd_backup.stdout_fd, 0);
+        reporter->output = spx_output_stream_dopen(reporter->fd_backup.stdout_fd, SPX_OUTPUT_STREAM_COMPRESSION_NONE);
     } else {
-        reporter->output = spx_output_stream_dopen(STDERR_FILENO, 0);
+        reporter->output = spx_output_stream_dopen(STDERR_FILENO, SPX_OUTPUT_STREAM_COMPRESSION_NONE);
     }
 
     if (!reporter->output) {
