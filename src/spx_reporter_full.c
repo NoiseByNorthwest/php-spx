@@ -309,7 +309,15 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
             }
 
             spx_str_builder_append_char(reporter->str_builder, ' ');
-            spx_str_builder_append_double(reporter->str_builder, current->metric_values.values[i], 4);
+
+            const double dval = current->metric_values.values[i];
+            const long lval = (long) dval;
+
+            if ((double) lval == dval) {
+                spx_str_builder_append_long(reporter->str_builder, lval);
+            } else {
+                spx_str_builder_append_double(reporter->str_builder, dval, 4);
+            }
         });
 
         spx_str_builder_append_str(reporter->str_builder, "\n");
