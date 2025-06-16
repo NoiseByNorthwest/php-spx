@@ -77,6 +77,8 @@ typedef struct {
     spx_str_builder_t * str_builder;
 } full_reporter_t;
 
+static int full_are_full_stats_required(const spx_profiler_reporter_t * reporter);
+
 static spx_profiler_reporter_cost_t full_notify(
     spx_profiler_reporter_t * reporter,
     const spx_profiler_event_t * event
@@ -161,6 +163,7 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
         return NULL;
     }
 
+    reporter->base.are_full_stats_required = full_are_full_stats_required;
     reporter->base.notify = full_notify;
     reporter->base.destroy = full_destroy;
 
@@ -227,6 +230,11 @@ const char * spx_reporter_full_get_key(const spx_profiler_reporter_t * base_repo
     const full_reporter_t * reporter = (const full_reporter_t *) base_reporter;
 
     return reporter->metadata->key;
+}
+
+static int full_are_full_stats_required(const spx_profiler_reporter_t * reporter)
+{
+    return 0;
 }
 
 static spx_profiler_reporter_cost_t full_notify(

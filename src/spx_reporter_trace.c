@@ -48,6 +48,7 @@ typedef struct {
     buffer_entry_t buffer[BUFFER_CAPACITY];
 } trace_reporter_t;
 
+static int trace_are_full_stats_required(const spx_profiler_reporter_t * reporter);
 static spx_profiler_reporter_cost_t trace_notify(spx_profiler_reporter_t * base_reporter, const spx_profiler_event_t * event);
 static void trace_destroy(spx_profiler_reporter_t * base_reporter);
 
@@ -73,6 +74,7 @@ spx_profiler_reporter_t * spx_reporter_trace_create(const char * file_name, int 
         return NULL;
     }
 
+    reporter->base.are_full_stats_required = trace_are_full_stats_required;
     reporter->base.notify = trace_notify;
     reporter->base.destroy = trace_destroy;
 
@@ -92,6 +94,11 @@ spx_profiler_reporter_t * spx_reporter_trace_create(const char * file_name, int 
     }
 
     return (spx_profiler_reporter_t *) reporter;
+}
+
+static int trace_are_full_stats_required(const spx_profiler_reporter_t * reporter)
+{
+    return 1;
 }
 
 static spx_profiler_reporter_cost_t trace_notify(spx_profiler_reporter_t * base_reporter, const spx_profiler_event_t * event)

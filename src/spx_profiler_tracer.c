@@ -88,12 +88,13 @@ typedef struct {
     spx_profiler_metric_values_t call_end_noise;
 
     spx_profiler_reporter_t * reporter;
+    int full_stats_required;
+    spx_profiler_event_t event;
 
     size_t max_depth;
     size_t called;
 
     spx_profiler_metric_values_t first_metric_values;
-    spx_profiler_metric_values_t last_metric_values;
     spx_profiler_metric_values_t cum_metric_values;
     spx_profiler_metric_values_t max_metric_values;
 
@@ -133,7 +134,6 @@ static void fill_event(
     spx_profiler_event_t * event,
     const tracing_profiler_t * profiler,
     spx_profiler_event_type_t type,
-    const spx_profiler_func_table_entry_t * caller,
     const spx_profiler_func_table_entry_t * callee,
     const spx_profiler_metric_values_t * inc,
     const spx_profiler_metric_values_t * exc
@@ -158,6 +158,7 @@ spx_profiler_t * spx_profiler_tracer_create(
     profiler->active = 1;
 
     profiler->reporter = reporter;
+    profiler->full_stats_required = reporter->are_full_stats_required(reporter);
 
     SPX_METRIC_FOREACH(i, {
         profiler->enabled_metrics[i] = enabled_metrics[i];
@@ -233,7 +234,6 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
         profiler->max_metric_values = cur_metric_values;
     }
 
-    profiler->last_metric_values = cur_metric_values;
     profiler->cum_metric_values = cur_metric_values;
     METRIC_VALUES_SUB(profiler->cum_metric_values, profiler->first_metric_values);
     METRIC_VALUES_MAX(profiler->max_metric_values, cur_metric_values);
@@ -253,20 +253,16 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
     frame->start_metric_values = cur_metric_values;
     METRIC_VALUES_ZERO(frame->children_metric_values);
 
-    spx_profiler_event_t event;
     fill_event(
-        &event,
+        &profiler->event,
         profiler,
         SPX_PROFILER_EVENT_CALL_START,
-        profiler->stack.depth > 0 ?
-            profiler->stack.frames[profiler->stack.depth - 1].func_table_entry : NULL
-        ,
         profiler->stack.frames[profiler->stack.depth].func_table_entry,
         NULL,
         NULL
     );
 
-    if (profiler->reporter->notify(profiler->reporter, &event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
+    if (profiler->reporter->notify(profiler->reporter, &profiler->event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
         spx_metric_collector_noise_barrier(profiler->metric_collector);
     }
 
@@ -305,7 +301,6 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
         cur_metric_values.values
     );
 
-    profiler->last_metric_values = cur_metric_values;
     profiler->cum_metric_values = cur_metric_values;
     METRIC_VALUES_SUB(profiler->cum_metric_values, profiler->first_metric_values);
     METRIC_VALUES_MAX(profiler->max_metric_values, cur_metric_values);
@@ -315,59 +310,62 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
         return;
     }
 
-    spx_profiler_func_table_entry_t * entry = frame->func_table_entry;
+    spx_profiler_metric_values_t * inc_metric_values_p = NULL;
+    spx_profiler_metric_values_t * exc_metric_values_p = NULL;
 
-    spx_profiler_metric_values_t inc_metric_values = cur_metric_values;
-    METRIC_VALUES_SUB(inc_metric_values, frame->start_metric_values);
+    if (profiler->full_stats_required) {
+        spx_profiler_func_table_entry_t * entry = frame->func_table_entry;
 
-    spx_profiler_metric_values_t exc_metric_values = inc_metric_values;
-    METRIC_VALUES_SUB(exc_metric_values, frame->children_metric_values);
+        spx_profiler_metric_values_t inc_metric_values = cur_metric_values;
+        inc_metric_values_p = &inc_metric_values;
+        METRIC_VALUES_SUB(inc_metric_values, frame->start_metric_values);
 
-    size_t cycle_depth = 0;
-    int i;
-    for (i = profiler->stack.depth - 1; i >= 0; i--) {
-        stack_frame_t * parent_frame = &profiler->stack.frames[i];
-        if (!parent_frame->func_table_entry) {
-            continue;
-        }
+        spx_profiler_metric_values_t exc_metric_values = inc_metric_values;
+        exc_metric_values_p = &exc_metric_values;
+        METRIC_VALUES_SUB(exc_metric_values, frame->children_metric_values);
 
-        if (i == profiler->stack.depth - 1) {
-            METRIC_VALUES_ADD(parent_frame->children_metric_values, inc_metric_values);
-        }
+        size_t cycle_depth = 0;
+        int i;
+        for (i = profiler->stack.depth - 1; i >= 0; i--) {
+            stack_frame_t * parent_frame = &profiler->stack.frames[i];
+            if (!parent_frame->func_table_entry) {
+                continue;
+            }
 
-        if (parent_frame->func_table_entry == entry) {
-            cycle_depth++;
+            if (i == profiler->stack.depth - 1) {
+                METRIC_VALUES_ADD(parent_frame->children_metric_values, inc_metric_values);
+            }
 
-            if (cycle_depth == 1) {
-                METRIC_VALUES_SUB(parent_frame->children_metric_values, exc_metric_values);
+            if (parent_frame->func_table_entry == entry) {
+                cycle_depth++;
+
+                if (cycle_depth == 1) {
+                    METRIC_VALUES_SUB(parent_frame->children_metric_values, exc_metric_values);
+                }
             }
         }
+
+        entry->stats.called++;
+        if (entry->stats.max_cycle_depth < cycle_depth) {
+            entry->stats.max_cycle_depth = cycle_depth;
+        }
+
+        if (cycle_depth == 0) {
+            METRIC_VALUES_ADD(entry->stats.inc, inc_metric_values);
+            METRIC_VALUES_ADD(entry->stats.exc, exc_metric_values);
+        }
     }
 
-    entry->stats.called++;
-    if (entry->stats.max_cycle_depth < cycle_depth) {
-        entry->stats.max_cycle_depth = cycle_depth;
-    }
-
-    if (cycle_depth == 0) {
-        METRIC_VALUES_ADD(entry->stats.inc, inc_metric_values);
-        METRIC_VALUES_ADD(entry->stats.exc, exc_metric_values);
-    }
-
-    spx_profiler_event_t event;
     fill_event(
-        &event,
+        &profiler->event,
         profiler,
         SPX_PROFILER_EVENT_CALL_END,
-        profiler->stack.depth > 0 ?
-            profiler->stack.frames[profiler->stack.depth - 1].func_table_entry : NULL
-        ,
         profiler->stack.frames[profiler->stack.depth].func_table_entry,
-        &inc_metric_values,
-        &exc_metric_values
+        inc_metric_values_p,
+        exc_metric_values_p
     );
 
-    if (profiler->reporter->notify(profiler->reporter, &event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
+    if (profiler->reporter->notify(profiler->reporter, &profiler->event) == SPX_PROFILER_REPORTER_COST_HEAVY) {
         spx_metric_collector_noise_barrier(profiler->metric_collector);
     }
 
@@ -388,9 +386,8 @@ static void tracing_profiler_finalize(spx_profiler_t * base_profiler)
 
     profiler->finalized = 1;
 
-    spx_profiler_event_t event;
-    fill_event(&event, profiler, SPX_PROFILER_EVENT_FINALIZE, NULL, NULL, NULL, NULL);
-    profiler->reporter->notify(profiler->reporter, &event);
+    fill_event(&profiler->event, profiler, SPX_PROFILER_EVENT_FINALIZE, NULL, NULL, NULL);
+    profiler->reporter->notify(profiler->reporter, &profiler->event);
 }
 
 static void tracing_profiler_destroy(spx_profiler_t * base_profiler)
@@ -422,6 +419,7 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
     profiler->calibrated = 1;
 
     spx_profiler_reporter_t null_reporter = {
+        NULL,
         null_reporter_notify,
         NULL
     };
@@ -569,7 +567,6 @@ static void fill_event(
     spx_profiler_event_t * event,
     const tracing_profiler_t * profiler,
     spx_profiler_event_type_t type,
-    const spx_profiler_func_table_entry_t * caller,
     const spx_profiler_func_table_entry_t * callee,
     const spx_profiler_metric_values_t * inc,
     const spx_profiler_metric_values_t * exc
@@ -588,7 +585,6 @@ static void fill_event(
 
     event->depth = profiler->stack.depth;
 
-    event->caller = caller;
     event->callee = callee;
 
     event->inc = inc;

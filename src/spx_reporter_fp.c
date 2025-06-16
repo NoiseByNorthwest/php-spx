@@ -20,8 +20,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-// #include <unistd.h>
-
 #include "spx_reporter_fp.h"
 #include "spx_resource_stats.h"
 #include "spx_output_stream.h"
@@ -54,6 +52,7 @@ typedef struct {
 
 static const SPX_THREAD_TLS fp_reporter_t * entry_cmp_reporter;
 
+static int fp_are_full_stats_required(const spx_profiler_reporter_t * reporter);
 static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter, const spx_profiler_event_t * event);
 static void fp_destroy(spx_profiler_reporter_t * reporter);
 
@@ -75,6 +74,7 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
         return NULL;
     }
 
+    reporter->base.are_full_stats_required = fp_are_full_stats_required;
     reporter->base.notify = fp_notify;
     reporter->base.destroy = fp_destroy;
 
@@ -129,6 +129,11 @@ error:
     spx_profiler_reporter_destroy((spx_profiler_reporter_t *)reporter);
 
     return NULL;
+}
+
+static int fp_are_full_stats_required(const spx_profiler_reporter_t * reporter)
+{
+    return 1;
 }
 
 static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter, const spx_profiler_event_t * event)

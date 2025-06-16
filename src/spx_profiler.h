@@ -65,7 +65,6 @@ typedef struct {
 
     size_t depth;
 
-    const spx_profiler_func_table_entry_t * caller;
     const spx_profiler_func_table_entry_t * callee;
     
     const spx_profiler_metric_values_t * inc;
@@ -78,6 +77,10 @@ typedef enum {
 } spx_profiler_reporter_cost_t;
 
 typedef struct spx_profiler_reporter_t {
+    int (*are_full_stats_required) (
+        const struct spx_profiler_reporter_t * reporter
+    );
+
     spx_profiler_reporter_cost_t (*notify) (
         struct spx_profiler_reporter_t * reporter,
         const spx_profiler_event_t * event
