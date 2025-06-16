@@ -36,6 +36,8 @@ spx_hmap_t * spx_hmap_create(
 void spx_hmap_reset(spx_hmap_t * hmap);
 void spx_hmap_destroy(spx_hmap_t * hmap);
 
+void spx_hmap_print_stats(const spx_hmap_t * hmap);
+
 spx_hmap_entry_t * spx_hmap_ensure_entry(spx_hmap_t * hmap, const void * key, int * new);
 void * spx_hmap_get_value(spx_hmap_t * hmap, const void * key);
 int spx_hmap_set_entry_key(spx_hmap_t * hmap, spx_hmap_entry_t * entry, const void * key);

@@ -234,6 +234,8 @@ static SPX_THREAD_TLS struct {
     size_t value;
 } memoized_metric_values[SPX_METRIC_COUNT];
 
+static SPX_THREAD_TLS double current_values[SPX_METRIC_COUNT];
+
 spx_metric_t spx_metric_get_by_key(const char * key)
 {
     SPX_METRIC_FOREACH(i, {
@@ -280,8 +282,6 @@ void spx_metric_collector_destroy(spx_metric_collector_t * collector)
 
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values)
 {
-    double current_values[SPX_METRIC_COUNT];
-
     collect_raw_values(
         collector->enabled_metrics,
         collector->last_enabled_metric_idx,
@@ -328,8 +328,6 @@ void spx_metric_collector_collect(spx_metric_collector_t * collector, double * v
 
 void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector)
 {
-    double current_values[SPX_METRIC_COUNT];
-
     collect_raw_values(
         collector->enabled_metrics,
         collector->last_enabled_metric_idx,

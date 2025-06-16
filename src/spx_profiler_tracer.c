@@ -490,6 +490,9 @@ static void tracing_profiler_destroy(spx_profiler_t * base_profiler)
         spx_metric_collector_destroy(profiler->metric_collector);
     }
 
+#if 0
+    spx_hmap_print_stats(profiler->func_table.hmap);
+#endif
     func_table_reset(&profiler->func_table);
 
     if (profiler->func_table.hmap) {

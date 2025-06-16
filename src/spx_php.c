@@ -315,6 +315,7 @@ void spx_php_current_function(spx_php_function_t * function)
         function->previous = EG(current_execute_data);
         function->class_name = "";
         function->func_name = context.active_function_name;
+        function->hash_code = zend_inline_hash_func(function->func_name, strlen(function->func_name));
     } else if (
         context.old_execute_data &&
         /*
@@ -331,15 +332,6 @@ void spx_php_current_function(spx_php_function_t * function)
     } else {
         execute_data_function(EG(current_execute_data), function TSRMLS_CC);
     }
-
-    /*
-        Most of the cost of this function is here, we must find a way to have a good
-        hash code with less CPU cycles.
-    */
-    function->hash_code =
-        zend_inline_hash_func(function->func_name, strlen(function->func_name))
-            ^ zend_inline_hash_func(function->class_name, strlen(function->class_name))
-    ;
 }
 
 int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous)
@@ -358,11 +350,6 @@ int spx_php_previous_function(const spx_php_function_t * current, spx_php_functi
     previous->line = 0;
 
     execute_data_function(current->previous, previous TSRMLS_CC);
-
-    previous->hash_code =
-        zend_inline_hash_func(previous->func_name, strlen(previous->func_name))
-            ^ zend_inline_hash_func(previous->class_name, strlen(previous->class_name))
-    ;
 
     return 1;
 }
@@ -983,9 +970,17 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
 {
     function->previous = execute_data->prev_execute_data;
 
+    int closure = 0;
+#if ZEND_MODULE_API_NO >= 20151012
+    const zend_function * func = NULL;
+    const zend_class_entry * ce = NULL;
+#endif
+
     if (zend_is_executing(TSRMLS_C)) {
 #if ZEND_MODULE_API_NO >= 20151012
-        const zend_function * func = execute_data->func;
+        func = execute_data->func;
+
+        closure = func->common.fn_flags & ZEND_ACC_CLOSURE;
 
         function->file_name = ZSTR_VAL(func->op_array.filename);
         function->line = func->op_array.line_start;
@@ -994,7 +989,7 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
             case ZEND_USER_FUNCTION:
             case ZEND_INTERNAL_FUNCTION:
             {
-                const zend_class_entry * ce = func->common.scope;
+                ce = func->common.scope;
                 if (ce) {
                     function->class_name = ZSTR_VAL(ce->name);
                 }
@@ -1019,11 +1014,13 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
         function->file_name = execute_data->function_state.function->op_array.filename;
         function->line = execute_data->function_state.function->op_array.line_start;
 
+        closure = execute_data->function_state.function->common.fn_flags & ZEND_ACC_CLOSURE;
+
         switch (execute_data->function_state.function->type) {
             case ZEND_USER_FUNCTION:
             case ZEND_INTERNAL_FUNCTION:
             {
-                zend_class_entry *ce = execute_data->function_state.function->common.scope;
+                const zend_class_entry * ce = execute_data->function_state.function->common.scope;
                 if (ce) {
                     function->class_name = ce->name;
                 }
@@ -1091,6 +1088,35 @@ static void execute_data_function(const zend_execute_data * execute_data, spx_ph
             function->func_name = EG(active_op_array)->filename;
         } else {
             function->func_name = "[no active file]";
+        }
+#endif
+    }
+
+    if (closure) {
+        function->hash_code =
+            zend_inline_hash_func(function->file_name, strlen(function->file_name))
+                ^ zend_inline_hash_func((void *) &function->line, sizeof(function->line))
+        ;
+    } else {
+#if ZEND_MODULE_API_NO >= 20151012
+        if (func) {
+            /*
+                Hashing the (non-closure) function address is safe since it always point to the same
+                function table entry for the whole script's lifespan.
+            */
+            function->hash_code = zend_inline_hash_func((void *)&func, sizeof(void *));
+            if (ce && ce->ce_flags & ZEND_ACC_ANON_CLASS) {
+                function->hash_code ^= zend_inline_hash_func(function->class_name, strlen(function->class_name));
+            }
+        } else {
+#else
+            function->hash_code = zend_inline_hash_func(function->func_name, strlen(function->func_name));
+
+            if (function->class_name[0]) {
+                function->hash_code ^= zend_inline_hash_func(function->class_name, strlen(function->class_name));
+            }
+#endif
+#if ZEND_MODULE_API_NO >= 20151012
         }
 #endif
     }
