@@ -35,7 +35,7 @@
 #include "spx_str_builder.h"
 #include "spx_utils.h"
 
-#define BUFFER_CAPACITY 16384
+#define BUFFER_CAPACITY (8 * 1024)
 
 typedef struct {
     size_t function_idx;
@@ -306,20 +306,53 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
 
     size_t i;
     for (i = 0; i < reporter->buffer_size; i++) {
+        const buffer_entry_t * prev = i > 0 ? &reporter->buffer[i - 1] : NULL;
         const buffer_entry_t * current = &reporter->buffer[i];
 
-        spx_str_builder_append_long(reporter->str_builder, current->function_idx);
-        spx_str_builder_append_char(reporter->str_builder, ' ');
-        spx_str_builder_append_char(reporter->str_builder, current->start ? '1' : '0');
+        if (!current->start) {
+            spx_str_builder_append_char(reporter->str_builder, '-');
+        }
+
+        int func_idx_compressed = 0;
+
+        if (current->function_idx >= 100) {
+            size_t j;
+            for (j = 1; j <= 4; j++) {
+                if (i < j) {
+                    break;
+                }
+
+                if (reporter->buffer[i - j].function_idx == current->function_idx) {
+                    spx_str_builder_append_char(reporter->str_builder, 'r');
+                    spx_str_builder_append_char(reporter->str_builder, '0' + j);
+                    func_idx_compressed = 1;
+
+                    break;
+                }
+            }
+        }
+
+        if (!func_idx_compressed) {
+            spx_str_builder_append_long(reporter->str_builder, current->function_idx);
+        }
 
         SPX_METRIC_FOREACH(i, {
             if (!enabled_metrics[i]) {
                 continue;
             }
 
-            spx_str_builder_append_char(reporter->str_builder, ' ');
+            spx_str_builder_append_char(reporter->str_builder, '|');
 
-            const double dval = current->metric_values.values[i];
+            double dval = current->metric_values.values[i];
+            if (prev) {
+                dval -= prev->metric_values.values[i];
+                if (dval == 0) {
+                    continue;
+                }
+            } else {
+                spx_str_builder_append_char(reporter->str_builder, 'a');
+            }
+
             const long lval = (long) dval;
 
             if ((double) lval == dval) {

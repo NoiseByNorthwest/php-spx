@@ -158,6 +158,7 @@
                     let type = null;
                     let currentFunctionIdx = 0;
                     let lastTruncatedLine = '';
+                    let lastEvents = [];
 
                     const decoder = new TextDecoder('ascii');
 
@@ -184,9 +185,49 @@
                             }
 
                             if (type == 'event') {
-                                profileDataBuilder.addEvent(
-                                    line.split(' ').map(e => parseFloat(e))
-                                );
+                                let event;
+                                if (line.includes(' ')) {
+                                    // legacy format
+                                    event = line.split(' ').map(e => parseFloat(e));
+                                } else {
+                                    // compressed format
+                                    const parts = line.split('|');
+                                    event = [];
+                                    for (let i = 0; i < parts.length; i++) {
+                                        let v = parts[i];
+                                        if (i === 0) {
+                                            const start = ! v.startsWith('-');
+                                            if (! start) {
+                                                v = v.substr(1);
+                                            }
+
+                                            if (v[0] === 'r') {
+                                                v = lastEvents[parseInt(v.substr(1)) - 1][i];
+                                            } else {
+                                                v = parseInt(v);
+                                            }
+
+                                            event.push(v);
+                                            event.push(start ? 1 : 0);
+                                        } else {
+                                            if (v === '') {
+                                                v = '0';
+                                            }
+
+                                            if (v[0] === 'a') {
+                                                v = parseFloat(v.substr(1));
+                                            } else {
+                                                v = parseFloat(v) + lastEvents[0][i + 1];
+                                            }
+
+                                            event.push(v);
+                                        }
+                                    }
+
+                                    lastEvents = [event, ...lastEvents.slice(0, 20)];
+                                }
+
+                                profileDataBuilder.addEvent(event);
 
                                 continue;
                             }
