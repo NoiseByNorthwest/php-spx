@@ -1,12 +1,12 @@
 --TEST--
-Userland stats (PHP 5.4-7.2)
+Userland stats (PHP 7.0-7.2)
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '5.4') < 0
+    version_compare(PHP_VERSION, '7.0') < 0
     || version_compare(PHP_VERSION, '7.3') >= 0
 ) {
-    die('skip this test is for PHP 5.4 to 7.2 only');
+    die('skip this test is for PHP 7.0 to 7.2 only');
 }
 ?>
 --ENV--

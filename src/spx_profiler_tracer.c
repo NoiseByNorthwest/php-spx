@@ -28,7 +28,6 @@
 #include "spx_utils.h"
 
 
-#define STACK_CAPACITY 2048
 #define FUNC_TABLE_CAPACITY 65536
 
 #define METRIC_VALUES_ZERO(m, last_idx)      \
@@ -103,7 +102,7 @@ typedef struct {
 
     struct {
         size_t depth;
-        stack_frame_t frames[STACK_CAPACITY];
+        stack_frame_t frames[SPX_PHP_STACK_CAPACITY];
     } stack;
 
     spx_php_function_t current_function;
@@ -178,7 +177,7 @@ spx_profiler_t * spx_profiler_tracer_create(
     METRIC_VALUES_ZERO(profiler->call_start_noise, SPX_METRIC_COUNT - 1);
     METRIC_VALUES_ZERO(profiler->call_end_noise, SPX_METRIC_COUNT - 1);
 
-    profiler->max_depth = max_depth > 0 && max_depth < STACK_CAPACITY ? max_depth : STACK_CAPACITY;
+    profiler->max_depth = max_depth > 0 && max_depth < SPX_PHP_STACK_CAPACITY ? max_depth : SPX_PHP_STACK_CAPACITY;
     profiler->called = 0;
 
     profiler->stack.depth = 0;
@@ -226,8 +225,8 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
     }
 
     if (!profiler->active) {
-        if (profiler->stack.depth == STACK_CAPACITY) {
-            fprintf(stderr, "SPX: STACK_CAPACITY (%d) exceeded\n", STACK_CAPACITY);
+        if (profiler->stack.depth == SPX_PHP_STACK_CAPACITY) {
+            fprintf(stderr, "SPX: SPX_PHP_STACK_CAPACITY (%d) exceeded\n", SPX_PHP_STACK_CAPACITY);
         }
 
         goto end;

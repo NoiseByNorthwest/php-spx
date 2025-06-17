@@ -48,8 +48,7 @@
 #include "spx_str_builder.h"
 #include "spx_utils.h"
 
-#if ZEND_MODULE_API_NO >= 20151012
-#   define ZE_HASHTABLE_FOREACH(ht, entry, block)               \
+#define ZE_HASHTABLE_FOREACH(ht, entry, block)                  \
 do {                                                            \
     void * entry;                                               \
     zend_hash_internal_pointer_reset(ht);                       \
@@ -58,48 +57,18 @@ do {                                                            \
         block                                                   \
     }                                                           \
 } while (0)
-#else
-#   define ZE_HASHTABLE_FOREACH(ht, entry, block)        \
-do {                                                     \
-    HashPosition pos_;                                   \
-    void * entry;                                        \
-    zend_hash_internal_pointer_reset_ex(ht, &pos_);      \
-    while (                                              \
-        SUCCESS == zend_hash_get_current_data_ex(        \
-            ht,                                          \
-            (void **)&entry,                             \
-            &pos_                                        \
-        )                                                \
-    ) {                                                  \
-        zend_hash_move_forward_ex(ht, &pos_);            \
-        block                                            \
-    }                                                    \
-} while (0)
-#endif
 
 typedef void (*execute_internal_func_t) (
     zend_execute_data * execute_data,
-#if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
-#else
-#if ZEND_MODULE_API_NO >= 20121212
-    struct _zend_fcall_info * fci,
-#endif
-    int ret
-#endif
-    TSRMLS_DC
 );
 
 static struct {
-#if ZEND_MODULE_API_NO < 20121212
-    void (*execute) (zend_op_array * op_array TSRMLS_DC);
-#else
-    void (*execute_ex) (zend_execute_data * execute_data TSRMLS_DC);
-#endif
+    void (*execute_ex) (zend_execute_data * execute_data);
     execute_internal_func_t previous_zend_execute_internal;
     execute_internal_func_t execute_internal;
 
-    zend_op_array * (*zend_compile_file)(zend_file_handle * file_handle, int type TSRMLS_DC);
+    zend_op_array * (*zend_compile_file)(zend_file_handle * file_handle, int type);
     zend_op_array * (*zend_compile_string)(
 #if ZEND_MODULE_API_NO >= 20200930
         zend_string * source_string,
@@ -111,19 +80,16 @@ static struct {
 #if ZEND_MODULE_API_NO >= 20210903
         , zend_compile_position position
 #endif
-        TSRMLS_DC
     );
 
-#if ZEND_MODULE_API_NO >= 20151012
     int (*gc_collect_cycles)(void);
-#endif
 
     void (*zend_error_cb) (
         int type,
 #if ZEND_MODULE_API_NO >= 20210902
-        zend_string *error_filename,
+        zend_string * error_filename,
 #else
-        const char *error_filename,
+        const char * error_filename,
 #endif
         const uint error_lineno,
 #if ZEND_MODULE_API_NO >= 20200930
@@ -136,13 +102,10 @@ static struct {
 } ze_hooked_func = {
     NULL, NULL, NULL,
     NULL, NULL,
-#if ZEND_MODULE_API_NO >= 20151012
     NULL,
-#endif
     NULL
 };
 
-#if ZEND_MODULE_API_NO >= 20151012
 static SPX_THREAD_TLS struct {
     void * (*malloc) (size_t size);
     void (*free) (void * ptr);
@@ -151,7 +114,6 @@ static SPX_THREAD_TLS struct {
 } ze_tls_hooked_func = {
     NULL, NULL, NULL, NULL
 };
-#endif
 
 static SPX_THREAD_TLS struct {
     struct {
@@ -166,10 +128,15 @@ static SPX_THREAD_TLS struct {
     int execution_disabled;
 
     size_t depth;
-#if ZEND_MODULE_API_NO < 20151012
-    const zend_op_array * bottom_op_array;
-#endif
-    const zend_execute_data * old_execute_data;
+
+    struct {
+        union {
+            const zend_execute_data * execute_data;
+            const char * function_name;
+        } data;
+        uint8_t special_function;
+    } stack[SPX_PHP_STACK_CAPACITY];
+
     int request_shutdown;
     int collect_userland_stats;
 
@@ -185,22 +152,15 @@ static SPX_THREAD_TLS struct {
     size_t alloc_bytes;
     size_t free_count;
     size_t free_bytes;
-
-    const char * active_function_name;
 } context;
 
 static void execute_data_function(
     const zend_execute_data * execute_data,
-#if ZEND_MODULE_API_NO < 20151012
-    const zend_op_array * op_array,
-#endif
     spx_php_function_t * function
-    TSRMLS_DC
 );
 
 static void reset_context(void);
 
-#if ZEND_MODULE_API_NO >= 20151012
 static size_t ze_mm_block_size(void * ptr);
 static size_t ze_mm_custom_block_size(void * ptr);
 static void * ze_mm_malloc(size_t size);
@@ -210,25 +170,12 @@ static void * ze_mm_realloc(void * ptr, size_t size);
 static void * tls_hook_malloc(size_t size);
 static void tls_hook_free(void * ptr);
 static void * tls_hook_realloc(void * ptr, size_t size);
-#endif
 
-#if ZEND_MODULE_API_NO < 20121212
-static void global_hook_execute(zend_op_array * op_array TSRMLS_DC);
-#else
-static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC);
-#endif
+static void global_hook_execute_ex(zend_execute_data * execute_data);
 
 static void global_hook_execute_internal(
     zend_execute_data * execute_data,
-#if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
-#else
-#   if ZEND_MODULE_API_NO >= 20121212
-    struct _zend_fcall_info * fci,
-#   endif
-    int ret
-#endif
-    TSRMLS_DC
 );
 
 #ifdef HAVE_PHP_OBSERVER_API
@@ -237,7 +184,7 @@ static void observer_api_begin(zend_execute_data * execute_data);
 static void observer_api_end(zend_execute_data * execute_data, zval * return_value);
 #endif
 
-static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC);
+static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type);
 static zend_op_array * global_hook_zend_compile_string(
 #if ZEND_MODULE_API_NO >= 20200930
     zend_string * source_string,
@@ -249,19 +196,16 @@ static zend_op_array * global_hook_zend_compile_string(
 #if ZEND_MODULE_API_NO >= 20210903
     , zend_compile_position position
 #endif
-        TSRMLS_DC
 );
 
-#if ZEND_MODULE_API_NO >= 20151012
 static int global_hook_gc_collect_cycles(void);
-#endif
 
 static void global_hook_zend_error_cb(
     int type,
 #if ZEND_MODULE_API_NO >= 20210902
-    zend_string *error_filename,
+    zend_string * error_filename,
 #else
-    const char *error_filename,
+    const char * error_filename,
 #endif
     const uint error_lineno,
 #if ZEND_MODULE_API_NO >= 20200930
@@ -272,6 +216,7 @@ static void global_hook_zend_error_cb(
 #endif
 );
 
+static void push_frame(uint8_t special_function, void * data);
 static void update_userland_stats(void);
 
 static HashTable * get_global_array(const char * name);
@@ -292,162 +237,219 @@ int spx_php_are_ansi_sequences_supported(void)
     ;
 }
 
-size_t spx_php_current_depth(void)
+#if 0
+void spx_php_print_stack(void)
 {
-    TSRMLS_FETCH();
+    int i;
 
-    if (context.depth > 0) {
-        return context.depth;
-    }
+    fprintf(stderr, "\nActual stack:\n");
 
-    size_t depth = 0;
-    const zend_execute_data * execute_data = EG(current_execute_data);
+    const zend_execute_data * execute_data;
 
+    execute_data = EG(current_execute_data);
+    i = 0;
     while (execute_data) {
-        depth++;
+        i++;
         execute_data = execute_data->prev_execute_data;
     }
 
-    return depth;
+    const size_t depth = i;
+
+    execute_data = EG(current_execute_data);
+    i = 0;
+    while (execute_data) {
+        fprintf(
+            stderr,
+            " - depth = %3lu, execute_data = %p, flags: %b, type: %d",
+            depth - i,
+            execute_data,
+            execute_data->func ? execute_data->func->common.fn_flags : 0,
+            execute_data->func ? execute_data->func->common.type : 0
+        );
+
+        fprintf(stderr, ", execute_data->opline = %p", execute_data->opline);
+        if (
+            /* opline is corrupted in this case, is it a ZE bug ? */
+            (intptr_t) execute_data->opline < 0xff
+            /* opline seems to be corrupted in this case, is it a ZE bug ? */
+            || ! (execute_data->func->common.fn_flags & (1 << 25))
+        ) {
+            fprintf(stderr, ", corrupted opline\n");
+        } else {
+            fprintf(
+                stderr,
+                ", execute_data->opline->lineno = %d\n",
+                execute_data->opline ?
+                    execute_data->opline->lineno : 0
+            );
+        }
+
+        i++;
+
+        execute_data = execute_data->prev_execute_data;
+    }
+
+    spx_php_function_t function;
+    int current_depth;
+
+    for (i = 0; i < 2; i++) {
+        fprintf(stderr, "Tracked stack (%s):\n", i == 0 ? "short" : "full");
+
+        current_depth = context.depth;
+
+        while (current_depth >= 1) {
+            if (context.stack[current_depth - 1].special_function) {
+                fprintf(
+                    stderr,
+                    " - depth = %3d, special function = %s\n",
+                    current_depth,
+                    context.stack[current_depth - 1].data.function_name
+                );
+            } else {
+                function.depth = current_depth;
+                function.hash_code = 0;
+                function.class_name = "";
+                function.func_name = "";
+                function.file_name = "";
+                function.line = 0;
+
+                execute_data = context.stack[current_depth - 1].data.execute_data;
+
+                execute_data_function(
+                    execute_data,
+                    &function
+                );
+
+                fprintf(
+                    stderr,
+                    " - depth = %3d, execute_data = %p",
+                    current_depth,
+                    execute_data
+                );
+
+                if (i == 0) {
+                    fprintf(stderr, "\n");
+                } else {
+                    if (
+                        /* opline is corrupted in this case, is it a ZE bug ? */
+                        (intptr_t) execute_data->opline < 0xff
+                        /* opline seems to be corrupted in this case, is it a ZE bug ? */
+                        || (
+                            execute_data->func
+                            && ! (execute_data->func->common.fn_flags & (1 << 25))
+                        )
+                    ) {
+                        fprintf(stderr, ", corrupted opline\n");
+                    } else {
+                        fprintf(
+                            stderr,
+                            ", flags = %b, name = %s::%s, execute_data->opline->lineno = %d\n",
+                            execute_data->func ? execute_data->func->common.fn_flags : 0,
+                            function.class_name,
+                            function.func_name,
+                            execute_data->opline ?
+                                execute_data->opline->lineno : 0
+                        );
+                    }
+                }
+            }
+
+            current_depth--;
+        }
+    }
+}
+#endif
+
+size_t spx_php_current_depth(void)
+{
+    return context.depth;
 }
 
 void spx_php_current_function(spx_php_function_t * function)
 {
-    TSRMLS_FETCH();
+    spx_php_function_at(context.depth, function);
+}
 
-    function->previous = NULL;
+int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous)
+{
+    if (current->depth == 1) {
+        return 0;
+    }
+
+    spx_php_function_at(current->depth - 1, previous);
+
+    return 1;
+}
+
+void spx_php_function_at(size_t depth, spx_php_function_t * function)
+{
+    if (depth > context.depth || depth == 0) {
+        spx_utils_die("Invalid specified depth");
+    }
+
+    function->depth = depth;
     function->hash_code = 0;
     function->class_name = "";
     function->func_name = "";
     function->file_name = "";
     function->line = 0;
 
-    if (context.active_function_name) {
-        function->previous = EG(current_execute_data);
+    if (context.stack[function->depth - 1].special_function) {
         function->class_name = "";
-        function->func_name = context.active_function_name;
+        function->func_name = context.stack[function->depth - 1].data.function_name;
         function->hash_code = zend_inline_hash_func(function->func_name, strlen(function->func_name));
-    } else if (
-        context.old_execute_data &&
-        /*
-            old_execute_data is equal to EG(current_execute_data) when instrumenting
-            via the observer API.
-        */
-        context.old_execute_data != EG(current_execute_data)
-    ) {
-        if (context.old_execute_data->prev_execute_data != EG(current_execute_data)) {
-            spx_utils_die("Stack inconsistency");
-        }
-
-        execute_data_function(
-            context.old_execute_data,
-#if ZEND_MODULE_API_NO < 20151012
-            NULL,
-#endif
-            function
-            TSRMLS_CC
-        );
     } else {
         execute_data_function(
-            EG(current_execute_data),
-#if ZEND_MODULE_API_NO < 20151012
-            NULL,
-#endif
+            context.stack[function->depth - 1].data.execute_data,
             function
-            TSRMLS_CC
         );
     }
 }
 
-int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous)
+uint8_t spx_php_is_internal_function(const spx_php_function_t * function)
 {
-    TSRMLS_FETCH();
-
-#if ZEND_MODULE_API_NO >= 20151012
-    if (!current->previous) {
-        return 0;
+    if (context.stack[function->depth - 1].special_function) {
+        return 1;
     }
-#endif
 
-    previous->previous = NULL;
-    previous->hash_code = 0;
-    previous->class_name = "";
-    previous->func_name = "";
-    previous->file_name = "";
-    previous->line = 0;
+    const zend_execute_data * execute_data = context.stack[function->depth - 1].data.execute_data;
 
-    const zend_execute_data * prev_execute_data = current->previous;
-
-#if ZEND_MODULE_API_NO < 20151012
-    if (
-        prev_execute_data &&
-        prev_execute_data->function_state.function == EG(current_execute_data)->function_state.function
-    ) {
-        /*
-            There is something weird about PHP 5's VM stack managment. I don't know why but the top 2
-            frames can point to the same function (call).
-        */
-        prev_execute_data = prev_execute_data->prev_execute_data;
+    if (execute_data->func && execute_data->func->type == ZEND_INTERNAL_FUNCTION) {
+        return 1;
     }
-#endif
 
-    execute_data_function(
-        prev_execute_data,
-#if ZEND_MODULE_API_NO < 20151012
-        /*
-            With PHP 5 the bottom frame (top-level script) is a zend_op_array.
-        */
-        prev_execute_data ? NULL : context.bottom_op_array,
-#endif
-        previous TSRMLS_CC
-    );
-
-    return 1;
+    return 0;
 }
 
 size_t spx_php_function_call_site_line(const spx_php_function_t * function)
 {
-    const zend_execute_data * prev_execute_data = function->previous;
-
-#if ZEND_MODULE_API_NO < 20151012
-    const zend_execute_data * execute_data = EG(current_execute_data);
-
-    if (context.old_execute_data) {
-        execute_data = context.old_execute_data;
-    }
-
-    if (
-        !prev_execute_data &&
-        context.bottom_op_array &&
-        /* this str pointer comparison is intentional */
-        function->func_name == context.bottom_op_array->filename
-    ) {
-        /* bottom frame */
+    if (context.depth < 2) {
         return 0;
     }
 
-    while (execute_data) {
-        if (execute_data->prev_execute_data == prev_execute_data) {
-            if (
-                prev_execute_data &&
-                execute_data->function_state.function == prev_execute_data->function_state.function
-            ) {
-                /*
-                    See related comment in spx_php_previous_function().
-                */
-                return prev_execute_data->opline->lineno;
-            }
+    const zend_execute_data * prev_execute_data = NULL;
+    int i;
 
-            return execute_data->opline->lineno;
+    for (i = function->depth - 2; i >= 0; i--) {
+        if (! context.stack[i].special_function) {
+            prev_execute_data = context.stack[i].data.execute_data;
+
+            break;
         }
-
-        execute_data = execute_data->prev_execute_data;
     }
 
-    return context.bottom_op_array ? context.bottom_op_array->line_start : 0;
-#endif
+    while (
+        prev_execute_data
+            && prev_execute_data->func
+            && prev_execute_data->func->type == ZEND_INTERNAL_FUNCTION
+    ) {
+        /*
+            While the caller is an internal function (e.g. calling a callback) we have to take its caller
+        */
+        prev_execute_data = prev_execute_data->prev_execute_data;
+    }
 
-    if (!prev_execute_data) {
+    if (! prev_execute_data)  {
         return 0;
     }
 
@@ -461,11 +463,7 @@ const char * spx_php_ini_get_string(const char * name)
          * This cast is checked
          */
         (char *)name,
-        strlen(name)
-#if ZEND_MODULE_API_NO < 20151012
-            + 1
-#endif
-        ,
+        strlen(name),
         0
     );
 }
@@ -477,11 +475,7 @@ double spx_php_ini_get_double(const char * name)
          * This cast is checked
          */
         (char *)name,
-        strlen(name)
-#if ZEND_MODULE_API_NO < 20151012
-            + 1
-#endif
-        ,
+        strlen(name),
         0
     );
 }
@@ -493,7 +487,6 @@ const char * spx_php_global_array_get(const char * name, const char * key)
         return NULL;
     }
 
-#if ZEND_MODULE_API_NO >= 20151012
     zval * pv = zend_hash_str_find(
         global_array,
         key,
@@ -507,21 +500,6 @@ const char * spx_php_global_array_get(const char * name, const char * key)
     convert_to_string_ex(pv);
 
     return Z_STRVAL_P(pv);
-#else
-    zval ** ppv;
-    if (
-        zend_hash_find(
-            global_array,
-            key,
-            strlen(key) + 1,
-            (void **) &ppv
-        ) == SUCCESS
-    ) {
-        return Z_STRVAL_PP(ppv);
-    }
-
-    return NULL;
-#endif
 }
 
 char * spx_php_build_command_line(void)
@@ -533,7 +511,6 @@ char * spx_php_build_command_line(void)
 
     const char * argv_key = "argv";
 
-#if ZEND_MODULE_API_NO >= 20151012
     zval * argv = zend_hash_str_find(
         global_array,
         argv_key,
@@ -554,38 +531,11 @@ char * spx_php_build_command_line(void)
     }
 
     HashTable * argv_array = Z_ARRVAL_P(argv);
-#else
-    zval ** argv;
-    if (
-        zend_hash_find(
-            global_array,
-            argv_key,
-            strlen(argv_key) + 1,
-            (void **) &argv
-        ) != SUCCESS
-    ) {
-        goto error;
-    }
 
-    if (Z_TYPE_PP(argv) != IS_ARRAY) {
-        goto error;
-    }
-
-    spx_str_builder_t * str_builder = spx_str_builder_create(2 * 1024);
-    if (!str_builder) {
-        goto error;
-    }
-
-    HashTable * argv_array = Z_ARRVAL_PP(argv);
-#endif
     int i = 0;
 
     ZE_HASHTABLE_FOREACH(argv_array, entry, {
-#if ZEND_MODULE_API_NO >= 20151012
         zval * zval_entry = entry;
-#else
-        zval * zval_entry = *(zval **)entry;
-#endif
         if (Z_TYPE_P(zval_entry) == IS_STRING) {
             if (i++ > 0) {
                 spx_str_builder_append_char(str_builder, ' ');
@@ -608,16 +558,12 @@ error:
 
 size_t spx_php_zend_memory_usage(void)
 {
-    TSRMLS_FETCH();
-
-    return zend_memory_usage(0 TSRMLS_CC);
+    return zend_memory_usage(0);
 }
 
 size_t spx_php_zend_memory_peak_usage(void)
 {
-    TSRMLS_FETCH();
-
-    return zend_memory_peak_usage(0 TSRMLS_CC);
+    return zend_memory_peak_usage(0);
 }
 
 size_t spx_php_zend_memory_alloc_count(void)
@@ -648,8 +594,6 @@ size_t spx_php_zend_gc_run_count(void)
 
     return status.runs;
 #else
-    TSRMLS_FETCH();
-
     return GC_G(gc_runs);
 #endif
 }
@@ -662,8 +606,6 @@ size_t spx_php_zend_gc_root_buffer_length(void)
 
     return status.num_roots;
 #else
-    TSRMLS_FETCH();
-
     size_t length = 0;
     const gc_root_buffer * current = GC_G(roots).next;
 
@@ -684,8 +626,6 @@ size_t spx_php_zend_gc_collected_count(void)
 
     return status.collected;
 #else
-    TSRMLS_FETCH();
-
     return GC_G(collected);
 #endif
 }
@@ -736,16 +676,10 @@ size_t spx_php_zend_opcode_count(void)
 
 size_t spx_php_zend_object_count(void)
 {
-    TSRMLS_FETCH();
-
     size_t i, count = 0;
     for (i = 1; i < EG(objects_store).top; i++) {
         if (
-#if ZEND_MODULE_API_NO >= 20151012
             IS_OBJ_VALID(EG(objects_store).object_buckets[i])
-#else
-            EG(objects_store).object_buckets[i].valid
-#endif
         ) {
             count++;
         }
@@ -773,13 +707,8 @@ void spx_php_global_hooks_set(int use_observer_api)
 #endif
 
     if (!use_observer_api) {
-#if ZEND_MODULE_API_NO < 20121212
-        ze_hooked_func.execute = zend_execute;
-        zend_execute = global_hook_execute;
-#else
         ze_hooked_func.execute_ex = zend_execute_ex;
         zend_execute_ex = global_hook_execute_ex;
-#endif
 
         ze_hooked_func.previous_zend_execute_internal = zend_execute_internal;
         ze_hooked_func.execute_internal = zend_execute_internal ?
@@ -794,10 +723,8 @@ void spx_php_global_hooks_set(int use_observer_api)
     ze_hooked_func.zend_compile_string = zend_compile_string;
     zend_compile_string = global_hook_zend_compile_string;
 
-#if ZEND_MODULE_API_NO >= 20151012
     ze_hooked_func.gc_collect_cycles = gc_collect_cycles;
     gc_collect_cycles = global_hook_gc_collect_cycles;
-#endif
 
     ze_hooked_func.zend_error_cb = zend_error_cb;
     zend_error_cb = global_hook_zend_error_cb;
@@ -805,17 +732,10 @@ void spx_php_global_hooks_set(int use_observer_api)
 
 void spx_php_global_hooks_unset(void)
 {
-#if ZEND_MODULE_API_NO < 20121212
-    if (ze_hooked_func.execute) {
-        zend_execute = ze_hooked_func.execute;
-        ze_hooked_func.execute = NULL;
-    }
-#else
     if (ze_hooked_func.execute_ex) {
         zend_execute_ex = ze_hooked_func.execute_ex;
         ze_hooked_func.execute_ex = NULL;
     }
-#endif
 
     if (ze_hooked_func.execute_internal) {
         zend_execute_internal = ze_hooked_func.previous_zend_execute_internal;
@@ -833,12 +753,10 @@ void spx_php_global_hooks_unset(void)
         ze_hooked_func.zend_compile_string = NULL;
     }
 
-#if ZEND_MODULE_API_NO >= 20151012
     if (ze_hooked_func.gc_collect_cycles) {
         gc_collect_cycles = ze_hooked_func.gc_collect_cycles;
         ze_hooked_func.gc_collect_cycles = NULL;
     }
-#endif
 
     if (ze_hooked_func.zend_error_cb) {
         zend_error_cb = ze_hooked_func.zend_error_cb;
@@ -858,9 +776,15 @@ void spx_php_execution_finalize(void)
     }
 
     if (context.ex_hook.internal.after) {
-        context.active_function_name = "::php_request_shutdown";
+        if (
+            context.depth != 1
+                || ! context.stack[context.depth - 1].special_function
+                || strcmp(context.stack[context.depth - 1].data.function_name, "::php_request_shutdown") != 0
+        ) {
+            spx_utils_die("stack inconsistency");
+        }
+
         context.ex_hook.internal.after();
-        context.active_function_name = NULL;
         context.depth--;
     }
 
@@ -877,7 +801,6 @@ void spx_php_execution_init(int use_observer_api)
 
     context.use_observer_api = use_observer_api;
 
-#if ZEND_MODULE_API_NO >= 20151012
     zend_mm_heap * ze_mm_heap = zend_mm_get_heap();
 
     /*
@@ -910,12 +833,10 @@ void spx_php_execution_init(int use_observer_api)
         tls_hook_free,
         tls_hook_realloc
     );
-#endif
 }
 
 void spx_php_execution_shutdown(void)
 {
-#if ZEND_MODULE_API_NO >= 20151012
     if (
         ze_tls_hooked_func.malloc
         && ze_tls_hooked_func.free
@@ -958,7 +879,6 @@ void spx_php_execution_shutdown(void)
         ze_tls_hooked_func.realloc = NULL;
         ze_tls_hooked_func.block_size = NULL;
     }
-#endif
 
     reset_context();
 }
@@ -979,10 +899,17 @@ void spx_php_execution_hook(void (*before)(void), void (*after)(void), int inter
     }
 }
 
+uint8_t spx_php_execution_hook_is_set(int internal)
+{
+    if (internal) {
+        return context.ex_hook.internal.before != NULL;
+    }
+
+    return context.ex_hook.user.before != NULL;
+}
+
 void spx_php_output_add_header_line(const char * header_line)
 {
-    TSRMLS_FETCH();
-
     sapi_header_line ctr = {0};
 
     /*
@@ -992,7 +919,7 @@ void spx_php_output_add_header_line(const char * header_line)
     ctr.line = (char *)header_line;
     ctr.line_len = strlen(header_line);
 
-    sapi_header_op(SAPI_HEADER_REPLACE, &ctr TSRMLS_CC);
+    sapi_header_op(SAPI_HEADER_REPLACE, &ctr);
 }
 
 void spx_php_output_add_header_linef(const char * fmt, ...)
@@ -1014,16 +941,12 @@ void spx_php_output_add_header_linef(const char * fmt, ...)
 
 void spx_php_output_send_headers(void)
 {
-    TSRMLS_FETCH();
-
-    sapi_send_headers(TSRMLS_C);
+    sapi_send_headers();
 }
 
 size_t spx_php_output_direct_write(const void * ptr, size_t len)
 {
-    TSRMLS_FETCH();
-
-    return sapi_module.ub_write(ptr, len TSRMLS_CC);
+    return sapi_module.ub_write(ptr, len);
 }
 
 size_t spx_php_output_direct_print(const char * str)
@@ -1074,29 +997,29 @@ void spx_php_log_notice(const char * fmt, ...)
 
 static void execute_data_function(
     const zend_execute_data * execute_data,
-#if ZEND_MODULE_API_NO < 20151012
-    const zend_op_array * op_array,
-#endif
     spx_php_function_t * function
-    TSRMLS_DC
 ) {
-    if (execute_data) {
-        function->previous = execute_data->prev_execute_data;
-    }
-
     int closure = 0;
-#if ZEND_MODULE_API_NO >= 20151012
     const zend_function * func = NULL;
     const zend_class_entry * ce = NULL;
-#endif
 
-    if (execute_data && zend_is_executing(TSRMLS_C)) {
-#if ZEND_MODULE_API_NO >= 20151012
+    if (execute_data && zend_is_executing()) {
         func = execute_data->func;
 
         closure = func->common.fn_flags & ZEND_ACC_CLOSURE;
 
-        function->file_name = ZSTR_VAL(func->op_array.filename);
+        if (func->type == ZEND_EVAL_CODE) {
+            function->file_name = "eval()";
+        } else {
+            function->file_name = ZSTR_VAL(func->op_array.filename);
+            if (
+                /* ZE bug causing func->op_array.filename to be corrupted ?*/
+                (intptr_t) function->file_name < 0xff
+            ) {
+                function->file_name = "";
+            }
+        }
+
         function->line = func->op_array.line_start;
 
         switch (func->type) {
@@ -1124,44 +1047,7 @@ static void execute_data_function(
             case ZEND_INTERNAL_FUNCTION:
                 function->func_name = ZSTR_VAL(func->common.function_name);
         }
-#else
-        function->file_name = execute_data->function_state.function->op_array.filename;
-        function->line = execute_data->function_state.function->op_array.line_start;
 
-        closure = execute_data->function_state.function->common.fn_flags & ZEND_ACC_CLOSURE;
-
-        switch (execute_data->function_state.function->type) {
-            case ZEND_USER_FUNCTION:
-            case ZEND_INTERNAL_FUNCTION:
-            {
-                const zend_class_entry * ce = execute_data->function_state.function->common.scope;
-                if (ce) {
-                    function->class_name = ce->name;
-                }
-            }
-        }
-
-        switch (execute_data->function_state.function->type) {
-            case ZEND_USER_FUNCTION:
-            {
-                const char * function_name = execute_data->function_state.function->common.function_name;
-
-                if (function_name) {
-                    function->func_name = function_name;
-                }
-
-                break;
-            }
-            case ZEND_INTERNAL_FUNCTION:
-                function->func_name = (
-                        (zend_internal_function *) execute_data->function_state.function
-                    )
-                    ->function_name
-                ;
-        }
-#endif
-
-#if ZEND_MODULE_API_NO >= 20151012
         /*
          *  Required for PHP 7+ to avoid function name default'd to "main" in this case
          *  (including file level code).
@@ -1177,13 +1063,11 @@ static void execute_data_function(
         if (func->type == ZEND_INTERNAL_FUNCTION && !func->common.function_name) {
             function->func_name = "";
         }
-#endif
     }
 
     if (!function->func_name[0]) {
         function->class_name = "";
 
-#if ZEND_MODULE_API_NO >= 20151012
         while (execute_data && (!execute_data->func || !ZEND_USER_CODE(execute_data->func->type))) {
             execute_data = execute_data->prev_execute_data;
         }
@@ -1193,44 +1077,22 @@ static void execute_data_function(
         } else {
             function->func_name = "[no active file]";
         }
-#else
-        if (op_array) {
-            function->func_name = op_array->filename;
-        } else if (EG(active_op_array)) {
-            function->func_name = EG(active_op_array)->filename;
-        } else {
-            function->func_name = "[no active file]";
-        }
-#endif
     }
 
-    if (closure) {
+    if (func && ! closure) {
+        /*
+            Hashing the (non-closure) function address is safe since it always point to the same
+            function table entry for the whole script's lifespan.
+        */
+        function->hash_code = zend_inline_hash_func((void *)&func, sizeof(void *));
+        if (ce && ce->ce_flags & ZEND_ACC_ANON_CLASS) {
+            function->hash_code ^= zend_inline_hash_func(function->class_name, strlen(function->class_name));
+        }
+    } else {
         function->hash_code =
             zend_inline_hash_func(function->file_name, strlen(function->file_name))
                 ^ zend_inline_hash_func((void *) &function->line, sizeof(function->line))
         ;
-    } else {
-#if ZEND_MODULE_API_NO >= 20151012
-        if (func) {
-            /*
-                Hashing the (non-closure) function address is safe since it always point to the same
-                function table entry for the whole script's lifespan.
-            */
-            function->hash_code = zend_inline_hash_func((void *)&func, sizeof(void *));
-            if (ce && ce->ce_flags & ZEND_ACC_ANON_CLASS) {
-                function->hash_code ^= zend_inline_hash_func(function->class_name, strlen(function->class_name));
-            }
-        } else {
-#else
-            function->hash_code = zend_inline_hash_func(function->func_name, strlen(function->func_name));
-
-            if (function->class_name[0]) {
-                function->hash_code ^= zend_inline_hash_func(function->class_name, strlen(function->class_name));
-            }
-#endif
-#if ZEND_MODULE_API_NO >= 20151012
-        }
-#endif
     }
 }
 
@@ -1245,10 +1107,6 @@ static void reset_context(void)
     context.global_hooks_enabled = 1;
     context.execution_disabled = 0;
     context.depth = 0;
-#if ZEND_MODULE_API_NO < 20151012
-    context.bottom_op_array = NULL;
-#endif
-    context.old_execute_data = NULL;
     context.request_shutdown = 0;
     context.collect_userland_stats = 0;
     context.file_count = 0;
@@ -1265,7 +1123,6 @@ static void reset_context(void)
     context.free_bytes = 0;
 }
 
-#if ZEND_MODULE_API_NO >= 20151012
 static size_t ze_mm_block_size(void * ptr)
 {
     return zend_mm_block_size(zend_mm_get_heap(), ptr);
@@ -1336,20 +1193,11 @@ static void * tls_hook_realloc(void * ptr, size_t size)
 
     return new;
 }
-#endif
 
-#if ZEND_MODULE_API_NO < 20121212
-static void global_hook_execute(zend_op_array * op_array TSRMLS_DC)
-#else
-static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
-#endif
+static void global_hook_execute_ex(zend_execute_data * execute_data)
 {
     if (!context.global_hooks_enabled) {
-#if ZEND_MODULE_API_NO < 20121212
-        ze_hooked_func.execute(op_array TSRMLS_CC);
-#else
-        ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
-#endif
+        ze_hooked_func.execute_ex(execute_data);
 
         return;
     }
@@ -1359,33 +1207,20 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
     }
 
     if (!context.use_observer_api) {
-#if ZEND_MODULE_API_NO < 20151012
-        if (context.depth == 0) {
-            context.bottom_op_array = EG(active_op_array);
-        }
-#endif
-
-        context.depth++;
+        push_frame(0, execute_data);
 
         if (context.ex_hook.user.before) {
             context.ex_hook.user.before();
         }
     }
 
-#if ZEND_MODULE_API_NO < 20121212
-    ze_hooked_func.execute(op_array TSRMLS_CC);
-#else
-    ze_hooked_func.execute_ex(execute_data TSRMLS_CC);
-#endif
+    ze_hooked_func.execute_ex(execute_data);
 
     if (!context.use_observer_api) {
-        context.old_execute_data = execute_data;
-
         if (context.ex_hook.user.after) {
             context.ex_hook.user.after();
         }
 
-        context.old_execute_data = NULL;
         context.depth--;
 
         /*
@@ -1395,10 +1230,8 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
             context.request_shutdown = 1;
 
             if (context.ex_hook.internal.before) {
-                context.depth++;
-                context.active_function_name = "::php_request_shutdown";
+                push_frame(1, "::php_request_shutdown");
                 context.ex_hook.internal.before();
-                context.active_function_name = NULL;
             }
         }
     }
@@ -1406,28 +1239,12 @@ static void global_hook_execute_ex(zend_execute_data * execute_data TSRMLS_DC)
 
 static void global_hook_execute_internal(
     zend_execute_data * execute_data,
-#if ZEND_MODULE_API_NO >= 20151012
     zval * return_value
-#else
-#if ZEND_MODULE_API_NO >= 20121212
-    struct _zend_fcall_info * fci,
-#endif
-    int ret
-#endif
-    TSRMLS_DC
 ) {
     if (!context.global_hooks_enabled) {
         ze_hooked_func.execute_internal(
             execute_data,
-#if ZEND_MODULE_API_NO >= 20151012
             return_value
-#else
-#   if ZEND_MODULE_API_NO >= 20121212
-            fci,
-#   endif
-            ret
-#endif
-            TSRMLS_CC
         );
 
         return;
@@ -1438,7 +1255,7 @@ static void global_hook_execute_internal(
     }
 
     if (!context.use_observer_api) {
-        context.depth++;
+        push_frame(0, execute_data);
 
         if (context.ex_hook.internal.before) {
             context.ex_hook.internal.before();
@@ -1447,25 +1264,14 @@ static void global_hook_execute_internal(
 
     ze_hooked_func.execute_internal(
         execute_data,
-#if ZEND_MODULE_API_NO >= 20151012
         return_value
-#else
-#   if ZEND_MODULE_API_NO >= 20121212
-        fci,
-#   endif
-        ret
-#endif
-        TSRMLS_CC
     );
 
     if (!context.use_observer_api) {
-        context.old_execute_data = execute_data;
-
         if (context.ex_hook.internal.after) {
             context.ex_hook.internal.after();
         }
 
-        context.old_execute_data = NULL;
         context.depth--;
     }
 }
@@ -1476,7 +1282,14 @@ static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execut
 {
     zend_observer_fcall_handlers handlers = {NULL, NULL};
 
-    /* FIXME should we really instrument everything ? */
+    if (!context.use_observer_api) {
+        return handlers;
+    }
+
+    /*
+        FIXME do not instrument internal functions if not requested
+            -> it may however break things such as stack tracking
+    */
 
     handlers.begin = observer_api_begin;
     handlers.end = observer_api_end;
@@ -1486,16 +1299,11 @@ static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execut
 
 static void observer_api_begin(zend_execute_data * execute_data)
 {
-    if (!context.use_observer_api) {
-        /* No noticeable instrumentation overhead when returning right here. */
-        return;
-    }
-
     if (!context.global_hooks_enabled) {
         return;
     }
 
-    context.depth++;
+    push_frame(0, execute_data);
 
     void (* const before_hook)(void) =
         execute_data->func &&
@@ -1510,16 +1318,9 @@ static void observer_api_begin(zend_execute_data * execute_data)
 
 static void observer_api_end(zend_execute_data * execute_data, zval * return_value)
 {
-    if (!context.use_observer_api) {
-        /* No noticeable instrumentation overhead when returning right here. */
-        return;
-    }
-
     if (!context.global_hooks_enabled) {
         return;
     }
-
-    context.old_execute_data = execute_data;
 
     const int internal_func_call =
         execute_data->func &&
@@ -1535,7 +1336,6 @@ static void observer_api_end(zend_execute_data * execute_data, zval * return_val
     }
 
     context.depth--;
-    context.old_execute_data = NULL;
 
     if (internal_func_call) {
         return;
@@ -1548,34 +1348,31 @@ static void observer_api_end(zend_execute_data * execute_data, zval * return_val
         context.request_shutdown = 1;
 
         if (context.ex_hook.internal.before) {
-            context.depth++;
-            context.active_function_name = "::php_request_shutdown";
+            push_frame(1, "::php_request_shutdown");
             context.ex_hook.internal.before();
-            context.active_function_name = NULL;
         }
     }
 }
 
 #endif
 
-static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type TSRMLS_DC)
+static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_handle, int type)
 {
     if (!context.global_hooks_enabled) {
-        return ze_hooked_func.zend_compile_file(file_handle, type TSRMLS_CC);
+        return ze_hooked_func.zend_compile_file(file_handle, type);
     }
 
     if (context.execution_disabled) {
         return NULL;
     }
 
-    context.depth++;
-    context.active_function_name = "::zend_compile_file";
+    push_frame(1, "::zend_compile_file");
 
     if (context.ex_hook.internal.before) {
         context.ex_hook.internal.before();
     }
 
-    zend_op_array * op_array = ze_hooked_func.zend_compile_file(file_handle, type TSRMLS_CC);
+    zend_op_array * op_array = ze_hooked_func.zend_compile_file(file_handle, type);
 
     if (op_array) {
         context.file_count++;
@@ -1595,7 +1392,6 @@ static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_han
         context.ex_hook.internal.after();
     }
 
-    context.active_function_name = NULL;
     context.depth--;
 
     return op_array;
@@ -1612,7 +1408,6 @@ static zend_op_array * global_hook_zend_compile_string(
 #if ZEND_MODULE_API_NO >= 20210903
     , zend_compile_position position
 #endif
-        TSRMLS_DC
 ) {
     if (!context.global_hooks_enabled) {
         return ze_hooked_func.zend_compile_string(
@@ -1621,7 +1416,6 @@ static zend_op_array * global_hook_zend_compile_string(
 #if ZEND_MODULE_API_NO >= 20210903
             , position
 #endif
-            TSRMLS_CC
         );
     }
 
@@ -1629,8 +1423,7 @@ static zend_op_array * global_hook_zend_compile_string(
         return NULL;
     }
 
-    context.depth++;
-    context.active_function_name = "::zend_compile_string";
+    push_frame(1, "::zend_compile_string");
 
     if (context.ex_hook.internal.before) {
         context.ex_hook.internal.before();
@@ -1642,7 +1435,6 @@ static zend_op_array * global_hook_zend_compile_string(
 #if ZEND_MODULE_API_NO >= 20210903
         , position
 #endif
-        TSRMLS_CC
     );
 
     if (op_array) {
@@ -1665,13 +1457,11 @@ static zend_op_array * global_hook_zend_compile_string(
         context.ex_hook.internal.after();
     }
 
-    context.active_function_name = NULL;
     context.depth--;
 
     return op_array;
 }
 
-#if ZEND_MODULE_API_NO >= 20151012
 static int global_hook_gc_collect_cycles(void)
 {
     if (!context.global_hooks_enabled) {
@@ -1682,8 +1472,7 @@ static int global_hook_gc_collect_cycles(void)
         return 0;
     }
 
-    context.depth++;
-    context.active_function_name = "::gc_collect_cycles";
+    push_frame(1, "::gc_collect_cycles");
 
     if (context.ex_hook.internal.before) {
         context.ex_hook.internal.before();
@@ -1695,19 +1484,17 @@ static int global_hook_gc_collect_cycles(void)
         context.ex_hook.internal.after();
     }
 
-    context.active_function_name = NULL;
     context.depth--;
 
     return count;
 }
-#endif
 
 static void global_hook_zend_error_cb(
     int type,
 #if ZEND_MODULE_API_NO >= 20210902
-    zend_string *error_filename,
+    zend_string * error_filename,
 #else
-    const char *error_filename,
+    const char * error_filename,
 #endif
     const uint error_lineno,
 #if ZEND_MODULE_API_NO >= 20200930
@@ -1751,25 +1538,30 @@ static void global_hook_zend_error_cb(
     );
 }
 
+static void push_frame(uint8_t special_function, void * data)
+{
+    if (context.depth == SPX_PHP_STACK_CAPACITY) {
+        spx_utils_die("SPX_PHP_STACK_CAPACITY exceeded");
+    }
+
+    context.depth++;
+    context.stack[context.depth - 1].special_function = special_function;
+    context.stack[context.depth - 1].data.execute_data = data;
+}
+
 static void update_userland_stats(void)
 {
-    TSRMLS_FETCH();
-
     context.class_count = 0;
     context.function_count = 0;
     context.opcode_count = context.file_opcode_count;
 
     ZE_HASHTABLE_FOREACH(EG(class_table), entry, {
-#if ZEND_MODULE_API_NO >= 20151012
         zval * zval_entry = entry;
         if (Z_TYPE_P(zval_entry) != IS_PTR) {
             continue;
         }
 
         zend_class_entry * ce = Z_PTR_P(zval_entry);
-#else
-        zend_class_entry * ce = *(zend_class_entry **)entry;
-#endif
 
         if (ce->type != ZEND_USER_CLASS) {
             continue;
@@ -1778,16 +1570,12 @@ static void update_userland_stats(void)
         context.class_count++;
 
         ZE_HASHTABLE_FOREACH(&ce->function_table, entry, {
-#if ZEND_MODULE_API_NO >= 20151012
             zval * zval_entry = entry;
             if (Z_TYPE_P(zval_entry) != IS_PTR) {
                 continue;
             }
 
             zend_function * func = Z_PTR_P(zval_entry);
-#else
-            zend_function * func = entry;
-#endif
 
             if (func->common.scope != ce) {
                 continue;
@@ -1799,16 +1587,12 @@ static void update_userland_stats(void)
     });
 
     ZE_HASHTABLE_FOREACH(EG(function_table), entry, {
-#if ZEND_MODULE_API_NO >= 20151012
         zval * zval_entry = entry;
         if (Z_TYPE_P(zval_entry) != IS_PTR) {
             continue;
         }
 
         zend_function * func = Z_PTR_P(zval_entry);
-#else
-        zend_function * func = entry;
-#endif
 
         if (func->type != ZEND_USER_FUNCTION) {
             continue;
@@ -1821,7 +1605,6 @@ static void update_userland_stats(void)
 
 static HashTable * get_global_array(const char * name)
 {
-#if ZEND_MODULE_API_NO >= 20151012
     zend_string * name_zs = zend_string_init(name, strlen(name), 0);
 
     zend_is_auto_global(name_zs);
@@ -1836,25 +1619,4 @@ static HashTable * get_global_array(const char * name)
     }
 
     return Z_ARRVAL_P(zv_array);
-#else
-    TSRMLS_FETCH();
-
-    zend_is_auto_global(name, strlen(name) TSRMLS_CC);
-
-    zval ** zv_array;
-    if (zend_hash_find(
-        &EG(symbol_table),
-        name,
-        strlen(name) + 1,
-        (void **) &zv_array
-    ) != SUCCESS) {
-        return NULL;
-    }
-
-    if (Z_TYPE_PP(zv_array) != IS_ARRAY) {
-        return NULL;
-    }
-
-    return Z_ARRVAL_PP(zv_array);
-#endif
 }

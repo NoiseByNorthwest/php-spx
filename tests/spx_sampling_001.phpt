@@ -3,6 +3,7 @@ Sampling mode
 --ENV--
 return <<<END
 SPX_ENABLED=1
+SPX_BUILTINS=0
 SPX_SAMPLING_PERIOD=1
 SPX_METRICS=wt
 SPX_REPORT=trace
@@ -20,7 +21,7 @@ function f1()
 function f2()
 {
     for ($i = 0; $i < 5; $i++) {
-        f1();
+        array_map('f1', [null]);
     }
 }
 
@@ -32,7 +33,7 @@ Wall time                      |
  Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
 ----------+----------+----------+----------+----------+----------
       0ns |      0ns |      0ns |        1 |        0 | +%s/tests/spx_sampling_001.php
-%w%fus |      0ns |      0ns |        2 |       15 |  +f2
+%w%f%cs |      0ns |      0ns |        2 |       15 |  +f2
 %w%fus |      0ns |      0ns |        3 |       11 |   +f1
   10%fms |  10%fms |  10%fms |        3 |        0 |   -f1
   10%fms |      0ns |      0ns |        3 |       11 |   +f1

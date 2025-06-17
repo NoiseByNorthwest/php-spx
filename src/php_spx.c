@@ -216,11 +216,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_stop, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_full_report_set_custom_metadata_str, 0, 0, 1)
-#if ZEND_MODULE_API_NO >= 20151012
     ZEND_ARG_TYPE_INFO(0, customMetadataStr, IS_STRING, 0)
-#else
-    ZEND_ARG_INFO(0, customMetadataStr)
-#endif
 ZEND_END_ARG_INFO()
 
 static zend_function_entry spx_functions[] = {
@@ -429,7 +425,7 @@ static PHP_FUNCTION(spx_profiler_start)
         }
     }
 
-    if (current_stack[0].previous) {
+    if (current_stack[0].depth > 1) {
         spx_php_log_notice("spx_profiler_start(): corrupted stack tracking: unexpected frame");
 
         goto end;
@@ -486,22 +482,14 @@ static PHP_FUNCTION(spx_profiler_stop)
     profiling_handler_stop();
 
     if (context.profiling_handler.full_report_key[0]) {
-#if ZEND_MODULE_API_NO >= 20151012
         RETURN_STRING(context.profiling_handler.full_report_key);
-#else
-        RETURN_STRING(context.profiling_handler.full_report_key, 1);
-#endif
     }
 }
 
 static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str)
 {
     char * custom_metadata_str;
-#if ZEND_MODULE_API_NO >= 20151012
     size_t custom_metadata_str_len;
-#else
-    int custom_metadata_str_len;
-#endif
 
 #if ZEND_MODULE_API_NO >= 20170718
     ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -510,7 +498,7 @@ static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str)
 #else
     if (
         zend_parse_parameters(
-            ZEND_NUM_ARGS() TSRMLS_CC,
+            ZEND_NUM_ARGS(),
             "s",
             &custom_metadata_str,
             &custom_metadata_str_len
@@ -544,8 +532,6 @@ static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str)
 
 static int check_access(void)
 {
-    TSRMLS_FETCH();
-
     if (context.cli_sapi) {
         /* CLI SAPI -> granted */
         return 1;
@@ -684,8 +670,6 @@ static void profiling_handler_shutdown(void)
 
 static void profiling_handler_start(void)
 {
-    TSRMLS_FETCH();
-
     if (context.profiling_handler.profiler) {
         return;
     }
@@ -935,8 +919,6 @@ static void http_ui_handler_init(void)
 
 static void http_ui_handler_shutdown(void)
 {
-    TSRMLS_FETCH();
-
     if (!context.config.ui_uri) {
         goto error_404;
     }

@@ -26,9 +26,6 @@
 #include "spx_utils.h"
 
 
-#define STACK_CAPACITY 2048
-
-
 typedef struct {
     spx_profiler_t base;
     spx_profiler_t * sampled_profiler;
@@ -44,7 +41,7 @@ typedef struct {
     struct {
         struct {
             size_t size;
-            spx_php_function_t frames[STACK_CAPACITY];
+            spx_php_function_t frames[SPX_PHP_STACK_CAPACITY];
         } previous, current;
     } stack;
 } sampling_profiler_t;
@@ -154,8 +151,8 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
 
     profiler->stack.current.size = spx_php_current_depth();
 
-    if (profiler->stack.current.size > STACK_CAPACITY) {
-        spx_utils_die("STACK_CAPACITY exceeded");
+    if (profiler->stack.current.size > SPX_PHP_STACK_CAPACITY) {
+        spx_utils_die("SPX_PHP_STACK_CAPACITY exceeded");
     }
 
     int i;
@@ -165,26 +162,21 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
             Build current stack.
         */
 
-        i = profiler->stack.current.size - 1;
+        const uint8_t internal_functions_traced = spx_php_execution_hook_is_set(1);
+        size_t corrected_depth = 0;
 
+        for (i = 0; i < profiler->stack.current.size; i++) {
+            spx_php_function_at(i + 1, &profiler->stack.current.frames[corrected_depth]);
 
-
-        spx_php_current_function(&profiler->stack.current.frames[i]);
-        for (;;) {
-            i--;
-
-            if (i < 0) {
-                break;
-            }
-
-            if (!spx_php_previous_function(&profiler->stack.current.frames[i + 1], &profiler->stack.current.frames[i])) {
-                spx_utils_die("Corrupted stack tracking: missing frame");
+            if (
+                internal_functions_traced
+                    || ! spx_php_is_internal_function(&profiler->stack.current.frames[corrected_depth])
+            ) {
+                corrected_depth++;
             }
         }
 
-        if (profiler->stack.current.frames[0].previous) {
-            spx_utils_die("Corrupted stack tracking: unexpected frame");
-        }
+        profiler->stack.current.size = corrected_depth;
     }
 
     int common_stack_top = 0;

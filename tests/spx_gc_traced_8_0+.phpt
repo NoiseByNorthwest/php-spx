@@ -60,4 +60,5 @@ Flat profile:
  %w%s | %w%s |        9 |        0 |    10.0K |        0 |    90.0K |        0 |    50.0K | f2
  %w%s | %w%s |        9 |        0 |    10.0K |   100.0K |    90.0K |        0 |    50.0K | f1
  %w%s | %w%s |        9 |        9 |   -90.0K |   -90.0K |    90.0K |    90.0K |        9 | ::gc_collect_cycles
+ %w%s | %w%s |        0 |        0 |        0 |        0 |        0 |        0 |        1 | ::zend_compile_file
  %A

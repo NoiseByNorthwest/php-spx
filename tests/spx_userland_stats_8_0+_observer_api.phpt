@@ -69,6 +69,6 @@ Flat profile:
 ----------+----------+----------+----------+----------+----------+----------+----------
         0 |        0 |        2 |        2 |       12 |       12 |        1 | ::zend_compile_file
         1 |        1 |        1 |        1 |        5 |        5 |        1 | ::zend_compile_string
-        1 |        0 |        1 |        0 |        5 |        0 |        1 | %s/tests/spx_userland_stats_8_0+_observer_api.php
-        0 |        0 |        0 |        0 |        0 |        0 |        1 | %s/tests/spx_userland_stats_8_0+_observer_api.php(4) : eval()'d code
+        1 |        0 |        1 |        0 |        5 |        0 |        1 | %s/tests/spx_userland_stats_%s_observer_api.php
+        0 |        0 |        0 |        0 |        0 |        0 |        1 | %s/tests/spx_userland_stats_%s_observer_api.php(4) : eval()'d code
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::php_request_shutdown
