@@ -1,0 +1,43 @@
+{
+    "name": "noisebynorthwest/php-spx",
+    "type": "php-ext",
+    "license": "GPL-3.0",
+    "description": "A simple & straight-to-the-point PHP profiling extension with its built-in web UI",
+    "keywords": ["profiler", "profiling", "performance", "debugging", "php", "extension"],
+    "homepage": "https://github.com/NoiseByNorthwest/php-spx",
+    "support": {
+        "issues": "https://github.com/NoiseByNorthwest/php-spx/issues",
+        "source": "https://github.com/NoiseByNorthwest/php-spx"
+    },
+    "authors": [
+        {
+            "name": "Sylvain Lassaut",
+            "email": "NoiseByNorthwest@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0 <8.5.0",
+        "ext-zlib": "*"
+    },
+    "php-ext": {
+        "extension-name": "SPX",
+        "support-zts": true,
+        "support-nts": true,
+        "configure-options": [
+            {
+                "name": "enable-spx",
+                "description": "Enable SPX extension"
+            },
+            {
+                "name": "enable-spx-dev",
+                "description": "Compile SPX with debugging symbols"
+            },
+            {
+                "name": "with-zlib-dir",
+                "description": "Set the path to ZLIB install prefix",
+                "needs-value": true
+            }
+        ]
+    }
+}
