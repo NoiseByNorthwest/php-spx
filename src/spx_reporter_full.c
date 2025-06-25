@@ -62,7 +62,7 @@ typedef struct {
     size_t called_function_count;
     size_t call_count;
     size_t recorded_call_count;
-    int enabled_metrics[SPX_METRIC_COUNT];
+    spx_metric_t enabled_metrics[SPX_METRIC_COUNT];
 } metadata_t;
 
 typedef struct {
@@ -86,7 +86,7 @@ static spx_profiler_reporter_cost_t full_notify(
 );
 
 static void full_destroy(spx_profiler_reporter_t * reporter);
-static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics);
+static void flush_buffer(full_reporter_t * reporter, size_t enabled_metric_count);
 static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * event);
 
 static metadata_t * metadata_create(void);
@@ -276,7 +276,10 @@ static spx_profiler_reporter_cost_t full_notify(
         }
     }
 
-    flush_buffer(reporter, event->enabled_metrics);
+    flush_buffer(
+        reporter,
+        event->enabled_metric_count
+    );
 
     if (event->type == SPX_PROFILER_EVENT_FINALIZE) {
         finalize(reporter, event);
@@ -302,15 +305,10 @@ static void full_destroy(spx_profiler_reporter_t * base_reporter)
     }
 }
 
-static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics)
-{
-    size_t last_enabled_metric_idx = 0;
-    SPX_METRIC_FOREACH(i, {
-        if (enabled_metrics[i]) {
-            last_enabled_metric_idx = i;
-        }
-    });
-
+static void flush_buffer(
+    full_reporter_t * reporter,
+    size_t enabled_metric_count
+) {
     spx_str_builder_reset(reporter->str_builder);
 
     size_t i;
@@ -348,11 +346,7 @@ static void flush_buffer(full_reporter_t * reporter, const int * enabled_metrics
             spx_str_builder_append_long(reporter->str_builder, current->function_idx);
         }
 
-        SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-            if (!enabled_metrics[i]) {
-                continue;
-            }
-
+        SPX_METRIC_FOREACH_L(i, enabled_metric_count, {
             spx_str_builder_append_char(reporter->str_builder, '|');
 
             double dval = current->metric_values.values[i];
@@ -421,9 +415,7 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
     reporter->metadata->wall_time_ms = event->cum->values[SPX_METRIC_WALL_TIME] / 1000;
 
     reporter->metadata->called_function_count = event->func_table.size;
-    SPX_METRIC_FOREACH(i, {
-        reporter->metadata->enabled_metrics[i] = event->enabled_metrics[i];
-    });
+    memcpy(reporter->metadata->enabled_metrics, event->enabled_metrics, SPX_METRIC_COUNT * sizeof(*reporter->metadata->enabled_metrics));
 
     metadata_save(reporter->metadata, reporter->metadata_file_name);
 }
@@ -695,8 +687,8 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
 
     int first = 1;
     SPX_METRIC_FOREACH(i, {
-        if (!metadata->enabled_metrics[i]) {
-            continue;
+        if (metadata->enabled_metrics[i] == SPX_METRIC_NONE) {
+            break;
         }
 
         fprintf(fp, "    ");
@@ -710,7 +702,7 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
         fprintf(
             fp,
             "\"%s\"\n",
-            spx_metric_info[i].key
+            spx_metric_info[metadata->enabled_metrics[i]].key
         );
     });
 

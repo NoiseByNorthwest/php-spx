@@ -23,6 +23,7 @@
 #include "spx_resource_stats.h"
 #include "spx_thread.h"
 #include "spx_php.h"
+#include "spx_utils.h"
 
 #ifdef __GNUC__
 #   define ARRAY_INIT_INDEX(idx) [idx] = 
@@ -32,8 +33,10 @@
 
 
 struct spx_metric_collector_t {
-    int enabled_metrics[SPX_METRIC_COUNT];
-    size_t last_enabled_metric_idx;
+    spx_metric_t enabled_metrics[SPX_METRIC_COUNT];
+    size_t enabled_metric_indexes[SPX_METRIC_COUNT];
+    size_t enabled_metric_count;
+    int derived_metric_enabled;
     double ref_values[SPX_METRIC_COUNT];
     double last_values[SPX_METRIC_COUNT];
     double current_fixed_noise[SPX_METRIC_COUNT];
@@ -48,7 +51,7 @@ static size_t metric_handler_io_w_bytes(void);
 static void memoize_io_stats(void);
 static size_t memoized_metric_value(spx_metric_t metric);
 
-static void collect_raw_values(const int * enabled_metrics, size_t last_enabled_metric_idx, double * current_values);
+static void collect_raw_values(const spx_metric_collector_t * collector, double * current_values);
 
 const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
     ARRAY_INIT_INDEX(SPX_METRIC_WALL_TIME) {
@@ -56,6 +59,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Wall time",
         "Wall time",
         SPX_FMT_TIME,
+        0,
         0,
         spx_resource_stats_wall_time,
     },
@@ -65,6 +69,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "CPU time",
         SPX_FMT_TIME,
         0,
+        0,
         spx_resource_stats_cpu_time,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IDLE_TIME) {
@@ -73,6 +78,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Idle time",
         SPX_FMT_TIME,
         0,
+        1,
         metric_handler_idle_time,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_USAGE) {
@@ -81,6 +87,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine memory usage",
         SPX_FMT_MEMORY,
         1,
+        0,
         spx_php_zend_memory_usage,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_ALLOC_COUNT) {
@@ -88,6 +95,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE alloc count",
         "Zend Engine allocation count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_memory_alloc_count,
     },
@@ -97,6 +105,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine allocated bytes",
         SPX_FMT_MEMORY,
         0,
+        0,
         spx_php_zend_memory_alloc_bytes,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_MEMORY_FREE_COUNT) {
@@ -104,6 +113,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE free count",
         "Zend Engine free count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_memory_free_count,
     },
@@ -113,6 +123,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine freed bytes",
         SPX_FMT_MEMORY,
         0,
+        0,
         spx_php_zend_memory_free_bytes,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_GC_RUNS) {
@@ -120,6 +131,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE GC runs",
         "Zend Engine GC run count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_gc_run_count,
     },
@@ -129,6 +141,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine GC root buffer length",
         SPX_FMT_QUANTITY,
         1,
+        0,
         spx_php_zend_gc_root_buffer_length,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_GC_COLLECTED) {
@@ -136,6 +149,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE GC collected",
         "Zend Engine GC collected cycle count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_gc_collected_count,
     },
@@ -145,6 +159,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine included file count",
         SPX_FMT_QUANTITY,
         0,
+        0,
         spx_php_zend_included_file_count,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_INCLUDED_LINE_COUNT) {
@@ -152,6 +167,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE line count",
         "Zend Engine included line count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_included_line_count,
     },
@@ -161,6 +177,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine user class count",
         SPX_FMT_QUANTITY,
         0,
+        0,
         spx_php_zend_class_count,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_USER_FUNCTION_COUNT) {
@@ -168,6 +185,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE func. count",
         "Zend Engine user function count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_function_count,
     },
@@ -177,6 +195,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine user opcode count",
         SPX_FMT_QUANTITY,
         0,
+        0,
         spx_php_zend_opcode_count,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_OBJECT_COUNT) {
@@ -185,6 +204,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Zend Engine object count",
         SPX_FMT_QUANTITY,
         1,
+        0,
         spx_php_zend_object_count,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_ZE_ERROR_COUNT) {
@@ -192,6 +212,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "ZE error count",
         "Zend Engine error count",
         SPX_FMT_QUANTITY,
+        0,
         0,
         spx_php_zend_error_count,
     },
@@ -201,6 +222,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "Process's own RSS",
         SPX_FMT_MEMORY,
         1,
+        0,
         spx_resource_stats_own_rss,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_BYTES) {
@@ -209,6 +231,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "I/O Bytes (reads + writes)",
         SPX_FMT_MEMORY,
         0,
+        1,
         metric_handler_io_bytes,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_RBYTES) {
@@ -217,6 +240,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "I/O Read Bytes",
         SPX_FMT_MEMORY,
         0,
+        1,
         metric_handler_io_r_bytes,
     },
     ARRAY_INIT_INDEX(SPX_METRIC_IO_WBYTES) {
@@ -225,6 +249,7 @@ const spx_metric_info_t spx_metric_info[SPX_METRIC_COUNT] = {
         "I/O Written Bytes",
         SPX_FMT_MEMORY,
         0,
+        1,
         metric_handler_io_w_bytes,
     },
 };
@@ -247,7 +272,7 @@ spx_metric_t spx_metric_get_by_key(const char * key)
     return SPX_METRIC_NONE;
 }
 
-spx_metric_collector_t * spx_metric_collector_create(const int * enabled_metrics)
+spx_metric_collector_t * spx_metric_collector_create(const spx_metric_t * enabled_metrics)
 {
     spx_metric_collector_t * collector = malloc(sizeof(*collector));
     if (!collector) {
@@ -255,19 +280,33 @@ spx_metric_collector_t * spx_metric_collector_create(const int * enabled_metrics
     }
 
     SPX_METRIC_FOREACH(i, {
-        collector->enabled_metrics[i] = enabled_metrics[i];
-        if (enabled_metrics[i]) {
-            collector->last_enabled_metric_idx = i;
-        }
+        collector->enabled_metrics[i] = SPX_METRIC_NONE;
+        collector->enabled_metric_indexes[i] = SPX_METRIC_NONE;
     });
 
-    collect_raw_values(
-        collector->enabled_metrics,
-        collector->last_enabled_metric_idx,
-        collector->last_values
-    );
+    collector->enabled_metric_count = SPX_METRIC_COUNT;
+    collector->derived_metric_enabled = 0;
+    size_t i;
+    for (i = 0; i < SPX_METRIC_COUNT; i++) {
+        if (enabled_metrics[i] == SPX_METRIC_NONE) {
+            collector->enabled_metric_count = i;
 
-    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
+            break;
+        }
+
+        collector->enabled_metrics[i] = enabled_metrics[i];
+        collector->enabled_metric_indexes[enabled_metrics[i]] = i;
+
+        if (
+            spx_metric_info[enabled_metrics[i]].derived
+        ) {
+            collector->derived_metric_enabled = 1;
+        }
+    }
+
+    collect_raw_values(collector, collector->last_values);
+
+    SPX_METRIC_FOREACH_L(i, collector->enabled_metric_count, {
         collector->ref_values[i] = collector->last_values[i];
         collector->current_fixed_noise[i] = 0;
     });
@@ -280,38 +319,53 @@ void spx_metric_collector_destroy(spx_metric_collector_t * collector)
     free(collector);
 }
 
+const spx_metric_t * spx_metric_collector_enabled_metrics(const spx_metric_collector_t * collector)
+{
+    return collector->enabled_metrics;
+}
+
+size_t spx_metric_collector_enabled_metric_count(const spx_metric_collector_t * collector)
+{
+    return collector->enabled_metric_count;
+}
+
+size_t spx_metric_collector_enabled_metric_idx(const spx_metric_collector_t * collector, spx_metric_t metric)
+{
+    return collector->enabled_metric_indexes[metric];
+}
+
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values)
 {
-    collect_raw_values(
-        collector->enabled_metrics,
-        collector->last_enabled_metric_idx,
-        current_values
-    );
+    collect_raw_values(collector, current_values);
+
+    const size_t wall_time_idx = collector->enabled_metric_indexes[SPX_METRIC_WALL_TIME];
+    const size_t cpu_time_idx = collector->enabled_metric_indexes[SPX_METRIC_CPU_TIME];
 
     /*
      *  This branch is required to fix cpu / wall time inconsistency (cpu > wall time within a single thread).
+     *  FIXME CPU/idle time get corrected only if wall time is enabled, is it OK ?
      */
     if (
-        collector->enabled_metrics[SPX_METRIC_WALL_TIME] &&
-        collector->enabled_metrics[SPX_METRIC_CPU_TIME]
+        cpu_time_idx != SPX_METRIC_NONE &&
+        wall_time_idx != SPX_METRIC_NONE
     ) {
         const double ct_surplus =
-            (current_values[SPX_METRIC_CPU_TIME] - collector->last_values[SPX_METRIC_CPU_TIME])
-            - (current_values[SPX_METRIC_WALL_TIME] - collector->last_values[SPX_METRIC_WALL_TIME])
+            (current_values[cpu_time_idx] - collector->last_values[cpu_time_idx])
+            - (current_values[wall_time_idx] - collector->last_values[wall_time_idx])
         ;
 
         if (ct_surplus > 0) {
-            collector->ref_values[SPX_METRIC_CPU_TIME] += ct_surplus;
-            collector->ref_values[SPX_METRIC_IDLE_TIME] -= ct_surplus;
+            collector->ref_values[cpu_time_idx] += ct_surplus;
+
+            const size_t idle_time_idx = collector->enabled_metric_indexes[SPX_METRIC_IDLE_TIME];
+            if (idle_time_idx != SPX_METRIC_NONE) {
+                collector->ref_values[idle_time_idx] -= ct_surplus;
+            }
         }
     }
 
-    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
-        if (!collector->enabled_metrics[i]) {
-            continue;
-        }
-
-        if (!spx_metric_info[i].releasable) {
+    SPX_METRIC_FOREACH_L(i, collector->enabled_metric_count, {
+        if (! spx_metric_info[collector->enabled_metrics[i]].releasable) {
             const double diff = current_values[i] - collector->last_values[i];
             if (collector->current_fixed_noise[i] > diff) {
                 collector->current_fixed_noise[i] = diff;
@@ -328,20 +382,16 @@ void spx_metric_collector_collect(spx_metric_collector_t * collector, double * v
 
 void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector)
 {
-    collect_raw_values(
-        collector->enabled_metrics,
-        collector->last_enabled_metric_idx,
-        current_values
-    );
+    collect_raw_values(collector, current_values);
 
-    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
+    SPX_METRIC_FOREACH_L(i, collector->enabled_metric_count, {
         collector->current_fixed_noise[i] += current_values[i] - collector->last_values[i];
     });
 }
 
 void spx_metric_collector_add_fixed_noise(spx_metric_collector_t * collector, const double * noise)
 {
-    SPX_METRIC_FOREACH_L(i, collector->last_enabled_metric_idx, {
+    SPX_METRIC_FOREACH_L(i, collector->enabled_metric_count, {
         collector->current_fixed_noise[i] += noise[i];
     });
 }
@@ -391,7 +441,7 @@ static void memoize_io_stats(void)
 
 static size_t memoized_metric_value(spx_metric_t metric)
 {
-    if (!memoized_metric_values[metric].memoized) {
+    if (! memoized_metric_values[metric].memoized) {
         memoized_metric_values[metric].value = spx_metric_info[metric].handler();
         memoized_metric_values[metric].memoized = 1;
     }
@@ -399,19 +449,23 @@ static size_t memoized_metric_value(spx_metric_t metric)
     return memoized_metric_values[metric].value;
 }
 
-static void collect_raw_values(const int * enabled_metrics, size_t last_enabled_metric_idx, double * current_values)
+static void collect_raw_values(const spx_metric_collector_t * collector, double * current_values)
 {
-    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-        memoized_metric_values[i].memoized = 0;
-    });
+    if (collector->derived_metric_enabled) {
+        SPX_METRIC_FOREACH(i, {
+            /*
+                All slots must be zeroed, even for disabled metrics since an enabled derived metric can depend
+                on a disabled one (e.g. idle time depends on wt & ct).
+            */
+            memoized_metric_values[i].memoized = 0;
+        });
+    } else {
+        SPX_METRIC_FOREACH_L(i, collector->enabled_metric_count, {
+            memoized_metric_values[collector->enabled_metrics[i]].memoized = 0;
+        });
+    }
 
-    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-        if (!enabled_metrics[i]) {
-            current_values[i] = 0;
-
-            continue;
-        }
-
-        current_values[i] = memoized_metric_value(i);
+    SPX_METRIC_FOREACH_L(i, collector->enabled_metric_count, {
+        current_values[i] = memoized_metric_value(collector->enabled_metrics[i]);
     });
 }

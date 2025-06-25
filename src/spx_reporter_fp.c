@@ -32,7 +32,7 @@
 typedef struct {
     spx_profiler_reporter_t base;
 
-    spx_metric_t focus;
+    size_t focus_metric_idx;
     int inc;
     int rel;
     size_t limit;
@@ -62,7 +62,7 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 static const char * get_value_ansi_fmt(double v);
 
 spx_profiler_reporter_t * spx_reporter_fp_create(
-    spx_metric_t focus,
+    size_t focus_metric_idx,
     int inc,
     int rel,
     size_t limit,
@@ -78,7 +78,7 @@ spx_profiler_reporter_t * spx_reporter_fp_create(
     reporter->base.notify = fp_notify;
     reporter->base.destroy = fp_destroy;
 
-    reporter->focus = focus;
+    reporter->focus_metric_idx = focus_metric_idx;
     reporter->inc = inc;
     reporter->rel = rel;
     reporter->limit = limit;
@@ -215,15 +215,15 @@ static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * rep
     double high_b, low_b;
 
     if (reporter->inc) {
-        high_a = entry_a->stats.inc.values[reporter->focus];
-        high_b = entry_b->stats.inc.values[reporter->focus];
-        low_a  = entry_a->stats.exc.values[reporter->focus];
-        low_b  = entry_b->stats.exc.values[reporter->focus];
+        high_a = entry_a->stats.inc.values[reporter->focus_metric_idx];
+        high_b = entry_b->stats.inc.values[reporter->focus_metric_idx];
+        low_a  = entry_a->stats.exc.values[reporter->focus_metric_idx];
+        low_b  = entry_b->stats.exc.values[reporter->focus_metric_idx];
     } else {
-        high_a = entry_a->stats.exc.values[reporter->focus];
-        high_b = entry_b->stats.exc.values[reporter->focus];
-        low_a  = entry_a->stats.inc.values[reporter->focus];
-        low_b  = entry_b->stats.inc.values[reporter->focus];
+        high_a = entry_a->stats.exc.values[reporter->focus_metric_idx];
+        high_b = entry_b->stats.exc.values[reporter->focus_metric_idx];
+        low_a  = entry_a->stats.inc.values[reporter->focus_metric_idx];
+        low_b  = entry_b->stats.inc.values[reporter->focus_metric_idx];
     }
 
     if (high_a != high_b) {
@@ -302,22 +302,16 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     spx_output_stream_print(reporter->output, "\n\n");
     line_count += 2;
 
-    size_t last_enabled_metric_idx = 0;
-    SPX_METRIC_FOREACH(i, {
-        if (event->enabled_metrics[i]) {
-            last_enabled_metric_idx = i;
-        }
-    });
+    SPX_METRIC_FOREACH_L(i, event->enabled_metric_count, {
+        spx_output_stream_printf(
+            reporter->output,
+            "  %-20s: ",
+            spx_metric_info[event->enabled_metrics[i]].short_name
+        );
 
-    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-        if (!event->enabled_metrics[i]) {
-            continue;
-        }
-
-        spx_output_stream_printf(reporter->output, "  %-20s: ", spx_metric_info[i].short_name);
         spx_fmt_print_value(
             reporter->output,
-            spx_metric_info[i].type,
+            spx_metric_info[event->enabled_metrics[i]].type,
             event->max->values[i]
         );
 
@@ -330,32 +324,28 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
 
     spx_fmt_row_t * fmt_row = spx_fmt_row_create();
 
-    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-        if (!event->enabled_metrics[i]) {
-            continue;
-        }
-
-        spx_fmt_row_add_tcell(fmt_row, 2, spx_metric_info[i].short_name);
+    SPX_METRIC_FOREACH_L(i, event->enabled_metric_count, {
+        spx_fmt_row_add_tcell(
+            fmt_row,
+            2,
+            spx_metric_info[event->enabled_metrics[i]].short_name
+        );
     });
 
     spx_fmt_row_print(fmt_row, reporter->output);
     spx_fmt_row_reset(fmt_row);
 
-    SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-        if (!event->enabled_metrics[i]) {
-            continue;
-        }
-
+    SPX_METRIC_FOREACH_L(i, event->enabled_metric_count, {
         spx_fmt_row_add_tcell(
             fmt_row,
             1,
-            i == reporter->focus && reporter->inc ? "*Inc." : "Inc."
+            i == reporter->focus_metric_idx && reporter->inc ? "*Inc." : "Inc."
         );
 
         spx_fmt_row_add_tcell(
             fmt_row,
             1,
-            i == reporter->focus && !reporter->inc ? "*Exc." : "Exc."
+            i == reporter->focus_metric_idx && !reporter->inc ? "*Exc." : "Exc."
         );
     });
 
@@ -371,14 +361,10 @@ static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t 
     for (i = 0; i < limit; i++) {
         const spx_profiler_func_table_entry_t * entry = reporter->top_entries[i];
 
-        SPX_METRIC_FOREACH_L(i, last_enabled_metric_idx, {
-            if (!event->enabled_metrics[i]) {
-                continue;
-            }
-
+        SPX_METRIC_FOREACH_L(i, event->enabled_metric_count, {
             double inc = entry->stats.inc.values[i];
             double exc = entry->stats.exc.values[i];
-            spx_fmt_value_type_t type = spx_metric_info[i].type;
+            spx_fmt_value_type_t type = spx_metric_info[event->enabled_metrics[i]].type;
 
             if (reporter->rel) {
                 type = SPX_FMT_PERCENTAGE;

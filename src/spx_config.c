@@ -55,7 +55,7 @@ typedef struct {
 typedef const char * (*source_handler_t) (const char * parameter);
 
 static void init_config(spx_config_t * config, int cli);
-static void fix_config(spx_config_t * config, int cli);
+static void finalize_config(spx_config_t * config, int cli);
 static void source_data_get(source_data_t * source_data, source_handler_t handler);
 static void source_data_to_config(const source_data_t * source_data, spx_config_t * config);
 static const char * source_handler_ini_http(const char * parameter);
@@ -115,7 +115,7 @@ void spx_config_get(spx_config_t * config, int cli, ...)
 
     va_end(ap);
 
-    fix_config(config, cli);
+    finalize_config(config, cli);
 }
 
 static void init_config(spx_config_t * config, int cli)
@@ -132,11 +132,11 @@ static void init_config(spx_config_t * config, int cli)
     config->max_depth = 0;
 
     SPX_METRIC_FOREACH(i, {
-        config->enabled_metrics[i] = 0;
+        config->metric_settings[i] = 0;
     });
 
-    config->enabled_metrics[SPX_METRIC_WALL_TIME] = 1;
-    config->enabled_metrics[SPX_METRIC_ZE_MEMORY_USAGE] = 1;
+    config->metric_settings[SPX_METRIC_WALL_TIME] = 1;
+    config->metric_settings[SPX_METRIC_ZE_MEMORY_USAGE] = 1;
 
     config->report = cli ? SPX_CONFIG_REPORT_FLAT_PROFILE : SPX_CONFIG_REPORT_FULL;
 
@@ -151,7 +151,7 @@ static void init_config(spx_config_t * config, int cli)
     config->trace_safe = 0;
 }
 
-static void fix_config(spx_config_t * config, int cli)
+static void finalize_config(spx_config_t * config, int cli)
 {
     if (spx_php_global_array_get("_SERVER", "TEST_PHP_SRCDIR")) {
         /* Force SPX disabling for tests "skip" scripts */
@@ -170,13 +170,26 @@ static void fix_config(spx_config_t * config, int cli)
     }
 
     if (config->report == SPX_CONFIG_REPORT_FULL) {
-        config->enabled_metrics[SPX_METRIC_WALL_TIME] = 1;
-        config->enabled_metrics[SPX_METRIC_ZE_MEMORY_USAGE] = 1;
+        config->metric_settings[SPX_METRIC_WALL_TIME] = 1;
+        config->metric_settings[SPX_METRIC_ZE_MEMORY_USAGE] = 1;
     }
 
     if (config->report == SPX_CONFIG_REPORT_FLAT_PROFILE) {
-        config->enabled_metrics[config->fp_focus] = 1;
+        config->metric_settings[config->fp_focus] = 1;
     }
+
+
+    SPX_METRIC_FOREACH(i, {
+        config->enabled_metrics[i] = SPX_METRIC_NONE;
+    });
+
+    size_t j = 0;
+    SPX_METRIC_FOREACH(i, {
+        if (config->metric_settings[i]) {
+            config->enabled_metrics[j] = i;
+            j++;
+        }
+    });
 }
 
 static void source_data_get(source_data_t * source_data, source_handler_t handler)
@@ -232,13 +245,13 @@ static void source_data_to_config(const source_data_t * source_data, spx_config_
 
     if (source_data->metrics_str) {
         SPX_METRIC_FOREACH(i, {
-            config->enabled_metrics[i] = 0;
+            config->metric_settings[i] = 0;
         });
 
         SPX_UTILS_TOKENIZE_STRING(source_data->metrics_str, ',', token, 32, {
             spx_metric_t metric = spx_metric_get_by_key(token);
             if (metric != SPX_METRIC_NONE) {
-                config->enabled_metrics[metric] = 1;
+                config->metric_settings[metric] = 1;
             }
         });
     }

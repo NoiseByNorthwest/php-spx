@@ -53,9 +53,17 @@ static int trace_are_full_stats_required(const spx_profiler_reporter_t * reporte
 static spx_profiler_reporter_cost_t trace_notify(spx_profiler_reporter_t * base_reporter, const spx_profiler_event_t * event);
 static void trace_destroy(spx_profiler_reporter_t * base_reporter);
 
-static void flush_buffer(trace_reporter_t * reporter, const int * enabled_metrics);
+static void flush_buffer(
+    trace_reporter_t * reporter,
+    const spx_metric_t * enabled_metrics,
+    size_t enabled_metric_count
+);
 
-static void print_header(spx_output_stream_t * output, const int * enabled_metrics);
+static void print_header(
+    spx_output_stream_t * output,
+    const spx_metric_t * enabled_metrics,
+    size_t enabled_metric_count
+);
 
 static void print_row(
     spx_output_stream_t * output,
@@ -63,7 +71,8 @@ static void print_row(
     size_t call_site_line,
     const spx_php_function_t * function,
     size_t depth,
-    const int * enabled_metrics,
+    const spx_metric_t * enabled_metrics,
+    size_t enabled_metric_count,
     const spx_profiler_metric_values_t * cum_metric_values,
     const spx_profiler_metric_values_t * inc_metric_values,
     const spx_profiler_metric_values_t * exc_metric_values
@@ -133,7 +142,11 @@ static spx_profiler_reporter_cost_t trace_notify(spx_profiler_reporter_t * base_
         }
     }
 
-    flush_buffer(reporter, event->enabled_metrics);
+    flush_buffer(
+        reporter,
+        event->enabled_metrics,
+        event->enabled_metric_count
+    );
 
     if (event->type == SPX_PROFILER_EVENT_FINALIZE) {
         spx_output_stream_flush(reporter->output);
@@ -157,12 +170,15 @@ static void trace_destroy(spx_profiler_reporter_t * base_reporter)
     }
 }
 
-static void flush_buffer(trace_reporter_t * reporter, const int * enabled_metrics)
-{
+static void flush_buffer(
+    trace_reporter_t * reporter,
+    const spx_metric_t * enabled_metrics,
+    size_t enabled_metric_count
+) {
     if (reporter->first) {
         reporter->first = 0;
 
-        print_header(reporter->output, enabled_metrics);
+        print_header(reporter->output, enabled_metrics, enabled_metric_count);
     }
 
     size_t i;
@@ -176,6 +192,7 @@ static void flush_buffer(trace_reporter_t * reporter, const int * enabled_metric
             entry->function,
             entry->depth,
             enabled_metrics,
+            enabled_metric_count,
             &entry->cum_metric_values,
             entry->event_type == SPX_PROFILER_EVENT_CALL_END ? &entry->inc_metric_values : NULL,
             entry->event_type == SPX_PROFILER_EVENT_CALL_END ? &entry->exc_metric_values : NULL
@@ -189,26 +206,21 @@ static void flush_buffer(trace_reporter_t * reporter, const int * enabled_metric
     reporter->buffer_size = 0;
 }
 
-static void print_header(spx_output_stream_t * output, const int * enabled_metrics)
-{
+static void print_header(
+    spx_output_stream_t * output,
+    const spx_metric_t * enabled_metrics,
+    size_t enabled_metric_count
+) {
     spx_fmt_row_t * fmt_row = spx_fmt_row_create();
 
-    SPX_METRIC_FOREACH(i, {
-        if (!enabled_metrics[i]) {
-            continue;
-        }
-
-        spx_fmt_row_add_tcell(fmt_row, 3, spx_metric_info[i].short_name);
+    SPX_METRIC_FOREACH_L(i, enabled_metric_count, {
+        spx_fmt_row_add_tcell(fmt_row, 3, spx_metric_info[enabled_metrics[i]].short_name);
     });
 
     spx_fmt_row_print(fmt_row, output);
     spx_fmt_row_reset(fmt_row);
 
-    SPX_METRIC_FOREACH(i, {
-        if (!enabled_metrics[i]) {
-            continue;
-        }
-
+    SPX_METRIC_FOREACH_L(i, enabled_metric_count, {
         spx_fmt_row_add_tcell(fmt_row, 1, "Cum.");
         spx_fmt_row_add_tcell(fmt_row, 1, "Inc.");
         spx_fmt_row_add_tcell(fmt_row, 1, "Exc.");
@@ -229,22 +241,19 @@ static void print_row(
     size_t call_site_line,
     const spx_php_function_t * function,
     size_t depth,
-    const int * enabled_metrics,
+    const spx_metric_t * enabled_metrics,
+    size_t enabled_metric_count,
     const spx_profiler_metric_values_t * cum_metric_values,
     const spx_profiler_metric_values_t * inc_metric_values,
     const spx_profiler_metric_values_t * exc_metric_values
 ) {
     spx_fmt_row_t * fmt_row = spx_fmt_row_create();
 
-    SPX_METRIC_FOREACH(i, {
-        if (!enabled_metrics[i]) {
-            continue;
-        }
-
+    SPX_METRIC_FOREACH_L(i, enabled_metric_count, {
         spx_fmt_row_add_ncell(
             fmt_row,
             1,
-            spx_metric_info[i].type,
+            spx_metric_info[enabled_metrics[i]].type,
             cum_metric_values->values[i]
         );
 
@@ -252,7 +261,7 @@ static void print_row(
         spx_fmt_row_add_ncell(
             fmt_row,
             1,
-            spx_metric_info[i].type,
+            spx_metric_info[enabled_metrics[i]].type,
             inc
         );
 
@@ -260,7 +269,7 @@ static void print_row(
         spx_fmt_row_add_ncell(
             fmt_row,
             1,
-            spx_metric_info[i].type,
+            spx_metric_info[enabled_metrics[i]].type,
             exc
         );
     });

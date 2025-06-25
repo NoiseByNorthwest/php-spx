@@ -51,7 +51,8 @@ typedef enum {
 typedef struct {
     spx_profiler_event_type_t type;
 
-    const int * enabled_metrics;
+    const spx_metric_t * enabled_metrics;
+    size_t enabled_metric_count;
 
     size_t called;
     const spx_profiler_metric_values_t * max;

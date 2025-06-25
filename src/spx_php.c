@@ -117,10 +117,9 @@ static SPX_THREAD_TLS struct {
 
 static SPX_THREAD_TLS struct {
     struct {
-        struct {
-            void (*before)(void);
-            void (*after)(void);
-        } user, internal;
+        void (*before)(void);
+        void (*after)(void);
+        int internal_functions;
     } ex_hook;
 
     int use_observer_api;
@@ -775,7 +774,7 @@ void spx_php_execution_finalize(void)
         return;
     }
 
-    if (context.ex_hook.internal.after) {
+    if (context.ex_hook.after && context.ex_hook.internal_functions) {
         if (
             context.depth != 1
                 || ! context.stack[context.depth - 1].special_function
@@ -784,8 +783,12 @@ void spx_php_execution_finalize(void)
             spx_utils_die("stack inconsistency");
         }
 
-        context.ex_hook.internal.after();
+        context.ex_hook.after();
         context.depth--;
+    }
+
+    if (context.depth != 0) {
+        spx_utils_die("Stack tracking inconsistency");
     }
 
     context.request_shutdown = 0;
@@ -888,24 +891,16 @@ void spx_php_execution_disable(void)
     context.execution_disabled = 1;
 }
 
-void spx_php_execution_hook(void (*before)(void), void (*after)(void), int internal)
+void spx_php_execution_hook(void (*before)(void), void (*after)(void), int internal_functions)
 {
-    if (internal) {
-        context.ex_hook.internal.before = before;
-        context.ex_hook.internal.after = after;
-    } else {
-        context.ex_hook.user.before = before;
-        context.ex_hook.user.after = after;
-    }
+    context.ex_hook.before = before;
+    context.ex_hook.after = after;
+    context.ex_hook.internal_functions = internal_functions;
 }
 
-uint8_t spx_php_execution_hook_is_set(int internal)
+int spx_php_execution_hook_are_internal_functions_traced()
 {
-    if (internal) {
-        return context.ex_hook.internal.before != NULL;
-    }
-
-    return context.ex_hook.user.before != NULL;
+    return context.ex_hook.internal_functions;
 }
 
 void spx_php_output_add_header_line(const char * header_line)
@@ -1010,9 +1005,10 @@ static void execute_data_function(
 
         if (func->type == ZEND_EVAL_CODE) {
             function->file_name = "eval()";
-        } else {
+        } else if (func->common.type != ZEND_INTERNAL_FUNCTION) {
             function->file_name = ZSTR_VAL(func->op_array.filename);
             if (
+                /* FIXME check if this case still occurs since the addition of the "type != ZEND_INTERNAL_FUNCTION" check above */
                 /* ZE bug causing func->op_array.filename to be corrupted ?*/
                 (intptr_t) function->file_name < 0xff
             ) {
@@ -1098,10 +1094,9 @@ static void execute_data_function(
 
 static void reset_context(void)
 {
-    context.ex_hook.user.before = NULL;
-    context.ex_hook.user.after = NULL;
-    context.ex_hook.internal.before = NULL;
-    context.ex_hook.internal.after = NULL;
+    context.ex_hook.before = NULL;
+    context.ex_hook.after = NULL;
+    context.ex_hook.internal_functions = 0;
 
     context.use_observer_api = 0;
     context.global_hooks_enabled = 1;
@@ -1206,33 +1201,35 @@ static void global_hook_execute_ex(zend_execute_data * execute_data)
         return;
     }
 
-    if (!context.use_observer_api) {
-        push_frame(0, execute_data);
+    if (context.use_observer_api) {
+        ze_hooked_func.execute_ex(execute_data);
 
-        if (context.ex_hook.user.before) {
-            context.ex_hook.user.before();
-        }
+        return;
+    }
+
+    push_frame(0, execute_data);
+
+    if (context.ex_hook.before) {
+        context.ex_hook.before();
     }
 
     ze_hooked_func.execute_ex(execute_data);
 
-    if (!context.use_observer_api) {
-        if (context.ex_hook.user.after) {
-            context.ex_hook.user.after();
-        }
+    if (context.ex_hook.after) {
+        context.ex_hook.after();
+    }
 
-        context.depth--;
+    context.depth--;
 
-        /*
-         *  FIXME: it might not works with prepend files
-         */
-        if (context.depth == 0 && !context.request_shutdown) {
-            context.request_shutdown = 1;
+    /*
+     *  FIXME: it might not works with prepend files
+     */
+    if (context.depth == 0 && !context.request_shutdown) {
+        context.request_shutdown = 1;
 
-            if (context.ex_hook.internal.before) {
-                push_frame(1, "::php_request_shutdown");
-                context.ex_hook.internal.before();
-            }
+        if (context.ex_hook.internal_functions) {
+            push_frame(1, "::php_request_shutdown");
+            context.ex_hook.before();
         }
     }
 }
@@ -1254,12 +1251,22 @@ static void global_hook_execute_internal(
         return;
     }
 
-    if (!context.use_observer_api) {
-        push_frame(0, execute_data);
+    if (context.use_observer_api) {
+        ze_hooked_func.execute_internal(
+            execute_data,
+            return_value
+        );
 
-        if (context.ex_hook.internal.before) {
-            context.ex_hook.internal.before();
-        }
+        return;
+    }
+
+    push_frame(0, execute_data);
+
+    if (
+        context.ex_hook.internal_functions
+            && context.ex_hook.before
+    ) {
+        context.ex_hook.before();
     }
 
     ze_hooked_func.execute_internal(
@@ -1267,28 +1274,27 @@ static void global_hook_execute_internal(
         return_value
     );
 
-    if (!context.use_observer_api) {
-        if (context.ex_hook.internal.after) {
-            context.ex_hook.internal.after();
-        }
-
-        context.depth--;
+    if (
+        context.ex_hook.internal_functions
+            && context.ex_hook.after
+    ) {
+        context.ex_hook.after();
     }
+
+    context.depth--;
 }
 
 #ifdef HAVE_PHP_OBSERVER_API
 
 static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execute_data)
 {
-    zend_observer_fcall_handlers handlers = {NULL, NULL};
-
-    if (!context.use_observer_api) {
-        return handlers;
-    }
+    zend_observer_fcall_handlers handlers;
 
     /*
-        FIXME do not instrument internal functions if not requested
-            -> it may however break things such as stack tracking
+        Returning {null,null} handlers in cases where there is nothing to instrument
+        counter-intuitively degrades performance.
+        This why such cases are directly handled in observer_api_begin() & observer_api_end()
+        via early returns.
     */
 
     handlers.begin = observer_api_begin;
@@ -1299,45 +1305,56 @@ static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execut
 
 static void observer_api_begin(zend_execute_data * execute_data)
 {
+    if (!context.use_observer_api) {
+        /* No noticeable instrumentation overhead when returning right here. */
+        return;
+    }
+
     if (!context.global_hooks_enabled) {
         return;
     }
 
     push_frame(0, execute_data);
 
-    void (* const before_hook)(void) =
-        execute_data->func &&
-        execute_data->func->type == ZEND_INTERNAL_FUNCTION ?
-        context.ex_hook.internal.before : context.ex_hook.user.before
-    ;
-
-    if (before_hook) {
-        before_hook();
+    if (
+        context.ex_hook.before && (
+            context.ex_hook.internal_functions
+                || ! (
+                    execute_data->func
+                        && execute_data->func->type == ZEND_INTERNAL_FUNCTION
+                )
+        )
+    ) {
+        context.ex_hook.before();
     }
 }
 
 static void observer_api_end(zend_execute_data * execute_data, zval * return_value)
 {
+    if (!context.use_observer_api) {
+        /* No noticeable instrumentation overhead when returning right here. */
+        return;
+    }
+
     if (!context.global_hooks_enabled) {
         return;
     }
 
-    const int internal_func_call =
-        execute_data->func &&
-        execute_data->func->type == ZEND_INTERNAL_FUNCTION
-    ;
-
-    void (* const after_hook)(void) = internal_func_call ?
-        context.ex_hook.internal.after : context.ex_hook.user.after
-    ;
-
-    if (after_hook) {
-        after_hook();
+    if (
+        context.ex_hook.after && (
+            context.ex_hook.internal_functions
+                || ! (
+                    execute_data->func
+                        && execute_data->func->type == ZEND_INTERNAL_FUNCTION
+                )
+        )
+    ) {
+        context.ex_hook.after();
     }
 
     context.depth--;
 
-    if (internal_func_call) {
+    if (! context.ex_hook.internal_functions) {
         return;
     }
 
@@ -1347,9 +1364,9 @@ static void observer_api_end(zend_execute_data * execute_data, zval * return_val
     if (context.depth == 0 && !context.request_shutdown) {
         context.request_shutdown = 1;
 
-        if (context.ex_hook.internal.before) {
+        if (context.ex_hook.before) {
             push_frame(1, "::php_request_shutdown");
-            context.ex_hook.internal.before();
+            context.ex_hook.before();
         }
     }
 }
@@ -1366,11 +1383,16 @@ static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_han
         return NULL;
     }
 
-    push_frame(1, "::zend_compile_file");
-
-    if (context.ex_hook.internal.before) {
-        context.ex_hook.internal.before();
+    if (
+        ! context.ex_hook.before
+        || ! context.ex_hook.after
+        || ! context.ex_hook.internal_functions
+    ) {
+        return ze_hooked_func.zend_compile_file(file_handle, type);
     }
+
+    push_frame(1, "::zend_compile_file");
+    context.ex_hook.before();
 
     zend_op_array * op_array = ze_hooked_func.zend_compile_file(file_handle, type);
 
@@ -1388,10 +1410,7 @@ static zend_op_array * global_hook_zend_compile_file(zend_file_handle * file_han
         }
     }
 
-    if (context.ex_hook.internal.after) {
-        context.ex_hook.internal.after();
-    }
-
+    context.ex_hook.after();
     context.depth--;
 
     return op_array;
@@ -1423,11 +1442,22 @@ static zend_op_array * global_hook_zend_compile_string(
         return NULL;
     }
 
-    push_frame(1, "::zend_compile_string");
-
-    if (context.ex_hook.internal.before) {
-        context.ex_hook.internal.before();
+    if (
+        ! context.ex_hook.before
+        || ! context.ex_hook.after
+        || ! context.ex_hook.internal_functions
+    ) {
+        return ze_hooked_func.zend_compile_string(
+            source_string,
+            filename
+#if ZEND_MODULE_API_NO >= 20210903
+            , position
+#endif
+        );
     }
+
+    push_frame(1, "::zend_compile_string");
+    context.ex_hook.before();
 
     zend_op_array * op_array = ze_hooked_func.zend_compile_string(
         source_string,
@@ -1453,10 +1483,7 @@ static zend_op_array * global_hook_zend_compile_string(
         }
     }
 
-    if (context.ex_hook.internal.after) {
-        context.ex_hook.internal.after();
-    }
-
+    context.ex_hook.after();
     context.depth--;
 
     return op_array;
@@ -1472,18 +1499,20 @@ static int global_hook_gc_collect_cycles(void)
         return 0;
     }
 
-    push_frame(1, "::gc_collect_cycles");
-
-    if (context.ex_hook.internal.before) {
-        context.ex_hook.internal.before();
+    if (
+        ! context.ex_hook.before
+        || ! context.ex_hook.after
+        || ! context.ex_hook.internal_functions
+    ) {
+        return ze_hooked_func.gc_collect_cycles();
     }
+
+    push_frame(1, "::gc_collect_cycles");
+    context.ex_hook.before();
 
     const int count = ze_hooked_func.gc_collect_cycles();
 
-    if (context.ex_hook.internal.after) {
-        context.ex_hook.internal.after();
-    }
-
+    context.ex_hook.after();
     context.depth--;
 
     return count;

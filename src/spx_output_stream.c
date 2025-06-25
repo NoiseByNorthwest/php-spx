@@ -501,7 +501,7 @@ static int zstd_file_driver_vprintf(void * file, const char * fmt, va_list ap)
 
 static int zstd_file_driver_write(void * file, const void * buf, size_t len)
 {
-    return zstd_file_driver_write_to_buffer(file, buf, strlen(buf));
+    return zstd_file_driver_write_to_buffer(file, buf, len);
 }
 
 static int zstd_file_driver_write_to_buffer(zstd_file_t * zstd_file, const void * buf, size_t len)
@@ -747,7 +747,7 @@ static int lz4_file_driver_vprintf(void * file, const char * fmt, va_list ap)
 
 static int lz4_file_driver_write(void * file, const void * buf, size_t len)
 {
-    return lz4_file_driver_write_to_buffer(file, buf, strlen(buf));
+    return lz4_file_driver_write_to_buffer(file, buf, len);
 }
 
 static int lz4_file_driver_write_to_buffer(lz4_file_t * lz4_file, const void * buf, size_t len)

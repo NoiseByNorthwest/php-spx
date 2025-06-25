@@ -24,7 +24,7 @@
 #include "main/php.h"
 
 
-#define SPX_PHP_STACK_CAPACITY 2048
+#define SPX_PHP_STACK_CAPACITY 16384
 
 typedef struct {
     uint64_t hash_code;
@@ -78,8 +78,8 @@ void spx_php_execution_init(int use_observer_api);
 void spx_php_execution_shutdown(void);
 
 void spx_php_execution_disable(void);
-void spx_php_execution_hook(void (*before)(void), void (*after)(void), int internal);
-uint8_t spx_php_execution_hook_is_set(int internal);
+void spx_php_execution_hook(void (*before)(void), void (*after)(void), int internal_functions);
+int spx_php_execution_hook_are_internal_functions_traced();
 void spx_php_execution_finalize(void);
 
 void spx_php_output_add_header_line(const char * header_line);

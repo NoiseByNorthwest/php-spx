@@ -69,6 +69,7 @@ static SPX_THREAD_TLS struct {
 #endif
 
         char full_report_key[512];
+        spx_metric_collector_t * metric_collector;
         spx_profiler_reporter_t * reporter;
         spx_profiler_t * profiler;
         size_t depth;
@@ -651,6 +652,7 @@ static void profiling_handler_init(void)
     profiling_handler_ex_set_context();
 
     context.profiling_handler.full_report_key[0] = 0;
+    context.profiling_handler.metric_collector = NULL;
     context.profiling_handler.reporter = NULL;
     context.profiling_handler.profiler = NULL;
     context.profiling_handler.depth = 0;
@@ -674,6 +676,11 @@ static void profiling_handler_start(void)
         return;
     }
 
+    context.profiling_handler.metric_collector = spx_metric_collector_create(context.config.enabled_metrics);
+    if (!context.profiling_handler.metric_collector) {
+        goto error;
+    }
+
     context.profiling_handler.full_report_key[0] = 0;
 
     switch (context.config.report) {
@@ -693,7 +700,10 @@ static void profiling_handler_start(void)
 
         case SPX_CONFIG_REPORT_FLAT_PROFILE:
             context.profiling_handler.reporter = spx_reporter_fp_create(
-                context.config.fp_focus,
+                spx_metric_collector_enabled_metric_idx(
+                    context.profiling_handler.metric_collector,
+                    context.config.fp_focus
+                ),
                 context.config.fp_inc,
                 context.config.fp_rel,
                 context.config.fp_limit,
@@ -718,7 +728,7 @@ static void profiling_handler_start(void)
 
     context.profiling_handler.profiler = spx_profiler_tracer_create(
         context.config.max_depth,
-        context.config.enabled_metrics,
+        context.profiling_handler.metric_collector,
         context.profiling_handler.reporter
     );
 
@@ -759,6 +769,11 @@ static void profiling_handler_stop(void)
         spx_profiler_reporter_destroy(context.profiling_handler.reporter);
         context.profiling_handler.reporter = NULL;
     }
+
+    if (!context.profiling_handler.metric_collector) {
+        spx_metric_collector_destroy(context.profiling_handler.metric_collector);
+        context.profiling_handler.metric_collector = NULL;
+    }
 }
 
 static void profiling_handler_ex_set_context(void)
@@ -772,16 +787,8 @@ static void profiling_handler_ex_set_context(void)
     spx_php_execution_hook(
         profiling_handler_ex_hook_before,
         profiling_handler_ex_hook_after,
-        0
+        context.config.builtins
     );
-
-    if (context.config.builtins) {
-        spx_php_execution_hook(
-            profiling_handler_ex_hook_before,
-            profiling_handler_ex_hook_after,
-            1
-        );
-    }
 
     spx_resource_stats_init();
 

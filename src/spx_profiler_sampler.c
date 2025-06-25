@@ -162,7 +162,7 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
             Build current stack.
         */
 
-        const uint8_t internal_functions_traced = spx_php_execution_hook_is_set(1);
+        const uint8_t internal_functions_traced = spx_php_execution_hook_are_internal_functions_traced();
         size_t corrected_depth = 0;
 
         for (i = 0; i < profiler->stack.current.size; i++) {

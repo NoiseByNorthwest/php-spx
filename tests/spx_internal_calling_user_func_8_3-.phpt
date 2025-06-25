@@ -38,7 +38,7 @@ ZE object count                |
 ----------+----------+----------+----------+----------+----------
         0 |        0 |        0 |        1 |        0 | +%s/tests/spx_internal_calling_user_func_%s.php
         0 |        0 |        0 |        2 |       13 |  +f2
-        1 |        0 |        0 |        3 |        9 |   +{closure}
+        1 |        0 |        0 |        3 |        5 |   +{closure}
         1 |        0 |        0 |        3 |        0 |   -{closure}
         0 |        0 |        0 |        2 |        0 |  -f2
         0 |        0 |        0 |        1 |        0 | -%s/tests/spx_internal_calling_user_func_%s.php
