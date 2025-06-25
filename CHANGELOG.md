@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.4.19](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.18...v0.4.19)
+
+### Added
+- composer.json for PIE (PHP Installer for Extensions) support [#291](https://github.com/NoiseByNorthwest/php-spx/pull/291)
+
+### Fixed
+- GitHub Actions: Update outdated action versions and fix Dockerfile syntax [#286](https://github.com/NoiseByNorthwest/php-spx/pull/286)
+
 ## [v0.4.18](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.17...v0.4.18)
 
 ### Added
