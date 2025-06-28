@@ -23,8 +23,8 @@
 #include "main/php.h"
 
 /* linux 2.6+ or OSX */
-#if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__)
-#   error "Only Linux-based OSes, Apple MacOS and FreeBSD are supported"
+#if !defined(linux) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__) && !defined(_WIN32)
+#   error "Only Linux-based OSes, Apple MacOS, FreeBSD and Windows are supported"
 #endif
 
 #if (defined(_MSC_VER) && !(defined(_M_X64) || defined(_M_ARM64))) || (!defined(_MSC_VER) && !(defined(__x86_64__) || defined(__aarch64__)))
