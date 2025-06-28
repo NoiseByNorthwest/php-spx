@@ -132,7 +132,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Build the extension
-        uses: php/php-windows-builder/extension@5199585cd19be6fb11e6b229d4b662649dc79ac8
+        uses: php/php-windows-builder/extension@7d5c246d2471327972cf214ef37de59c278a6b38
+        #uses: php/php-windows-builder/extension@5199585cd19be6fb11e6b229d4b662649dc79ac8
         #uses: php/php-windows-builder/extension@2a031a68a7ed21340248d07946a8f655faf1d6aa
         with:
           #extension-url: https://github.com/xdebug/xdebug
