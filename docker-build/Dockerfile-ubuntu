@@ -1,0 +1,42 @@
+ARG VERSION=latest
+FROM ubuntu:${VERSION} AS build
+
+# https://dev.to/setevoy/docker-configure-tzdata-and-timezone-during-build-20bk
+ENV TZ=Europe/Berlin
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# update system
+RUN apt update
+RUN apt upgrade -y
+
+# install git
+RUN apt install -y git
+
+# install php development tools
+RUN apt install -y php-dev
+
+# install zlib development tools
+RUN apt install -y zlib1g-dev
+
+# clone php-spx
+RUN git clone https://github.com/NoiseByNorthwest/php-spx.git
+
+# set workdir
+WORKDIR /php-spx
+
+# checkout release
+RUN git checkout tags/v0.4.10
+
+# build php-spx
+RUN phpize
+RUN ./configure
+RUN make
+
+# start again with a new image
+FROM scratch
+
+# get version
+ARG VERSION
+
+# copy spx module from ubuntu image to the scratch image so files can be copied back to host
+COPY --from=build /php-spx/modules/spx.so ubuntu-$VERSION/spx.so
