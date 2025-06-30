@@ -9,8 +9,15 @@ PHP_ARG_WITH(zlib-dir, for ZLIB,
 [  --with-zlib-dir[=DIR]   Set the path to ZLIB install prefix.], no)
 fi
 
+PHP_ARG_WITH(spx-assets-dir, for assets path,
+[  --with-spx-assets-dir[=DIR]   Set the installation path of assets.], $prefix/share/misc/php-spx/assets)
+
 if test "$PHP_SPX" = "yes"; then
     AC_DEFINE(HAVE_SPX, 1, [spx])
+    AC_MSG_CHECKING([for assets directory])
+    AC_MSG_RESULT([ $PHP_SPX_ASSETS_DIR ])
+    AC_DEFINE_UNQUOTED([SPX_HTTP_UI_ASSETS_DIR], [ "$PHP_SPX_ASSETS_DIR/web-ui" ], [path of web-ui assets directory])
+    PHP_SUBST([PHP_SPX_ASSETS_DIR])
 
     CFLAGS="-Werror -Wall -O3 -pthread -std=gnu90"
 
