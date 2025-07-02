@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.4.20](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.19...v0.4.20)
+
+### Added
+- add --with-spx-assets-dir configure option [#295](https://github.com/NoiseByNorthwest/php-spx/pull/295)
+
+### Fixed
+- composer: remove ext-zlib dependency [#293](https://github.com/NoiseByNorthwest/php-spx/pull/293)
+- fix project's license in composer.json and add THIRD-PARTY-LICENSES.md [#296](https://github.com/NoiseByNorthwest/php-spx/pull/296)
+
 ## [v0.4.19](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.18...v0.4.19)
 
 ### Added
