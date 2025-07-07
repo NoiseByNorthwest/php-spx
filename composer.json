@@ -20,7 +20,7 @@
         "php": ">=5.4.0 <8.5.0"
     },
     "php-ext": {
-        "extension-name": "SPX",
+        "extension-name": "spx",
         "support-zts": true,
         "support-nts": true,
         "configure-options": [
