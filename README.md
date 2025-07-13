@@ -2,7 +2,7 @@
 
 [![Build Status][:badge-ci:]][:link-ci:]
 ![Supported PHP versions: 5.4 .. 8.x][:badge-php-versions:]
-![Supported platforms: GNU/Linux, macOS & FreeBSD][:badge-supported-platforms:]
+![Supported platforms: Linux, macOS, FreeBSD & Windows][:badge-supported-platforms:]
 ![Supported architectures: x86-64 or ARM64][:badge-supported-arch:]
 [![License][:badge-license:]][:link-license:]
 
@@ -34,12 +34,8 @@ It differentiates itself from other similar extensions as being:
 
 ## Requirements
 
-Platforms support is currently quite limited. Feel free to open an issue if your platform is not supported.
-Current requirements are:
-
 * x86-64 or ARM64
-* **GNU/Linux**, **macOS** or **FreeBSD**
-* zlib dev package (e.g. zlib1g-dev on Debian based distros)
+* **Linux**, **macOS**, **FreeBSD** or **Windows**
 * PHP 5.4 to 8.4
 
 ## Installation
@@ -66,6 +62,12 @@ sudo make install
 Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
 You may also want to override [default SPX configuration](#configuration) to be able to profile a web request, with [this one](#private-environment) for example for a local development environment.
 
+### Windows
+
+Windows is supported, with these extra limitations:
+- live update of flat profile in CLI (`SPX_FP_LIVE=1`) is not supported.
+
+Also, consider Windows support as still being in beta.
 
 ### ZTS PHP (multi-thread)
 
@@ -78,7 +80,7 @@ Also, consider ZTS PHP support as still being in beta.
 
 ### Linux, PHP-FPM & I/O stats
 
-On GNU/Linux, SPX uses procfs (i.e. by reading files under `/proc` directory) to get some stats for the current process or thread. This is what is done under the hood when you select at least one of these metrics: `mor`, `io`, `ior` or `iow`.
+On Linux, SPX uses procfs (i.e. by reading files under `/proc` directory) to get some stats for the current process or thread. This is what is done under the hood when you select at least one of these metrics: `mor`, `io`, `ior` or `iow`.
 
 But, on most PHP-FPM setups, you will have a permission issue preventing SPX to open a file under `/proc/self` directory.
 This is due to the fact that PHP-FPM master process runs as root when child processes run as another unprivileged user.
@@ -315,7 +317,7 @@ Here is the list of available metrics to collect. By default only _Wall time_ an
 
 _\*: Allocated and freed byte counts will not be collected if you use a custom allocator or if you force the libc one through the `USE_ZEND_ALLOC` environment variable set to `0`._
 
-_\*\*: RSS & I/O metrics are not supported on macOS and FreeBSD. On GNU/Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
+_\*\*: RSS & I/O metrics are not supported on macOS and FreeBSD. On Linux you should [read this if you use PHP-FPM](#linux-php-fpm--io-stats)._
 
 ### Command line script
 
@@ -504,7 +506,7 @@ See the [LICENSE][:link-license:] file for more information.
 [:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
 
 [:badge-php-versions:]: https://img.shields.io/badge/php-5.4--8.4-blue.svg
-[:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow
+[:badge-supported-platforms:]: https://img.shields.io/badge/platform-Linux%20|%20macOS%20|%20FreeBSD%20-yellow
 [:badge-supported-arch:]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver
 
 [:badge-license:]:      https://img.shields.io/github/license/NoiseByNorthwest/php-spx
