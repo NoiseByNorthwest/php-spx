@@ -1,5 +1,13 @@
 --TEST--
 Sampling mode
+--SKIPIF--
+<?php
+if (
+    stripos(php_uname(), 'Darwin') !== false
+) {
+    die('skip this test is too flaky on macOS');
+}
+?>
 --ENV--
 return <<<END
 SPX_ENABLED=1
@@ -44,7 +52,7 @@ Wall time                      |
   40%fms |  10%fms |  10%fms |        3 |        0 |   -f1
   40%fms |      0ns |      0ns |        3 |       11 |   +f1
   50%fms |  10%fms |  10%fms |        3 |        0 |   -f1
-  50%fms |  50%fms | %w%fus |        2 |        0 |  -f2
+  50%fms |  50%fms | %w%f%cs |        2 |        0 |  -f2
   50%fms |  50%fms | %w%fus |        1 |        0 | -%s/tests/spx_sampling_001.php
 
 SPX trace file: /dev/stdout

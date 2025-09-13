@@ -50,7 +50,7 @@ Global stats:
   Called functions    :   100.0K
   Distinct functions  :        6
 
-  Wall time           :   %s
+  Wall time           :  %s
   ZE GC runs          :        9
   ZE GC root buffer   :    10.0K
   ZE GC collected     :    90.0K

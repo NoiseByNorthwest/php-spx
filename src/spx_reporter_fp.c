@@ -230,7 +230,12 @@ static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * rep
         return high_b - high_a;
     }
 
-    return low_b - low_a;
+    if (low_a != low_b) {
+        return low_b - low_a;
+    }
+
+    /* stable sort is required for some automated tests */
+    return ((int) entry_a->idx) - ((int) entry_b->idx);
 }
 
 static size_t print_report(fp_reporter_t * reporter, const spx_profiler_event_t * event)

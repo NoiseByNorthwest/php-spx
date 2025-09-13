@@ -71,7 +71,7 @@ Global stats:
   Called functions    :       13
   Distinct functions  :        7
 
-  Wall time           :   %s
+  Wall time           :  %s
 
 Flat profile:
 
