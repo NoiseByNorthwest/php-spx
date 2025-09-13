@@ -1,12 +1,12 @@
 --TEST--
-GC is traced (PHP 7.0 - 7.1)
+GC is traced (PHP 7.0)
 --SKIPIF--
 <?php
 if (
-    version_compare(PHP_VERSION, '7.0') < 0
+    version_compare(PHP_VERSION, '7.1') < 0
     || version_compare(PHP_VERSION, '7.2') >= 0
 ) {
-    die('skip this test is for PHP 7.0 & 7.1 only');
+    die('skip this test is for PHP 7.1 only');
 }
 ?>
 --ENV--
@@ -51,6 +51,6 @@ Flat profile:
 ----------+----------+----------+----------+----------+----------+----------+----------
        10 |        0 |        0 |   100.0K |   100.0K |        0 |    50.0K | f
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::zend_compile_file
-       10 |        0 |        0 |        0 |   100.0K |        0 |        1 | %s/spx_%s.php
+       10 |        0 |        0 |        0 |   100.0K |        0 |        1 | %s/tests/spx_gc_traced_7_1.php
         0 |        0 |        0 |        0 |        0 |        0 |        1 | ::php_request_shutdown
        10 |       10 |  -100.0K |  -100.0K |   100.0K |   100.0K |       10 | ::gc_collect_cycles
