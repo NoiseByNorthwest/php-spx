@@ -29,6 +29,15 @@ do {                                             \
     }                                            \
 } while (0)
 
+
+#define SPX_METRIC_FOREACH_L(it, limit, block)  \
+do {                                            \
+    size_t it;                                  \
+    for (it = 0; it < (limit); it++) {          \
+        block                                   \
+    }                                           \
+} while (0)
+
 typedef enum {
     SPX_METRIC_WALL_TIME,
     SPX_METRIC_CPU_TIME,
@@ -66,6 +75,7 @@ typedef struct {
     const char * name;
     spx_fmt_value_type_t type;
     int releasable;
+    int derived;
     size_t (*handler)(void);
 } spx_metric_info_t;
 
@@ -75,8 +85,12 @@ spx_metric_t spx_metric_get_by_key(const char * key);
 
 typedef struct spx_metric_collector_t spx_metric_collector_t;
 
-spx_metric_collector_t * spx_metric_collector_create(const int * enabled_metrics);
+spx_metric_collector_t * spx_metric_collector_create(const spx_metric_t * enabled_metrics);
 void spx_metric_collector_destroy(spx_metric_collector_t * collector);
+
+const spx_metric_t * spx_metric_collector_enabled_metrics(const spx_metric_collector_t * collector);
+size_t spx_metric_collector_enabled_metric_count(const spx_metric_collector_t * collector);
+size_t spx_metric_collector_enabled_metric_idx(const spx_metric_collector_t * collector, spx_metric_t metric);
 
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values);
 void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector);

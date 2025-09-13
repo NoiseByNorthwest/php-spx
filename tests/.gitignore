@@ -1,5 +1,6 @@
-*
-!.gitignore
-!*.phpt
-!*.inc
-!data_dir
+*.diff
+*.exp
+*.log
+*.out
+*.php
+*.sh
