@@ -973,7 +973,7 @@ static void http_ui_handle_request(const char * ui_uri)
     }
 
     if (0 == http_ui_handle_data_request(SPX_G(data_dir), ui_uri)) {
-        goto finish;
+        return;
     }
 
     char local_file_absolute_path[PATH_MAX];
@@ -991,7 +991,7 @@ static void http_ui_handle_request(const char * ui_uri)
     }
 
     if (0 == http_ui_handle_static_file(local_file_absolute_path)) {
-        goto finish;
+        return;
     }
 
 error_404:
@@ -1000,8 +1000,6 @@ error_404:
     spx_php_output_send_headers();
 
     spx_php_output_direct_print("File not found.\n");
-
-finish:
 }
 
 static int http_ui_handle_data_request(const char * data_dir, const char *relative_path)
