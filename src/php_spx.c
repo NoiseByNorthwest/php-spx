@@ -360,6 +360,14 @@ static PHP_MINFO_FUNCTION(spx)
 
     php_info_print_table_row(2, PHP_SPX_EXTNAME " Support", "enabled");
     php_info_print_table_row(2, PHP_SPX_EXTNAME " Version", PHP_SPX_VERSION);
+    php_info_print_table_row(
+        2, PHP_SPX_EXTNAME " Zstandard available",
+#ifdef HAVE_ZSTD
+        "yes"
+#else
+        "no"
+#endif
+    );
 
     php_info_print_table_end();
 
