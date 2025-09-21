@@ -19,5 +19,5 @@ SPX_KEY=dev&SPX_UI_URI=/data/metrics
 echo 'Normal output';
 ?>
 --EXPECT--
-Notice: SPX: access not granted: "10.0.1.1" IP is not in white list ("10.0.0.0/24") in Unknown on line 0
+Notice: SPX: access not granted: "10.0.1.1" IP is not in white list in Unknown on line 0
 Normal output

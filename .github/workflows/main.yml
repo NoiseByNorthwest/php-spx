@@ -29,11 +29,11 @@ jobs:
 
         include:
           # Linux
-          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }
+          - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-24.04 }
           # Debian (docker)
-          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }
+          - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-24.04 }
           # macOS
-          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-13 }
+          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-15 }
     env:
       DOCKER_BUILD_RECORD_UPLOAD: false   # disable docker buildx record upload as build artifact
       DOCKER_BUILD_SUMMARY: false         # disable docker buildx summary

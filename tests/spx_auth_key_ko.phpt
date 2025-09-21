@@ -19,5 +19,5 @@ SPX_KEY=dev1&SPX_UI_URI=/data/metrics
 echo 'Normal output';
 ?>
 --EXPECT--
-Notice: SPX: access not granted: server ("dev") & client ("dev1") key mismatch in Unknown on line 0
+Notice: SPX: access not granted: server & client ("dev1") key mismatch in Unknown on line 0
 Normal output
