@@ -19,13 +19,13 @@ if test "$PHP_SPX" = "yes"; then
     AC_DEFINE_UNQUOTED([SPX_HTTP_UI_ASSETS_DIR], [ "$PHP_SPX_ASSETS_DIR/web-ui" ], [path of web-ui assets directory])
     PHP_SUBST([PHP_SPX_ASSETS_DIR])
 
-    CFLAGS="-Werror -Wall -O3 -pthread -std=gnu90"
+    CFLAGS="$CFLAGS -Werror -Wall -O3 -pthread -std=gnu90"
 
-    if test "$(uname -s 2>/dev/null)" = "Darwin"
-    then
-        # see discussion here https://github.com/NoiseByNorthwest/php-spx/pull/270
-        CFLAGS="$CFLAGS -Wno-typedef-redefinition"
-    fi
+    # Disabling typedef-redefinition is required for:
+    #   - macOS, see https://github.com/NoiseByNorthwest/php-spx/pull/270
+    #   - clang, see https://github.com/NoiseByNorthwest/php-spx/pull/305
+    # Furthermore, typedef-redefinition is also allowed with c11 and above.
+    CFLAGS="$CFLAGS -Wno-typedef-redefinition"
 
     if test "$PHP_SPX_DEV" = "yes"
     then
