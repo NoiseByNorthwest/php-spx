@@ -27,7 +27,14 @@ spx_profiler_start();
 foo();
 
 $key = spx_profiler_stop();
-echo shell_exec("zstdcat /tmp/spx/$key.txt.zst");
+
+$zstdcatCommand = 'zstdcat';
+if (getenv('PATH') === false) {
+  // it happens with macos & PHP 7.0-7.1
+  $zstdcatCommand = '/opt/homebrew/bin/' . $zstdcatCommand;
+}
+
+echo shell_exec("$zstdcatCommand /tmp/spx/$key.txt.zst");
 
 ?>
 --EXPECTF--

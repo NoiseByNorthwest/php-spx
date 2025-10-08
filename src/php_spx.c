@@ -174,8 +174,9 @@ static PHP_MINFO_FUNCTION(spx);
 static PHP_FUNCTION(spx_profiler_start);
 static PHP_FUNCTION(spx_profiler_stop);
 static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str);
+static PHP_FUNCTION(spx_ui_handle_request);
 
-static int check_access(void);
+static int check_access(const char * request_key);
 
 static void profiling_handler_init(void);
 static void profiling_handler_shutdown(void);
@@ -194,11 +195,11 @@ static void profiling_handler_sig_unset_handler(void);
 
 static void http_ui_handler_init(void);
 static void http_ui_handler_shutdown(void);
-static int  http_ui_handler_data(const char * data_dir, const char *relative_path);
-static void http_ui_handler_list_metadata_files_callback(const char * file_name, size_t count);
-static int  http_ui_handler_output_file(const char * file_name);
-
-static void read_stream_content(FILE * stream, size_t (*callback) (const void * ptr, size_t len));
+static int  http_ui_handle_data_request(const char * data_dir, const char *relative_path);
+static void http_ui_handle_request(const char * ui_uri);
+static int  http_ui_handle_static_file(const char * file_name);
+static void http_ui_list_metadata_files_callback(const char * file_name, size_t count);
+static void http_ui_read_stream_content(FILE * stream, size_t (*callback) (const void * ptr, size_t len));
 
 static execution_handler_t profiling_handler = {
     profiling_handler_init,
@@ -220,10 +221,14 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_profiler_full_report_set_custom_metadata_str,
     ZEND_ARG_TYPE_INFO(0, customMetadataStr, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_spx_ui_handle_request, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 static zend_function_entry spx_functions[] = {
     PHP_FE(spx_profiler_start, arginfo_spx_profiler_start)
     PHP_FE(spx_profiler_stop, arginfo_spx_profiler_stop)
     PHP_FE(spx_profiler_full_report_set_custom_metadata_str, arginfo_spx_profiler_full_report_set_custom_metadata_str)
+    PHP_FE(spx_ui_handle_request, arginfo_spx_ui_handle_request)
     PHP_FE_END
 };
 
@@ -299,7 +304,7 @@ static PHP_RINIT_FUNCTION(spx)
         */
         const int access_required = context.config.ui_uri || context.config.enabled;
 
-        if (!access_required || !check_access()) {
+        if (!access_required || !check_access(context.config.key)) {
             /*
                 If the access is not required or not granted, we have to read the config again, from the INI source only.
             */
@@ -355,6 +360,14 @@ static PHP_MINFO_FUNCTION(spx)
 
     php_info_print_table_row(2, PHP_SPX_EXTNAME " Support", "enabled");
     php_info_print_table_row(2, PHP_SPX_EXTNAME " Version", PHP_SPX_VERSION);
+    php_info_print_table_row(
+        2, PHP_SPX_EXTNAME " Zstandard available",
+#ifdef HAVE_ZSTD
+        "yes"
+#else
+        "no"
+#endif
+    );
 
     php_info_print_table_end();
 
@@ -531,13 +544,30 @@ static PHP_FUNCTION(spx_profiler_full_report_set_custom_metadata_str)
     );
 }
 
-static int check_access(void)
+static PHP_FUNCTION(spx_ui_handle_request)
 {
-    if (context.cli_sapi) {
-        /* CLI SAPI -> granted */
-        return 1;
+    spx_config_t config;
+
+    spx_config_get(
+        &config,
+        0,
+        SPX_CONFIG_SOURCE_HTTP_COOKIE,
+        SPX_CONFIG_SOURCE_HTTP_HEADER,
+        SPX_CONFIG_SOURCE_HTTP_QUERY_STRING,
+        -1
+    );
+
+    if (! config.ui_uri || ! check_access(config.key)) {
+        RETURN_BOOL(0);
     }
 
+    http_ui_handle_request(config.ui_uri);
+
+    RETURN_BOOL(1);
+}
+
+static int check_access(const char * request_key)
+{
     if (!SPX_G(http_enabled)) {
         /* HTTP profiling explicitly turned off -> not granted */
 
@@ -551,19 +581,18 @@ static int check_access(void)
         return 0;
     }
 
-    if (!context.config.key || context.config.key[0] == 0) {
+    if (!request_key || request_key[0] == 0) {
         /* empty SPX_KEY (client config) -> not granted */
         spx_php_log_notice("access not granted: client key is empty");
 
         return 0;
     }
 
-    if (0 != strcmp(SPX_G(http_key), context.config.key)) {
+    if (0 != strcmp(SPX_G(http_key), request_key)) {
         /* server / client key mismatch -> not granted */
         spx_php_log_notice(
-            "access not granted: server (\"%s\") & client (\"%s\") key mismatch",
-            SPX_G(http_key),
-            context.config.key
+            "access not granted: server & client (\"%s\") key mismatch",
+            request_key
         );
 
         return 0;
@@ -630,9 +659,8 @@ static int check_access(void)
     });
 
     spx_php_log_notice(
-        "access not granted: \"%s\" IP is not in white list (\"%s\")",
-        ip_str,
-        authorized_ips_str
+        "access not granted: \"%s\" IP is not in white list",
+        ip_str
     );
 
     /* no matching ip in white list -> not granted */
@@ -926,11 +954,21 @@ static void http_ui_handler_init(void)
 
 static void http_ui_handler_shutdown(void)
 {
-    if (!context.config.ui_uri) {
+    http_ui_handle_request(context.config.ui_uri);
+
+    spx_php_execution_shutdown();
+
+#ifndef ZTS
+    spx_php_global_hooks_unset();
+#endif
+}
+
+static void http_ui_handle_request(const char * ui_uri)
+{
+    if (!ui_uri) {
         goto error_404;
     }
 
-    const char * ui_uri = context.config.ui_uri;
     if (
         ui_uri[0] == 0
         || 0 == strcmp(ui_uri, "/")
@@ -942,8 +980,8 @@ static void http_ui_handler_shutdown(void)
         goto error_404;
     }
 
-    if (0 == http_ui_handler_data(SPX_G(data_dir), ui_uri)) {
-        goto finish;
+    if (0 == http_ui_handle_data_request(SPX_G(data_dir), ui_uri)) {
+        return;
     }
 
     char local_file_absolute_path[PATH_MAX];
@@ -960,8 +998,8 @@ static void http_ui_handler_shutdown(void)
         goto error_404;
     }
 
-    if (0 == http_ui_handler_output_file(local_file_absolute_path)) {
-        goto finish;
+    if (0 == http_ui_handle_static_file(local_file_absolute_path)) {
+        return;
     }
 
 error_404:
@@ -970,16 +1008,9 @@ error_404:
     spx_php_output_send_headers();
 
     spx_php_output_direct_print("File not found.\n");
-
-finish:
-    spx_php_execution_shutdown();
-
-#ifndef ZTS
-    spx_php_global_hooks_unset();
-#endif
 }
 
-static int http_ui_handler_data(const char * data_dir, const char *relative_path)
+static int http_ui_handle_data_request(const char * data_dir, const char *relative_path)
 {
     if (0 == strcmp(relative_path, "/data/metrics")) {
         spx_php_output_add_header_line("HTTP/1.1 200 OK");
@@ -1038,7 +1069,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
 
         spx_reporter_full_metadata_list_files(
             data_dir,
-            http_ui_handler_list_metadata_files_callback
+            http_ui_list_metadata_files_callback
         );
 
         spx_php_output_direct_print("]}\n");
@@ -1060,7 +1091,7 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
             return -1;
         }
 
-        return http_ui_handler_output_file(file_name);
+        return http_ui_handle_static_file(file_name);
     }
 
     const char * get_report_uri = "/data/reports/get/";
@@ -1077,28 +1108,13 @@ static int http_ui_handler_data(const char * data_dir, const char *relative_path
             return -1;
         }
 
-        return http_ui_handler_output_file(file_name);
+        return http_ui_handle_static_file(file_name);
     }
 
     return -1;
 }
 
-static void http_ui_handler_list_metadata_files_callback(const char * file_name, size_t count)
-{
-    if (count > 0) {
-        spx_php_output_direct_print(",");
-    }
-
-    FILE * fp = fopen(file_name, "r");
-    if (!fp) {
-        return;
-    }
-
-    read_stream_content(fp, spx_php_output_direct_write);
-    fclose(fp);
-}
-
-static int http_ui_handler_output_file(const char * file_name)
+static int http_ui_handle_static_file(const char * file_name)
 {
     FILE * fp = fopen(file_name, "rb");
     if (!fp) {
@@ -1148,13 +1164,28 @@ static int http_ui_handler_output_file(const char * file_name)
 
     spx_php_output_send_headers();
 
-    read_stream_content(fp, spx_php_output_direct_write);
+    http_ui_read_stream_content(fp, spx_php_output_direct_write);
     fclose(fp);
 
     return 0;
 }
 
-static void read_stream_content(FILE * stream, size_t (*callback) (const void * ptr, size_t len))
+static void http_ui_list_metadata_files_callback(const char * file_name, size_t count)
+{
+    if (count > 0) {
+        spx_php_output_direct_print(",");
+    }
+
+    FILE * fp = fopen(file_name, "r");
+    if (!fp) {
+        return;
+    }
+
+    http_ui_read_stream_content(fp, spx_php_output_direct_write);
+    fclose(fp);
+}
+
+static void http_ui_read_stream_content(FILE * stream, size_t (*callback) (const void * ptr, size_t len))
 {
     char buf[8 * 1024];
     while (1) {
