@@ -36,6 +36,6 @@
 #endif
 
 #define PHP_SPX_EXTNAME "SPX"
-#define PHP_SPX_VERSION "0.4.20"
+#define PHP_SPX_VERSION "0.4.21"
 
 extern zend_module_entry spx_module_entry;
