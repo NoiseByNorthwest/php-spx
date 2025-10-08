@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.4.21](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.20...v0.4.21)
+
+### Added
+- PHP 8.5 support [#305](https://github.com/NoiseByNorthwest/php-spx/pull/305)
+
+### Fixed
+- composer: fix extension name case [#299](https://github.com/NoiseByNorthwest/php-spx/pull/299)
+
 ## [v0.4.20](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.19...v0.4.20)
 
 ### Added
