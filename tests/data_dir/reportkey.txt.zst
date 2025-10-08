@@ -1,24 +1,3 @@
---TEST--
-UI: URI confinement
---CGI--
---INI--
-spx.http_enabled=1
-spx.http_key="dev"
-spx.http_ip_whitelist="127.0.0.1"
-spx.data_dir="{PWD}/data_dir"
-log_errors=on
---ENV--
-return <<<END
-REMOTE_ADDR=127.0.0.1
-REQUEST_URI=/
-END;
---GET--
-SPX_KEY=dev&SPX_UI_URI=/data/reports/get/reportkey
---FILE--
-<?php
-// noop
-?>
---EXPECT--
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras et efficitur neque. Quisque non ante euismod, mollis ipsum ac, accumsan ex. Proin ut eleifend nibh, eu sagittis neque. Pellentesque aliquet maximus ligula, in sodales mi scelerisque id. Donec maximus neque vitae semper vehicula. Integer eget nisl at augue ornare scelerisque. Proin id maximus ligula, sit amet lobortis dolor. Fusce id facilisis leo. Praesent finibus ligula sed magna varius dictum. Donec urna lectus, ultrices non libero ac, rutrum bibendum nibh. Proin in felis placerat, sodales dui sed, vehicula sem. Proin pellentesque pulvinar leo. Nam mattis mi erat, sit amet tristique ante hendrerit non. Vestibulum scelerisque ipsum in ipsum vehicula rhoncus.
 
 Donec eget lacus nec nisl auctor tincidunt quis ac nibh. Praesent nec ornare orci, vitae commodo dui. Maecenas condimentum at odio vel vestibulum. Ut venenatis imperdiet ipsum, ut faucibus ipsum volutpat in. Curabitur at nisi at ante efficitur fermentum. Donec ut dapibus elit. Vivamus id orci non metus volutpat imperdiet. Etiam iaculis felis nec eros feugiat vehicula. Suspendisse facilisis quam quis justo volutpat, interdum fringilla arcu rhoncus. Integer eget quam vel mauris viverra consequat a sit amet erat. Duis egestas pharetra metus, eu tempus augue varius sit amet. Donec quam metus, euismod quis ex in, ultricies auctor est. Nunc ex justo, tincidunt ut justo eget, bibendum varius eros.
@@ -27,4 +6,4 @@ Phasellus suscipit eleifend arcu, sit amet blandit nisi lobortis et. Nulla eget 
 
 Phasellus convallis sollicitudin nunc vestibulum viverra. Donec faucibus odio metus, sit amet fringilla sapien hendrerit id. Donec sit amet arcu quis erat semper efficitur. Proin pretium libero a felis dictum, vitae iaculis augue elementum. Sed mattis congue nisi, sit amet porttitor quam rhoncus eget. Nulla sit amet convallis tortor. Mauris eu urna maximus, consectetur sem eu, bibendum mauris. Praesent ultricies condimentum nisl, nec venenatis dolor ullamcorper nec. Nulla eget velit tempor, mollis lacus nec, auctor dolor. Morbi hendrerit lorem leo, in viverra orci pulvinar at. Mauris tincidunt fringilla est ac rutrum. Ut pulvinar lobortis velit, id congue turpis dictum vitae. Sed leo nibh, ullamcorper non ultricies nec, pretium non nisi.
 
-Curabitur facilisis quam nec lobortis cursus. Aenean eleifend magna vitae elit bibendum vestibulum. Cras placerat tincidunt dui, ac efficitur nisi luctus sed. Proin ultricies velit non dolor commodo, nec molestie neque elementum. Quisque et sagittis arcu. Morbi rhoncus nunc eu sodales volutpat. Maecenas bibendum pharetra dictum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas rutrum tellus non interdum hendrerit.
+Curabitur facilisis quam nec lobortis cursus. Aenean eleifend magna vitae elit bibendum vestibulum. Cras placerat tincidunt dui, ac efficitur nisi luctus sed. Proin ultricies velit non dolor commodo, nec molestie neque elementum. Quisque et sagittis arcu. Morbi rhoncus nunc eu sodales volutpat. Maecenas bibendum pharetra dictum. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas rutrum tellus non interdum hendrerit. 

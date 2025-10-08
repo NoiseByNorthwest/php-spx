@@ -18,19 +18,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "spx_hmap.h"
 
-#define HSET_BUCKET_SIZE 4
+#define HMAP_BUCKET_SIZE 8
 
 struct spx_hmap_entry_t {
     const void * key;
     void * value;
-    int free;
+    uint8_t free;
 };
 
 typedef struct hmap_bucket_t {
-    spx_hmap_entry_t entries[HSET_BUCKET_SIZE];
+    spx_hmap_entry_t entries[HMAP_BUCKET_SIZE];
     struct hmap_bucket_t * next;
 } hmap_bucket_t;
 
@@ -45,7 +46,7 @@ static void bucket_init(hmap_bucket_t * bucket)
 {
     bucket->next = NULL;
     size_t i;
-    for (i = 0; i < HSET_BUCKET_SIZE; i++) {
+    for (i = 0; i < HMAP_BUCKET_SIZE; i++) {
         bucket->entries[i].free = 1;
     }
 }
@@ -68,7 +69,7 @@ static spx_hmap_entry_t * bucket_get_entry(
     int * new
 ) {
     size_t i;
-    for (i = 0; i < HSET_BUCKET_SIZE; i++) {
+    for (i = 0; i < HMAP_BUCKET_SIZE; i++) {
         spx_hmap_entry_t * entry = &bucket->entries[i];
         if (entry->free) {
             if (existing) {
@@ -164,6 +165,48 @@ void spx_hmap_destroy(spx_hmap_t * hmap)
 
     free(hmap->buckets);
     free(hmap);
+}
+
+void spx_hmap_print_stats(const spx_hmap_t * hmap)
+{
+    size_t used_bucket_count = 0;
+    size_t total_used_entry_count = 0;
+    size_t max_used_entry_count = 0;
+
+    size_t i;
+    for (i = 0; i < hmap->size; i++) {
+        const hmap_bucket_t * bucket = &hmap->buckets[i];
+
+        size_t used_entry_count = 0;
+
+        while (bucket) {
+            size_t j;
+            for (j = 0; j < HMAP_BUCKET_SIZE; j++) {
+                if (! bucket->entries[j].free) {
+                    used_entry_count++;
+                }
+            }
+
+            bucket = bucket->next;
+        }
+
+        if (used_entry_count > max_used_entry_count) {
+            max_used_entry_count = used_entry_count;
+        }
+
+        if (used_entry_count > 0) {
+            used_bucket_count++;
+        }
+
+        total_used_entry_count += used_entry_count;
+    }
+
+    fprintf(stderr, "\n\n----------------------\n");
+    fprintf(stderr, "HMAP stats:\n");
+    fprintf(stderr, " - used_bucket_count: %lu\n", used_bucket_count);
+    fprintf(stderr, " - total_used_entry_count: %lu\n", total_used_entry_count);
+    fprintf(stderr, " - max_used_entry_count: %lu\n", max_used_entry_count);
+    fprintf(stderr, "----------------------\n\n");
 }
 
 spx_hmap_entry_t * spx_hmap_ensure_entry(spx_hmap_t * hmap, const void * key, int * new) {
