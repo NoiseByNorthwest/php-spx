@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: [ '7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+        php: [ '7.0', '7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5' ]
 
         name:
           - linux
@@ -34,6 +34,11 @@ jobs:
           - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-24.04 }
           # macOS
           - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-15 }
+        exclude:
+          # PHP 8.5 is temporarily excluded for Debian builds.
+          # Once it is available in the official packages from Ondřej Surý (packages.sury.org),
+          # this exclusion can be removed.
+          - { name: debian, php: '8.5' }
     env:
       DOCKER_BUILD_RECORD_UPLOAD: false   # disable docker buildx record upload as build artifact
       DOCKER_BUILD_SUMMARY: false         # disable docker buildx summary

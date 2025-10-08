@@ -41,7 +41,7 @@ Current requirements are:
 * **GNU/Linux**, **macOS** or **FreeBSD**
 * zlib dev package (e.g. zlib1g-dev on Debian-based distros)
 * Optionally: Zstandard dev package (e.g. libzstd-dev on Debian-based distros). Zstandard is optional but recommended in order to minimize SPX's overhead.
-* PHP 7.0 to 8.4. PHP 5.x (starting from 5.4) is supported by SPX 0.4.x and earlier versions.
+* PHP 7.0 to 8.5. PHP 5.x (starting from 5.4) is supported by SPX 0.4.x and earlier versions.
 
 ## Installation
 
@@ -535,7 +535,7 @@ See the [LICENSE][:link-license:] file for more information.
 [:badge-ci:]:           https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg
 [:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
 
-[:badge-php-versions:]: https://img.shields.io/badge/php-7.0--8.4-blue.svg
+[:badge-php-versions:]: https://img.shields.io/badge/php-7.0--8.5-blue.svg
 [:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow
 [:badge-supported-arch:]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver
 

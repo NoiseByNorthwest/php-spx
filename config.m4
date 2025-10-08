@@ -21,10 +21,11 @@ if test "$PHP_SPX" = "yes"; then
 
     CFLAGS="$CFLAGS -Werror -Wall -O3 -pthread -std=gnu90"
 
-    if test "$(uname -s 2>/dev/null)" = "Darwin"; then
-        # see discussion here https://github.com/NoiseByNorthwest/php-spx/pull/270
-        CFLAGS="$CFLAGS -Wno-typedef-redefinition"
-    fi
+    # Disabling typedef-redefinition is required for:
+    #   - macOS, see https://github.com/NoiseByNorthwest/php-spx/pull/270
+    #   - clang, see https://github.com/NoiseByNorthwest/php-spx/pull/305
+    # Furthermore, typedef-redefinition is also allowed with c11 and above.
+    CFLAGS="$CFLAGS -Wno-typedef-redefinition"
 
     if test "$PHP_SPX_DEV" = "yes"; then
         CFLAGS="$CFLAGS -g"

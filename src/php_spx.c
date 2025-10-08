@@ -574,30 +574,6 @@ static int check_access(const char * request_key)
         return 0;
     }
 
-    if (!SPX_G(http_key) || SPX_G(http_key)[0] == 0) {
-        /* empty spx.http_key (server config) -> not granted */
-        spx_php_log_notice("access not granted: http_key is empty");
-
-        return 0;
-    }
-
-    if (!request_key || request_key[0] == 0) {
-        /* empty SPX_KEY (client config) -> not granted */
-        spx_php_log_notice("access not granted: client key is empty");
-
-        return 0;
-    }
-
-    if (0 != strcmp(SPX_G(http_key), request_key)) {
-        /* server / client key mismatch -> not granted */
-        spx_php_log_notice(
-            "access not granted: server & client (\"%s\") key mismatch",
-            request_key
-        );
-
-        return 0;
-    }
-
     if (!SPX_G(http_ip_var) || SPX_G(http_ip_var)[0] == 0) {
         /* empty client ip server var name -> not granted */
         spx_php_log_notice("access not granted: http_ip_var is empty");
@@ -650,21 +626,49 @@ static int check_access(const char * request_key)
         return 0;
     }
 
+    int ip_authorized = 0;
     SPX_UTILS_TOKENIZE_STRING(authorized_ips_str, ',', authorized_ip_str, 64, {
         if (spx_utils_ip_match(ip_str, authorized_ip_str)) {
-            /* ip authorized (OK, as well as all previous checks) -> granted */
-
-            return 1;
+            ip_authorized = 1;
         }
     });
 
-    spx_php_log_notice(
-        "access not granted: \"%s\" IP is not in white list",
-        ip_str
-    );
+    if (! ip_authorized) {
+        /* ip not in whitelist -> not granted */
+        spx_php_log_notice(
+            "access not granted: \"%s\" IP is not in white list",
+            ip_str
+        );
+
+        return 0;
+    }
+
+    if (!SPX_G(http_key) || SPX_G(http_key)[0] == 0) {
+        /* empty spx.http_key (server config) -> not granted */
+        spx_php_log_notice("access not granted: http_key is empty");
+
+        return 0;
+    }
+
+    if (!request_key || request_key[0] == 0) {
+        /* empty SPX_KEY (client config) -> not granted */
+        spx_php_log_notice("access not granted: client key is empty");
+
+        return 0;
+    }
+
+    if (0 != strcmp(SPX_G(http_key), request_key)) {
+        /* server / client key mismatch -> not granted */
+        spx_php_log_notice(
+            "access not granted: server & client (\"%s\") key mismatch",
+            request_key
+        );
+
+        return 0;
+    }
 
     /* no matching ip in white list -> not granted */
-    return 0;
+    return 1;
 }
 
 static void profiling_handler_init(void)
