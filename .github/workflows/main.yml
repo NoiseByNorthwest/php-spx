@@ -33,13 +33,16 @@ jobs:
           # Debian (docker)
           - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }
           # macOS
-          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-13 }
+          - { name: mac,    ts: 'nts', compiler: 'clang', os: macos-14 }
 
         exclude:
           # PHP 8.5 is temporarily excluded for Debian builds.
           # Once it is available in the official packages from Ondřej Surý (packages.sury.org),
           # this exclusion can be removed.
           - { name: debian, php: '8.5' }
+          # PHP 5.4 and 5.5 are not compatible with macos-14 (ARM64) runners.
+          - { name: mac, php: '5.4' }
+          - { name: mac, php: '5.5' }
     env:
       DOCKER_BUILD_RECORD_UPLOAD: false   # disable docker buildx record upload as build artifact
       DOCKER_BUILD_SUMMARY: false         # disable docker buildx summary
