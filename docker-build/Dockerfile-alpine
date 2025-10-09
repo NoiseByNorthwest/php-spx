@@ -1,0 +1,37 @@
+ARG VERSION=latest
+FROM alpine:${VERSION} AS build
+
+# add c build tools
+RUN apk add build-base
+
+# add git
+RUN apk add git
+
+# add php dev
+RUN apk add php7-dev
+
+# add zlib dev
+RUN apk add zlib-dev
+
+# clone php-spx
+RUN git clone https://github.com/NoiseByNorthwest/php-spx.git
+
+# set workdir
+WORKDIR /php-spx
+
+# checkout release
+RUN git checkout tags/v0.4.10
+
+# build php-spx
+RUN phpize
+RUN ./configure
+RUN make
+
+# start again with a new image
+FROM scratch
+
+# get version
+ARG VERSION
+
+# copy spx module from alpine image to the scratch image so files can be copied back to host
+COPY --from=build /php-spx/modules/spx.so alpine-$VERSION/spx.so
