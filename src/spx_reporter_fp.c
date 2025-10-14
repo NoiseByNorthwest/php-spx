@@ -227,11 +227,11 @@ static int entry_cmp_r(const void * a, const void * b, const fp_reporter_t * rep
     }
 
     if (high_a != high_b) {
-        return high_b - high_a;
+        return high_b < high_a ? -1 : 1;
     }
 
     if (low_a != low_b) {
-        return low_b - low_a;
+        return low_b < low_a ? -1 : 1;
     }
 
     /* stable sort is required for some automated tests */
