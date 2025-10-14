@@ -91,7 +91,9 @@ typedef struct {
     const spx_metric_t * enabled_metrics;
     size_t enabled_metric_count;
 
+    int calibrating;
     int calibrated;
+
     spx_profiler_metric_values_t call_start_noise;
     spx_profiler_metric_values_t call_end_noise;
 
@@ -175,6 +177,7 @@ spx_profiler_t * spx_profiler_tracer_create(
     profiler->enabled_metrics = spx_metric_collector_enabled_metrics(profiler->metric_collector);
     profiler->enabled_metric_count = spx_metric_collector_enabled_metric_count(profiler->metric_collector);
 
+    profiler->calibrating = 0;
     profiler->calibrated = 0;
     METRIC_VALUES_ZERO(profiler->call_start_noise, SPX_METRIC_COUNT);
     METRIC_VALUES_ZERO(profiler->call_end_noise, SPX_METRIC_COUNT);
@@ -234,7 +237,10 @@ static void tracing_profiler_call_start(spx_profiler_t * base_profiler, const sp
         function = &profiler->current_function;
     }
 
-    if (profiler->called == 0 && !profiler->calibrated) {
+    if (
+        profiler->called == 0
+            && ! profiler->calibrated && ! profiler->calibrating
+    ) {
         calibrate(profiler, function);
     }
 
@@ -398,6 +404,13 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
         size_t cycle_depth = 0;
         int i;
         for (i = profiler->stack.depth - 1; i >= 0; i--) {
+            if (
+                profiler->calibrating
+                    && i > 15 && i < profiler->stack.depth - 9
+            ) {
+                break;
+            }
+
             stack_frame_t * parent_frame = &profiler->stack.frames[i];
             if (!parent_frame->func_table_entry) {
                 continue;
@@ -444,6 +457,7 @@ static void tracing_profiler_call_end(spx_profiler_t * base_profiler)
             );
         }
     }
+
 
     fill_event(
         &profiler->event,
@@ -514,7 +528,7 @@ static spx_profiler_reporter_cost_t null_reporter_notify(
 
 static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * function)
 {
-    profiler->calibrated = 1;
+    profiler->calibrating = 1;
 
     const size_t wt_metric_idx = spx_metric_collector_enabled_metric_idx(profiler->metric_collector, SPX_METRIC_WALL_TIME);
     const size_t ct_metric_idx = spx_metric_collector_enabled_metric_idx(profiler->metric_collector, SPX_METRIC_CPU_TIME);
@@ -576,6 +590,9 @@ static void calibrate(tracing_profiler_t * profiler, const spx_php_function_t * 
     profiler->called = 0;
     profiler->stack.depth = 0;
     func_table_reset(&profiler->func_table);
+
+    profiler->calibrating = 0;
+    profiler->calibrated = 1;
 }
 
 static uint64_t func_table_hmap_hash_key(const void * v)
