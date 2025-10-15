@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [v0.4.22](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.21...v0.4.22)
+
+### Fixed
+- CLI / Flat profile: fix overflow issue breaking sorting [#312](https://github.com/NoiseByNorthwest/php-spx/pull/312)
+- composer: supported PHP version (up to 8.5) [#310](https://github.com/NoiseByNorthwest/php-spx/pull/310)
+
 ## [v0.4.21](https://github.com/NoiseByNorthwest/php-spx/compare/v0.4.20...v0.4.21)
 
 ### Added
