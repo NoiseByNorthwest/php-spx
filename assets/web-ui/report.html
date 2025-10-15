@@ -158,6 +158,7 @@
                     let type = null;
                     let currentFunctionIdx = 0;
                     let lastTruncatedLine = '';
+                    let lastEvents = [];
 
                     const decoder = new TextDecoder('ascii');
 
@@ -184,17 +185,72 @@
                             }
 
                             if (type == 'event') {
-                                profileDataBuilder.addEvent(
-                                    line.split(' ').map(e => parseFloat(e))
-                                );
+                                let event;
+                                if (line.includes(' ')) {
+                                    // legacy format
+                                    event = line.split(' ').map(e => parseFloat(e));
+                                } else {
+                                    // compressed format
+                                    const start = ! line.startsWith('-');
+                                    const parts = line.split('|');
+
+                                    if (start) {
+                                        // ignoring call site line
+                                        parts.splice(0, 1);
+                                    }
+
+                                    event = [];
+                                    for (let i = 0; i < parts.length; i++) {
+                                        let v = parts[i];
+                                        if (i === 0) {
+                                            if (! start) {
+                                                v = v.substr(1);
+                                            }
+
+                                            if (v[0] === 'r') {
+                                                v = lastEvents[parseInt(v.substr(1)) - 1][i];
+                                            } else {
+                                                v = parseInt(v);
+                                            }
+
+                                            event.push(v);
+                                            event.push(start ? 1 : 0);
+                                        } else {
+                                            if (v === '') {
+                                                v = '0';
+                                            }
+
+                                            if (v[0] === 'a') {
+                                                v = parseFloat(v.substr(1));
+                                            } else {
+                                                v = parseFloat(v) + lastEvents[0][i + 1];
+                                            }
+
+                                            event.push(v);
+                                        }
+                                    }
+
+                                    lastEvents = [event, ...lastEvents.slice(0, 20)];
+                                }
+
+                                profileDataBuilder.addEvent(event);
 
                                 continue;
                             }
 
                             if (type == 'function') {
+                                const parts = line.split(':');
+                                const file = parts.shift();
+                                const lineNumber = parseInt(parts.shift());
+
+                                let functionName = parts.join(':');
+                                if (functionName === '{closure}') {
+                                    functionName = `{closure:${file}:${lineNumber}}`;
+                                }
+
                                 profileDataBuilder.setFunctionName(
                                     currentFunctionIdx++,
-                                    line
+                                    functionName
                                 );
 
                                 continue;

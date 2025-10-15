@@ -22,7 +22,7 @@
 #include "spx_profiler.h"
 
 spx_profiler_reporter_t * spx_reporter_fp_create(
-    spx_metric_t focus,
+    size_t focus_metric_idx,
     int inc,
     int rel,
     size_t limit,
