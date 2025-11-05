@@ -1126,7 +1126,7 @@ export class TimeLine extends SVGWidget {
             }
 
             e.preventDefault();
-            let f = 1.5;
+            let f = 1 + Math.abs(e.originalEvent.deltaY / 1000);
             if (e.originalEvent.deltaY < 0) {
                 f = 1 / f;
             }
