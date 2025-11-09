@@ -413,18 +413,25 @@ static PHP_FUNCTION(spx_profiler_start)
         return;
     }
 
-    const size_t actual_depth = context.profiling_handler.depth + (context.config.builtins ? 0 : 1);
-
-    spx_php_function_t * current_stack = malloc(actual_depth * sizeof(*current_stack));
+    spx_php_function_t * current_stack = malloc(context.profiling_handler.depth * sizeof(*current_stack));
     if (!current_stack) {
         spx_php_log_notice("spx_profiler_start(): allocation failure");
 
         return;
     }
 
-    int i = actual_depth - 1;
+    int i = context.profiling_handler.depth - 1;
 
     spx_php_current_function(&current_stack[i]);
+
+    if (! context.config.builtins && spx_php_is_internal_function(&current_stack[i])) {
+        if (! spx_php_previous_userland_function(&current_stack[i], &current_stack[i])) {
+            spx_php_log_notice("spx_profiler_start(): corrupted stack tracking: missing frame");
+
+            goto end;
+        }
+    }
+
     for (;;) {
         i--;
 
@@ -432,7 +439,7 @@ static PHP_FUNCTION(spx_profiler_start)
             break;
         }
 
-        if (!spx_php_previous_function(&current_stack[i + 1], &current_stack[i])) {
+        if (! spx_php_previous_userland_function(&current_stack[i + 1], &current_stack[i])) {
             spx_php_log_notice("spx_profiler_start(): corrupted stack tracking: missing frame");
 
             goto end;
@@ -445,14 +452,7 @@ static PHP_FUNCTION(spx_profiler_start)
         goto end;
     }
 
-    for (i = 0; i < actual_depth; i++) {
-        if (i == actual_depth - 1 && !context.config.builtins) {
-            /*
-                Skip the spx_profiler_start() frame (i.e the top one) if builtin functions are not traced.
-            */
-            break;
-        }
-
+    for (i = 0; i < context.profiling_handler.depth; i++) {
         context.profiling_handler.profiler->call_start(
             context.profiling_handler.profiler,
             &current_stack[i]
