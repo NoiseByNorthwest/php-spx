@@ -43,6 +43,7 @@ void spx_php_print_stack(void);
 size_t spx_php_current_depth(void);
 void spx_php_current_function(spx_php_function_t * function);
 int spx_php_previous_function(const spx_php_function_t * current, spx_php_function_t * previous);
+int spx_php_previous_userland_function(const spx_php_function_t * current, spx_php_function_t * previous);
 void spx_php_function_at(size_t depth, spx_php_function_t * function);
 uint8_t spx_php_is_internal_function(const spx_php_function_t * function);
 size_t spx_php_function_call_site_line(const spx_php_function_t * function);
