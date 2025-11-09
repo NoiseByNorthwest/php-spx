@@ -257,11 +257,29 @@ static PHP_MINIT_FUNCTION(spx)
 {
     spx_php_global_hooks_init();
 
-#ifdef ZTS
-    spx_php_global_hooks_set(0);
-#endif
-
     REGISTER_INI_ENTRIES();
+
+#ifdef ZTS
+    /*
+        Overriding the zend_execute_ex hook disables the PHP JIT.
+        For this reason, it is avoided here when the alternative instrumentation
+        infrastructure (Zend Observer API) is enabled.
+
+        The main limitation of this approach is that SPX can no longer intercept
+        HTTP request handling (for web server SAPIs such as FPM, mod_php, or CGI)
+        to serve its own web UI instead.
+
+        However, this limitation is relatively minor, since PHP is typically not
+        built with ZTS in those contexts (except on Windows).
+
+        We can therefore assume that PHP will be ZTS-enabled in new generation
+        runtime environments (e.g. FrankenPHP), where the web UI can be served
+        via spx_ui_handle_request() instead.
+    */
+    if (! SPX_G(use_observer_api)) {
+        spx_php_global_hooks_set(0);
+    }
+#endif
 
     return SUCCESS;
 }
