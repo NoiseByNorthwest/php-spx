@@ -321,9 +321,11 @@ void spx_php_print_stack(void)
 
                 fprintf(
                     stderr,
-                    " - depth = %3d, execute_data = %p",
+                    " - depth = %3d, execute_data = %p, internal = %s",
                     current_depth,
-                    execute_data
+                    execute_data,
+                    execute_data->func && execute_data->func->type == ZEND_INTERNAL_FUNCTION ?
+                        "true" : "false"
                 );
 
                 if (i == 0) {
@@ -376,6 +378,30 @@ int spx_php_previous_function(const spx_php_function_t * current, spx_php_functi
     }
 
     spx_php_function_at(current->depth - 1, previous);
+
+    return 1;
+}
+
+int spx_php_previous_userland_function(const spx_php_function_t * current, spx_php_function_t * previous)
+{
+    if (current->depth == 1) {
+        return 0;
+    }
+
+    size_t prev_depth = current->depth - 1;
+
+    for (;;) {
+        spx_php_function_at(prev_depth, previous);
+        if (! spx_php_is_internal_function(previous)) {
+            break;
+        }
+
+        if (prev_depth == 0) {
+            return 0;
+        }
+
+        prev_depth--;
+    }
 
     return 1;
 }
