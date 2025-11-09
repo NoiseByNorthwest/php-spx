@@ -28,17 +28,17 @@ array_map(
 );
 
 ?>
---EXPECT--
+--EXPECTF--
 ZE object count                |
  Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
 ----------+----------+----------+----------+----------+----------
-        0 |        0 |        0 |        1 |        0 | +/var/www/php-spx/tests/spx_auto_start_008.php
-        0 |        0 |        0 |        2 |       10 |  +{closure:/var/www/php-spx/tests/spx_auto_start_008.php:11}
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_008.php
+        0 |        0 |        0 |        2 |       %d |  +{closure%S}
         0 |        0 |        0 |        3 |       13 |   +foo
         0 |        0 |        0 |        4 |        3 |    +bar
         0 |        0 |        0 |        4 |        0 |    -bar
         0 |        0 |        0 |        3 |        0 |   -foo
-        0 |        0 |        0 |        2 |        0 |  -{closure:/var/www/php-spx/tests/spx_auto_start_008.php:11}
-        0 |        0 |        0 |        1 |        0 | -/var/www/php-spx/tests/spx_auto_start_008.php
+        0 |        0 |        0 |        2 |        0 |  -{closure%S}
+        0 |        0 |        0 |        1 |        0 | -%s/tests/spx_auto_start_008.php
 
 SPX trace file: /dev/stdout
