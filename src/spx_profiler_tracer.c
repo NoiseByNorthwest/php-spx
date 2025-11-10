@@ -183,6 +183,7 @@ spx_profiler_t * spx_profiler_tracer_create(
     METRIC_VALUES_ZERO(profiler->call_end_noise, SPX_METRIC_COUNT);
 
     profiler->max_depth = max_depth > 0 && max_depth < SPX_PHP_STACK_CAPACITY ? max_depth : SPX_PHP_STACK_CAPACITY;
+    profiler->metrics_frozen = 0;
     profiler->called = 0;
 
     profiler->stack.depth = 0;
