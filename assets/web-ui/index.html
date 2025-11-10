@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=/">
+  <title>Redirecting...</title>
+  <script>
+    (function() {
+        const url = new URL(window.location.href);
+        const uiUri = url.searchParams.get('SPX_UI_URI');
+
+        if (uiUri === "/") {
+            url.searchParams.set('SPX_UI_URI', '/v1/index.html');
+            window.location.replace(url.pathname + '?' + url.searchParams.toString());
+        }
+    })();
+  </script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>
