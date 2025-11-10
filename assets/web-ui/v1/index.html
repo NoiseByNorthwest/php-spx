@@ -15,7 +15,7 @@
             window.location.replace(window.location.href.replace(/\?.*/, '?SPX_UI_URI=/'));
         })();
         </script>
-        <link rel="stylesheet" href="?SPX_UI_URI=/css/main.css">
+        <link rel="stylesheet" href="?SPX_UI_URI=/v1/css/main.css">
     </head>
     <body>
         <h1>SPX Control Panel</h1>
@@ -33,10 +33,10 @@
         <div id="reports"></div>
 
         <!-- Required workaround for Firefox to fix a "no credentials" issue -->
-        <script crossorigin src="?SPX_UI_URI=/js/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="></script>
-        <script type="module" crossorigin src="?SPX_UI_URI=/js/dataTable.js"></script>
-        <script type="module" crossorigin src="?SPX_UI_URI=/js/utils.js"></script>
-        <script type="module" crossorigin src="?SPX_UI_URI=/js/fmt.js"></script>
+        <script crossorigin src="?SPX_UI_URI=/v1/js/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/dataTable.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/utils.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/fmt.js"></script>
 
         <script type="module" crossorigin>
             function getImportUrl(path) {
@@ -45,9 +45,9 @@
                 return rootUrl.toString();
             }
 
-            const {makeDataTable} = await import(getImportUrl('/js/dataTable.js'));
-            const {getCookieVar, setCookieVar} = await import(getImportUrl('/js/utils.js'));
-            const fmt = await import(getImportUrl('/js/fmt.js'));
+            const {makeDataTable} = await import(getImportUrl('/v1/js/dataTable.js'));
+            const {getCookieVar, setCookieVar} = await import(getImportUrl('/v1/js/utils.js'));
+            const fmt = await import(getImportUrl('/v1/js/fmt.js'));
 
             $(() => {
                 fetch('?SPX_UI_URI=/data/metrics', {credentials: "same-origin"})
@@ -239,7 +239,7 @@
                         makeDataTable(
                             'reports',
                             {
-                                makeRowUrl: row => '?SPX_UI_URI=/report.html&key=' + row.key,
+                                makeRowUrl: row => '?SPX_UI_URI=/v1/report.html&key=' + row.key,
                                 columns: [
                                     {
                                         label: 'Date',

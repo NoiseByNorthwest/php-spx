@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>SPX Report</title>
-    <link rel="stylesheet" href="?SPX_UI_URI=/css/main.css">
+    <link rel="stylesheet" href="?SPX_UI_URI=/v1/css/main.css">
 </head>
 <body>
     <div id="init-report">
@@ -61,12 +61,12 @@
     </div>
 
     <!-- Required workaround for Firefox to fix a "no credentials" issue -->
-    <script crossorigin src="?SPX_UI_URI=/js/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="></script>
-    <script crossorigin src="?SPX_UI_URI=/js/jscolor.min.js" integrity="sha256-CJWfUCeP3jLdUMVNUll6yQx37gh9AKmXTRxvRf7jzro="></script>
-    <script type="module" crossorigin src="?SPX_UI_URI=/js/fmt.js"></script>
-    <script type="module" crossorigin src="?SPX_UI_URI=/js/profileData.js"></script>
-    <script type="module" crossorigin src="?SPX_UI_URI=/js/widget.js"></script>
-    <script type="module" crossorigin src="?SPX_UI_URI=/js/layoutSplitter.js"></script>
+    <script crossorigin src="?SPX_UI_URI=/v1/js/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="></script>
+    <script crossorigin src="?SPX_UI_URI=/v1/js/jscolor.min.js" integrity="sha256-CJWfUCeP3jLdUMVNUll6yQx37gh9AKmXTRxvRf7jzro="></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/fmt.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/profileData.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/widget.js"></script>
+    <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/layoutSplitter.js"></script>
 
     <script type="module" crossorigin>
         function getImportUrl(path) {
@@ -75,10 +75,10 @@
             return rootUrl.toString();
         }
 
-        const fmt = await import(getImportUrl('/js/fmt.js'));
-        const {ProfileDataBuilder} = await import(getImportUrl('/js/profileData.js'));
-        const widget = await import(getImportUrl('/js/widget.js'));
-        const layoutSplitter = await import(getImportUrl('/js/layoutSplitter.js'));
+        const fmt = await import(getImportUrl('/v1/js/fmt.js'));
+        const {ProfileDataBuilder} = await import(getImportUrl('/v1/js/profileData.js'));
+        const widget = await import(getImportUrl('/v1/js/widget.js'));
+        const layoutSplitter = await import(getImportUrl('/v1/js/layoutSplitter.js'));
 
         $(() => {
             const m = window.location.href.match(/\bkey=([^&]+)/);

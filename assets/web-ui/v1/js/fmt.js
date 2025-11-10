@@ -21,7 +21,7 @@ function getImportUrl(path) {
     return rootUrl.toString();
 }
 
-const {round} = await import(getImportUrl('/js/math.js'));
+const {round} = await import(getImportUrl('/v1/js/math.js'));
 
 export function lpad(str, len, char) {
     str = str + '';
