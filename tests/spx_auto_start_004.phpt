@@ -50,13 +50,13 @@ foo();
 --EXPECTF--
 Normal output
  ZE object count                |
- Cum.     | Inc.     | Exc.     | Depth    | Function
-----------+----------+----------+----------+----------
-        0 |        0 |        0 |        1 | +%s/spx_auto_start_004.php
-        0 |        0 |        0 |        2 |  +foo
-        1 |        0 |        0 |        3 |   +bar
-        3 |        2 |        2 |        3 |   -bar
-        4 |        4 |        2 |        2 |  -foo
-        4 |        4 |        0 |        1 | -%s/spx_auto_start_004.php
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_004.php
+        0 |        0 |        0 |        2 |       34 |  +foo
+        1 |        0 |        0 |        3 |       10 |   +bar
+        3 |        2 |        2 |        3 |        0 |   -bar
+        4 |        4 |        2 |        2 |        0 |  -foo
+        4 |        4 |        0 |        1 |        0 | -%s/tests/spx_auto_start_004.php
 
 SPX trace file: /dev/stdout

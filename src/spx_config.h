@@ -39,7 +39,8 @@ typedef struct {
     size_t sampling_period;
     int builtins;
     size_t max_depth;
-    int enabled_metrics[SPX_METRIC_COUNT];
+    int metric_settings[SPX_METRIC_COUNT];
+    spx_metric_t enabled_metrics[SPX_METRIC_COUNT];
 
     spx_config_report_t report;
 
