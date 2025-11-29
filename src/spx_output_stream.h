@@ -21,14 +21,34 @@
 
 typedef struct spx_output_stream_t spx_output_stream_t;
 
-spx_output_stream_t * spx_output_stream_open(const char * file_name, int compressed);
-spx_output_stream_t * spx_output_stream_dopen(int fileno, int compressed);
+typedef enum {
+    SPX_OUTPUT_STREAM_COMPRESSION_NONE,
+    SPX_OUTPUT_STREAM_COMPRESSION_GZIP,
+#ifdef HAVE_ZSTD
+    SPX_OUTPUT_STREAM_COMPRESSION_ZSTD,
+#endif
+#ifdef HAVE_LZ4
+    SPX_OUTPUT_STREAM_COMPRESSION_LZ4,
+#endif
+} spx_output_stream_compression_type_t;
 
-void spx_output_stream_close(spx_output_stream_t * output);
+#ifdef HAVE_ZSTD
+#   define SPX_OUTPUT_STREAM_COMPRESSION_BEST SPX_OUTPUT_STREAM_COMPRESSION_ZSTD
+#else
+#   define SPX_OUTPUT_STREAM_COMPRESSION_BEST SPX_OUTPUT_STREAM_COMPRESSION_GZIP
+#endif
 
-void spx_output_stream_print(spx_output_stream_t * output, const char * str);
-void spx_output_stream_printf(spx_output_stream_t * output, const char * format, ...);
+const char * spx_output_stream_compression_format_ext(spx_output_stream_compression_type_t compression_type);
 
-void spx_output_stream_flush(spx_output_stream_t * output);
+spx_output_stream_t * spx_output_stream_open(const char * file_name, spx_output_stream_compression_type_t compression_type);
+spx_output_stream_t * spx_output_stream_dopen(int fileno, spx_output_stream_compression_type_t compression_type);
+
+int spx_output_stream_close(spx_output_stream_t * output);
+
+int spx_output_stream_print(spx_output_stream_t * output, const char * str);
+int spx_output_stream_printf(spx_output_stream_t * output, const char * format, ...);
+int spx_output_stream_write(spx_output_stream_t * output, const void * buf, size_t len);
+
+int spx_output_stream_flush(spx_output_stream_t * output);
 
 #endif /* SPX_OUTPUT_STREAM_H_DEFINED */

@@ -46,35 +46,35 @@ for ($i = 0; $i < 3; $i++) {
 --EXPECTF--
 Normal output
  ZE object count                |
- Cum.     | Inc.     | Exc.     | Depth    | Function
-----------+----------+----------+----------+----------
-        0 |        0 |        0 |        1 | +%s/spx_auto_start_003.php
-        0 |        0 |        0 |        2 |  +foo
-        0 |        0 |        0 |        3 |   +bar
-        1 |        1 |        1 |        3 |   -bar
-        2 |        2 |        1 |        2 |  -foo
-        3 |        3 |        1 |        1 | -%s/spx_auto_start_003.php
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_003.php
+        0 |        0 |        0 |        2 |       27 |  +foo
+        0 |        0 |        0 |        3 |       10 |   +bar
+        1 |        1 |        1 |        3 |        0 |   -bar
+        2 |        2 |        1 |        2 |        0 |  -foo
+        3 |        3 |        1 |        1 |        0 | -%s/tests/spx_auto_start_003.php
 
 SPX trace file: /dev/stdout
  ZE object count                |
- Cum.     | Inc.     | Exc.     | Depth    | Function
-----------+----------+----------+----------+----------
-        0 |        0 |        0 |        1 | +%s/spx_auto_start_003.php
-        0 |        0 |        0 |        2 |  +foo
-        0 |        0 |        0 |        3 |   +bar
-        1 |        1 |        1 |        3 |   -bar
-        2 |        2 |        1 |        2 |  -foo
-        3 |        3 |        1 |        1 | -%s/spx_auto_start_003.php
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_003.php
+        0 |        0 |        0 |        2 |       27 |  +foo
+        0 |        0 |        0 |        3 |       10 |   +bar
+        1 |        1 |        1 |        3 |        0 |   -bar
+        2 |        2 |        1 |        2 |        0 |  -foo
+        3 |        3 |        1 |        1 |        0 | -%s/tests/spx_auto_start_003.php
 
 SPX trace file: /dev/stdout
  ZE object count                |
- Cum.     | Inc.     | Exc.     | Depth    | Function
-----------+----------+----------+----------+----------
-        0 |        0 |        0 |        1 | +%s/spx_auto_start_003.php
-        0 |        0 |        0 |        2 |  +foo
-        0 |        0 |        0 |        3 |   +bar
-        1 |        1 |        1 |        3 |   -bar
-        2 |        2 |        1 |        2 |  -foo
-        3 |        3 |        1 |        1 | -%s/spx_auto_start_003.php
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_003.php
+        0 |        0 |        0 |        2 |       27 |  +foo
+        0 |        0 |        0 |        3 |       10 |   +bar
+        1 |        1 |        1 |        3 |        0 |   -bar
+        2 |        2 |        1 |        2 |        0 |  -foo
+        3 |        3 |        1 |        1 |        0 | -%s/tests/spx_auto_start_003.php
 
 SPX trace file: /dev/stdout

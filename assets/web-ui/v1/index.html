@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>SPX Control Panel</title>
+        <script>
+        (() => {
+            let m = window.location.href.match(/SPX_KEY=([^&]+)/);
+            if (!m) {
+                return;
+            }
+
+            document.cookie = 'SPX_KEY=' + m[1] + '; expires=Thu, 31 Dec 2037 23:59:59 UTC; path=/';
+
+            window.location.replace(window.location.href.replace(/\?.*/, '?SPX_UI_URI=/'));
+        })();
+        </script>
+        <link rel="stylesheet" href="?SPX_UI_URI=/v1/css/main.css">
+    </head>
+    <body>
+        <h1>SPX Control Panel</h1>
+
+        <form id="config">
+            <fieldset>
+                <legend>Configuration</legend>
+                <br>
+                <label for="cli-prefix">Command line prefix</label>
+                <textarea id="cli-prefix" rows="2" cols="60" readonly></textarea>
+                <br>
+            </fieldset>
+        </form>
+
+        <div id="reports"></div>
+
+        <!-- Required workaround for Firefox to fix a "no credentials" issue -->
+        <script crossorigin src="?SPX_UI_URI=/v1/js/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/dataTable.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/utils.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/fmt.js"></script>
+
+        <script type="module" crossorigin>
+            function getImportUrl(path) {
+                const rootUrl = new URL(import.meta.url);
+                rootUrl.searchParams.set('SPX_UI_URI', path);
+                return rootUrl.toString();
+            }
+
+            const {makeDataTable} = await import(getImportUrl('/v1/js/dataTable.js'));
+            const {getCookieVar, setCookieVar} = await import(getImportUrl('/v1/js/utils.js'));
+            const fmt = await import(getImportUrl('/v1/js/fmt.js'));
+
+            $(() => {
+                fetch('?SPX_UI_URI=/data/metrics', {credentials: "same-origin"})
+                    .then(response => response.json())
+                    .then(response => {
+                        const metrics = response.results;
+
+                        const parameters = [
+                            {
+                                key: 'SPX_ENABLED',
+                                label: 'Enabled',
+                                type: 'switch',
+                                defaultValue: '0',
+                                description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
+                            },
+                            {
+                                key: 'SPX_AUTO_START',
+                                label: 'Automatic start',
+                                type: 'switch',
+                                defaultValue: '1',
+                                description: 'Whether to enable SPX profiler\'s automatic start. When automatic start is disabled, you have to start & stop profiling on your own at runtime via the `spx_profiler_start()` & `spx_profiler_stop()` functions.',
+                            },
+                            {
+                                key: 'SPX_BUILTINS',
+                                label: 'Profile internal functions',
+                                type: 'switch',
+                                defaultValue: '0',
+                                description: 'Whether to profile internal functions. It is not recommended to profile internal functions if you want to accurately find a time bottleneck.',
+                            },
+                            {
+                                key: 'SPX_SAMPLING_PERIOD',
+                                label: 'Sampling',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: [
+                                        {key: '0',    label: 'Disabled'},
+                                        {key: '5',    label: '5us'},
+                                        {key: '10',   label: '10us'},
+                                        {key: '20',   label: '20us'},
+                                        {key: '50',   label: '50us'},
+                                        {key: '100',  label: '100us'},
+                                        {key: '200',  label: '200us'},
+                                        {key: '500',  label: '500us'},
+                                        {key: '1000', label: '1ms'},
+                                        {key: '2000', label: '2ms'},
+                                        {key: '5000', label: '5ms'},
+                                    ],
+                                },
+                                defaultValue: '0',
+                                description: 'Whether to collect data for the current call stack at regular intervals according to the specified sampling period. The result will usually be less accurate but in some cases it could be far more accurate by not over-evaluating small functions called many times. It is recommended to try sampling (with different periods) if you want to accurately find a time bottleneck. When profiling a long running & CPU intensive script, this option will also allow you to contain report size and thus keeping it small enough to be exploitable through the analysis screen.',
+                            },
+                            {
+                                key: 'SPX_DEPTH',
+                                label: 'Max profiling depth',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: Array
+                                        .from(Array(10).keys(), e => e != 0 ? e : Number.POSITIVE_INFINITY)
+                                        .sort()
+                                        .reverse()
+                                        .map(e => e == Number.POSITIVE_INFINITY ? 0 : e)
+                                        .map(e => ({
+                                            key: '' + e,
+                                            label: '' + (e == 0 ? 'Unlimited' : e),
+                                        }))
+                                    ,
+                                },
+                                defaultValue: '0',
+                                description: 'The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls).',
+                            },
+                            {
+                                key: 'SPX_METRICS',
+                                label: 'Additional metrics',
+                                type: 'choice',
+                                choice: {
+                                    multi: true,
+                                    values: metrics
+                                        .filter(e => e.key != 'wt' && e.key != 'zm')
+                                        .map(e => ({
+                                            key: e.key,
+                                            label: e.name,
+                                        }))
+                                    ,
+                                },
+                                defaultValue: '',
+                                description: 'List of available metrics to collect in addition to Wall time and Zend Engine memory usage. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
+                            },
+                        ];
+
+                        let $fieldSet = $($('#config > fieldset')[0]);
+                        $.each(parameters, (_, parameter) => {
+                            $fieldSet.append(
+                                '<label for="' + parameter.key + '">'
+                                    + parameter.label + '</label>'
+                            );
+
+                            switch (parameter.type) {
+                                case 'switch':
+                                    $fieldSet.append(
+                                        '<input id="'+ parameter.key + '" type="checkbox">'
+                                    );
+
+                                    break;
+
+                                case 'choice':
+                                    let size = Math.max(5, parseInt(parameter.choice.values.length * 0.7));
+                                    let html =
+                                        '<select id="'+ parameter.key + '" '
+                                            + (
+                                                parameter.choice.multi
+                                                    ? 'multiple size="' + size + '"'
+                                                    : ''
+                                            ) + '>'
+                                    ;
+
+                                    $.each(parameter.choice.values, (_, e) => {
+                                        html += '<option value="' + e.key + '">' + e.label + '</option>';
+                                    });
+
+                                    html += '</select>';
+                                    $fieldSet.append(html);
+
+                                    break;
+                            }
+
+                            $fieldSet.append('<em>' + parameter.description + '</em>');
+
+                            $fieldSet.append('<br>');
+                        });
+
+                        $.each(parameters, (_, parameter) => {
+                            let value = getCookieVar(parameter.key) || parameter.defaultValue;
+                            switch (parameter.type) {
+                                case 'switch':
+                                    $('#' + parameter.key).prop('checked', value != '0');
+
+                                    break;
+
+                                case 'choice':
+                                    $('#' + parameter.key + ' > option').each((_, e) => {
+                                        $(e).prop('selected', false);
+                                    });
+
+                                    $.each(value.split(','), (_, e) => {
+                                        $('#' + parameter.key + ' option[value="' + e + '"]').prop('selected', true);
+                                    });
+
+                                    break;
+                            }
+                        });
+
+                        $('#config').on('click blur change', () => {
+                            let cliParameters = ['SPX_REPORT=full'];
+                            $.each(parameters, (_, parameter) => {
+                                let value = null;
+
+                                switch (parameter.type) {
+                                    case 'switch':
+                                        value = $('#' + parameter.key).is(':checked') ? '1' : '0';
+
+                                        break;
+
+                                    case 'choice':
+                                        value = $('#' + parameter.key).val();
+                                        if (value.constructor === Array) {
+                                            value = value.join(',');
+                                        }
+
+                                        break;
+                                }
+
+                                setCookieVar(parameter.key, value);
+                                if (value != parameter.defaultValue) {
+                                    cliParameters.push(parameter.key + '=' + value);
+                                }
+                            });
+
+                            $('#cli-prefix').val(cliParameters.join(' '));
+                        });
+
+                        $('#config').trigger('blur');
+
+                        return fetch('?SPX_UI_URI=/data/reports/metadata', {credentials: "same-origin"});
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        makeDataTable(
+                            'reports',
+                            {
+                                makeRowUrl: row => '?SPX_UI_URI=/v1/report.html&key=' + row.key,
+                                columns: [
+                                    {
+                                        label: 'Date',
+                                        value: 'exec_ts',
+                                        format: value => fmt.date(new Date(value * 1000)),
+                                    },
+                                    {
+                                        label: 'HTTP Host',
+                                        cssClass: 'breakable-text',
+                                        value: 'http_host',
+                                    },
+                                    {
+                                        label: 'Request / Command',
+                                        cssClass: 'breakable-text',
+                                        value: row => row.cli ? row.cli_command_line
+                                                : row.http_method + ' ' + row.http_request_uri
+                                        ,
+                                    },
+                                    {
+                                        label: 'Host',
+                                        cssClass: 'breakable-text',
+                                        value: 'host_name',
+                                    },
+                                    {
+                                        label: 'Custom metadata',
+                                        cssClass: 'breakable-text',
+                                        value: 'custom_metadata_str',
+                                    },
+                                    {
+                                        label: 'Wall time',
+                                        value: 'wall_time_ms',
+                                        format: value => fmt.time(value * 1000),
+                                    },
+                                    {
+                                        label: 'Memory',
+                                        value: 'peak_memory_usage',
+                                        format: value => fmt.memory(value),
+                                    },
+                                    {
+                                        label: 'Metrics',
+                                        value: 'enabled_metrics',
+                                        format: value => value.join(', '),
+                                    },
+                                    {
+                                        label: 'Recorded calls',
+                                        value: 'recorded_call_count',
+                                        format: value => fmt.quantity(value),
+                                    },
+                                ]
+                            },
+                            data.results
+                        );
+                    })
+                ;
+            });
+        </script>
+    </body>
+</html>
