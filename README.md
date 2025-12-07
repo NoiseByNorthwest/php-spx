@@ -49,10 +49,18 @@ Current requirements are:
 
 * PHP development package (corresponding to your installed PHP version).
 * zlib development package:
-  * For Debian based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`.
-  * For Fedora based distros (including CentOS, AlmaLinux, Rocky Linux...), just run: `sudo dnf install zlib-devel`.
+  * For Debian-based distros (including Ubuntu, Kubuntu...), just run: `sudo apt-get install zlib1g-dev`.
+  * For Fedora-based distros (including CentOS, AlmaLinux, Rocky Linux...), just run: `sudo dnf install zlib-devel`.
 
 ### Install the extension
+
+#### Install via PIE
+
+```shell
+pie install noisebynorthwest/php-spx
+```
+
+#### Install from source
 
 ```shell
 git clone https://github.com/NoiseByNorthwest/php-spx.git
@@ -64,7 +72,9 @@ make
 sudo make install
 ```
 
-Then add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
+#### Activate & configure SPX
+
+After installing SPX, add `extension=spx.so` to your *php.ini*, or in a dedicated *spx.ini* file created within the include directory.
 You may also want to override [default SPX configuration](#configuration) to be able to profile a web request, with [this one](#private-environment) for example for a local development environment.
 
 
