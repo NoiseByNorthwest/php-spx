@@ -16,7 +16,7 @@
  */
 
 
-#if defined(linux)
+#if defined(__linux__)
 #   include "spx_resource_stats-linux.c"
 #elif defined(__APPLE__) && defined(__MACH__)
 #   include "spx_resource_stats-macos.c"
