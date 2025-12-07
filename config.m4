@@ -19,7 +19,16 @@ if test "$PHP_SPX" = "yes"; then
     AC_DEFINE_UNQUOTED([SPX_HTTP_UI_ASSETS_DIR], [ "$PHP_SPX_ASSETS_DIR/web-ui" ], [path of web-ui assets directory])
     PHP_SUBST([PHP_SPX_ASSETS_DIR])
 
-    CFLAGS="$CFLAGS -Werror -Wall -Wno-attributes -O3 -pthread -std=gnu90"
+    CFLAGS="$CFLAGS -Werror -Wall -Wno-attributes -O3 -pthread"
+
+    php_ver_num=$(echo $PHP_VERSION | awk -F. '{printf("%d%02d%02d",$1,$2,$3)}')
+    if test "$php_ver_num" -ge 80200; then
+        CFLAGS="$CFLAGS -std=c11"
+        AC_MSG_NOTICE([Adding -std=c11 because PHP >= 8.2])
+    else
+        CFLAGS="$CFLAGS -std=gnu90"
+        AC_MSG_NOTICE([Adding -std=gnu90 because PHP < 8.2])
+    fi
 
     # Disabling typedef-redefinition is required for:
     #   - macOS, see https://github.com/NoiseByNorthwest/php-spx/pull/270
