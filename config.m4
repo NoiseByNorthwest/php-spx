@@ -19,7 +19,7 @@ if test "$PHP_SPX" = "yes"; then
     AC_DEFINE_UNQUOTED([SPX_HTTP_UI_ASSETS_DIR], [ "$PHP_SPX_ASSETS_DIR/web-ui" ], [path of web-ui assets directory])
     PHP_SUBST([PHP_SPX_ASSETS_DIR])
 
-    CFLAGS="$CFLAGS -Werror -Wall -Wno-attributes -O3 -pthread -std=gnu90"
+    CFLAGS="$CFLAGS -Werror -Wall -Wno-attributes -O3 -pthread -std=c11"
 
     # Disabling typedef-redefinition is required for:
     #   - macOS, see https://github.com/NoiseByNorthwest/php-spx/pull/270
