@@ -1,5 +1,5 @@
 --TEST--
-Custom metadata
+"full" report custom metadata
 --INI--
 log_errors=on
 --ENV--
@@ -45,7 +45,7 @@ foreach ($metadataStrings as $metadataString) {
   "process_tid": %d,
   "process_pwd": "%S\/php-spx%S",
   "cli": 1,
-  "cli_command_line": "%S\/php-spx%S\/tests\/spx_custom_metadata.php",
+  "cli_command_line": "%S\/php-spx%S\/tests\/spx_full_report_custom_metadata.php",
   "http_request_uri": "n\/a",
   "http_method": "GET",
   "http_host": "n\/a",
@@ -68,7 +68,7 @@ foreach ($metadataStrings as $metadataString) {
   "process_tid": %d,
   "process_pwd": "%S\/php-spx%S",
   "cli": 1,
-  "cli_command_line": "%S\/php-spx%S\/tests\/spx_custom_metadata.php",
+  "cli_command_line": "%S\/php-spx%S\/tests\/spx_full_report_custom_metadata.php",
   "http_request_uri": "n\/a",
   "http_method": "GET",
   "http_host": "n\/a",
@@ -91,7 +91,7 @@ foreach ($metadataStrings as $metadataString) {
   "process_tid": %d,
   "process_pwd": "%S\/php-spx%S",
   "cli": 1,
-  "cli_command_line": "%S\/php-spx%S\/tests\/spx_custom_metadata.php",
+  "cli_command_line": "%S\/php-spx%S\/tests\/spx_full_report_custom_metadata.php",
   "http_request_uri": "n\/a",
   "http_method": "GET",
   "http_host": "n\/a",
@@ -106,9 +106,9 @@ foreach ($metadataStrings as $metadataString) {
     ,"zm"
   ]
 }
-PHP Notice:  SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $customMetadataStr string, it must not exceed 4KB in %S/php-spx%S/tests/spx_custom_metadata.php on line 18
+PHP Notice:  SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $customMetadataStr string, it must not exceed 4KB in %S/php-spx%S/tests/spx_full_report_custom_metadata.php on line 18
 
-Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $customMetadataStr string, it must not exceed 4KB in %S/php-spx%S/tests/spx_custom_metadata.php on line 18
+Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $customMetadataStr string, it must not exceed 4KB in %S/php-spx%S/tests/spx_full_report_custom_metadata.php on line 18
 {
   "key": "spx-full-%s",
   "exec_ts": %d,
@@ -117,7 +117,7 @@ Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $cust
   "process_tid": %d,
   "process_pwd": "%S\/php-spx%S",
   "cli": 1,
-  "cli_command_line": "%S\/php-spx%S\/tests\/spx_custom_metadata.php",
+  "cli_command_line": "%S\/php-spx%S\/tests\/spx_full_report_custom_metadata.php",
   "http_request_uri": "n\/a",
   "http_method": "GET",
   "http_host": "n\/a",
@@ -140,7 +140,7 @@ Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $cust
   "process_tid": %d,
   "process_pwd": "%S\/php-spx%S",
   "cli": 1,
-  "cli_command_line": "%S\/php-spx%S\/tests\/spx_custom_metadata.php",
+  "cli_command_line": "%S\/php-spx%S\/tests\/spx_full_report_custom_metadata.php",
   "http_request_uri": "n\/a",
   "http_method": "GET",
   "http_host": "n\/a",

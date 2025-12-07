@@ -21,9 +21,9 @@ function getImportUrl(path) {
     return rootUrl.toString();
 }
 
-const utils = await import(getImportUrl('/js/utils.js'));
-const fmt = await import(getImportUrl('/js/fmt.js'));
-const math = await import(getImportUrl('/js/math.js'));
+const utils = await import(getImportUrl('/v1/js/utils.js'));
+const fmt = await import(getImportUrl('/v1/js/fmt.js'));
+const math = await import(getImportUrl('/v1/js/math.js'));
 
 class MetricValueSet {
 

@@ -1,7 +1,7 @@
 # SPX - A simple profiler for PHP
 
 [![Build Status][:badge-ci:]][:link-ci:]
-![Supported PHP versions: 5.4 .. 8.x][:badge-php-versions:]
+![Supported PHP versions: 7.0 .. 8.x][:badge-php-versions:]
 ![Supported platforms: GNU/Linux, macOS & FreeBSD][:badge-supported-platforms:]
 ![Supported architectures: x86-64 or ARM64][:badge-supported-arch:]
 [![License][:badge-license:]][:link-license:]
@@ -39,8 +39,9 @@ Current requirements are:
 
 * x86-64 or ARM64
 * **GNU/Linux**, **macOS** or **FreeBSD**
-* zlib dev package (e.g. zlib1g-dev on Debian based distros)
-* PHP 5.4 to 8.5
+* zlib dev package (e.g. zlib1g-dev on Debian-based distros)
+* Optionally: Zstandard dev package (e.g. libzstd-dev on Debian-based distros). Zstandard is optional but recommended in order to minimize SPX's overhead.
+* PHP 7.0 to 8.5. PHP 5.x (starting from 5.4) is supported by SPX 0.4.x and earlier versions.
 
 ## Installation
 
@@ -105,17 +106,48 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 ## Basic usage
 
-### web request
+### Serving and accessing to the web UI
 
 Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.
 
-Just open with your browser the following URL: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access to the web UI [control panel](#control-panel).
+Just open the following URL in your browser: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access the web UI [control panel](#control-panel).
 
-_N.B.: `http://localhost/` must be served by a PHP script through standard web server feature like directory index or URL rewriting. The PHP script will however not be executed, SPX will intercept and disable its execution to serve its content in place._
+#### Regular PHP server (FPM, mod_php)
 
-_If you see only a blank page then make sure to set `zlib.output_compression = 0` in your PHP configuration file_
+You have nothing special to do, it will work out of the box.
 
-You will then see the following form:
+However, `http://localhost/` must be served by a PHP script through standard web server features like directory index or URL rewriting. The PHP script will not be executed, SPX will intercept and disable its execution to serve its content in its place.
+
+If you see only a blank page, then make sure to set `zlib.output_compression = 0` in your PHP configuration file.
+
+#### Worker-based PHP servers
+
+If you are running PHP in worker mode, such as with FrankenPHP, it is also possible to serve the SPX Web UI directly from the worker process. This requires that the worker implementation correctly exposes PHP superglobals for each HTTP request, as FrankenPHP does.
+
+To do this you can use the following function:
+
+```php
+spx_ui_handle_request(): bool
+```
+
+This function will attempt to serve the SPX Web UI. If it handles the request, it returns `true`, and you should skip further application logic.
+
+Example usage with a custom FrankenPHP handler:
+
+```php
+$handler = static function () use ($myApp) {
+    if (spx_ui_handle_request()) {
+        // A SPX UI request has been served
+        return;
+    }
+
+    echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
+};
+```
+
+### Web request profiling
+
+Once in the dev panel, you will see the following form:
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/93baabbcba04223586d06756dbcecfbd6ec1293d/php-spx/doc/cp-form.png)
 
@@ -133,7 +165,7 @@ Then refresh the web request you want to profile and refresh the control panel t
 
 Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).
 
-### Command line script
+### Command line script profiling
 
 #### Instant flat profile
 
@@ -513,7 +545,7 @@ See the [LICENSE][:link-license:] file for more information.
 [:badge-ci:]:           https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg
 [:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
 
-[:badge-php-versions:]: https://img.shields.io/badge/php-5.4--8.5-blue.svg
+[:badge-php-versions:]: https://img.shields.io/badge/php-7.0--8.5-blue.svg
 [:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow
 [:badge-supported-arch:]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver
 
