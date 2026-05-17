@@ -173,7 +173,9 @@ export class FlameGraph extends SVGWidget {
                 (this.viewPort.width *
                     node.getInc().getValue(this.currentMetric)) /
                 totalInc;
-            if (w < 0.3) return x;
+            if (w < 0.3) {
+                return x;
+            }
 
             const h = math.bound(y / (node.getDepth() + 1), 2, 12);
             y -= h + 0.5;

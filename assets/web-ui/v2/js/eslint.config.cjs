@@ -17,7 +17,8 @@ module.exports = [
     },
     rules: {
       ...prettierConfig.rules,
-      "prettier/prettier": "error"
+      "prettier/prettier": "error",
+      "curly": ["error", "all"]
     }
   }
 ];

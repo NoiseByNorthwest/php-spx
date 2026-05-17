@@ -15,57 +15,75 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-let el = null;
-let titleEl = null;
-let messageEl = null;
-let confirmBtn = null;
-let cancelBtn = null;
+class ConfirmDialog {
+    static #dialog = null;
+    static #titleElement = null;
+    static #messageElement = null;
+    static #confirmButton = null;
+    static #cancelButton = null;
 
-function init() {
-    if (el) return;
+    static #init() {
+        if (this.#dialog) {
+            return;
+        }
 
-    el = document.createElement('dialog');
-    el.id = 'confirm-dialog';
-    el.innerHTML = `
-        <div id="confirm-dialog-title"></div>
-        <div id="confirm-dialog-message"></div>
-        <div id="confirm-dialog-actions">
-            <button id="confirm-dialog-cancel">No</button><!--
-            --><button id="confirm-dialog-confirm">Delete</button>
-        </div>
-    `;
-    document.body.appendChild(el);
+        this.#dialog = document.createElement('dialog');
+        this.#dialog.id = 'confirm-dialog';
+        this.#dialog.innerHTML = `
+            <div id="confirm-dialog-title"></div>
+            <div id="confirm-dialog-message"></div>
+            <div id="confirm-dialog-actions">
+                <button id="confirm-dialog-cancel"></button><!--
+                --><button id="confirm-dialog-confirm"></button>
+            </div>
+        `;
+        document.body.appendChild(this.#dialog);
 
-    titleEl = el.querySelector('#confirm-dialog-title');
-    messageEl = el.querySelector('#confirm-dialog-message');
-    confirmBtn = el.querySelector('#confirm-dialog-confirm');
-    cancelBtn = el.querySelector('#confirm-dialog-cancel');
+        this.#titleElement = this.#dialog.querySelector(
+            '#confirm-dialog-title'
+        );
+        this.#messageElement = this.#dialog.querySelector(
+            '#confirm-dialog-message'
+        );
+        this.#confirmButton = this.#dialog.querySelector(
+            '#confirm-dialog-confirm'
+        );
+        this.#cancelButton = this.#dialog.querySelector(
+            '#confirm-dialog-cancel'
+        );
+    }
+
+    static confirm(title, message, confirmLabel, cancelLabel) {
+        this.#init();
+
+        return new Promise((resolve) => {
+            this.#titleElement.textContent = title;
+            this.#messageElement.innerHTML = message;
+            this.#confirmButton.textContent = confirmLabel;
+            this.#cancelButton.textContent = cancelLabel;
+            this.#dialog.showModal();
+
+            const cleanup = (value) => {
+                this.#dialog.close();
+                this.#confirmButton.removeEventListener('click', onConfirm);
+                this.#cancelButton.removeEventListener('click', onCancel);
+                this.#dialog.removeEventListener('cancel', onCancel);
+                resolve(value);
+            };
+
+            const onConfirm = () => cleanup(true);
+            const onCancel = (e) => {
+                e.preventDefault();
+                cleanup(false);
+            };
+
+            this.#confirmButton.addEventListener('click', onConfirm);
+            this.#cancelButton.addEventListener('click', onCancel);
+            this.#dialog.addEventListener('cancel', onCancel);
+        });
+    }
 }
 
-export function confirm(title, message) {
-    init();
-
-    return new Promise((resolve) => {
-        titleEl.textContent = title;
-        messageEl.innerHTML = message;
-        el.showModal();
-
-        const cleanup = (value) => {
-            el.close();
-            confirmBtn.removeEventListener('click', onConfirm);
-            cancelBtn.removeEventListener('click', onCancel);
-            el.removeEventListener('cancel', onCancel);
-            resolve(value);
-        };
-
-        const onConfirm = () => cleanup(true);
-        const onCancel = (e) => {
-            e.preventDefault();
-            cleanup(false);
-        };
-
-        confirmBtn.addEventListener('click', onConfirm);
-        cancelBtn.addEventListener('click', onCancel);
-        el.addEventListener('cancel', onCancel);
-    });
+export function confirm(title, message, confirmLabel, cancelLabel) {
+    return ConfirmDialog.confirm(title, message, confirmLabel, cancelLabel);
 }

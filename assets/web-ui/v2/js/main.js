@@ -17,6 +17,9 @@
 
 import * as utils from './utils.js';
 import * as fmt from './fmt.js';
+import * as progressBar from './progressBar.js';
+import * as reportReader from './reportReader.js';
+import * as reportExporter from './reportExporter.js';
 import * as profileDataAnalyzer from './profileDataAnalyzer.js';
 import * as widget from './widget.js';
 import * as dataTable from './dataTable.js';
@@ -26,6 +29,9 @@ import * as confirmDialog from './confirmDialog.js';
 export {
     utils,
     fmt,
+    progressBar,
+    reportReader,
+    reportExporter,
     profileDataAnalyzer,
     widget,
     dataTable,

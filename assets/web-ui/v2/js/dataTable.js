@@ -15,6 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { confirm } from './confirmDialog.js';
+
 export function makeDataTable(containerId, options, rows) {
     const hasRowActions = options.rowActions?.length > 0;
     const hasTableActions = options.tableActions?.length > 0;
@@ -85,7 +87,7 @@ export function makeDataTable(containerId, options, rows) {
                 const actionsHtml = options.rowActions
                     .map(
                         (action, i) =>
-                            `<a class="data_table-action-btn${action.cssClass ? ` ${action.cssClass}` : ''}" href="${action.href(row)}" data-action-index="${i}" data-row-key="${row.key}"${action.title ? ` title="${action.title}"` : ''}>${action.label}</a>`
+                            `<a class="data_table-action-btn${action.cssClass ? ` ${action.cssClass}` : ''}" href="${action.href ? action.href(row) : '#'}" data-action-index="${i}" data-row-key="${row.key}"${action.title ? ` title="${action.title}"` : ''}>${action.label}</a>`
                     )
                     .join(' ');
                 html += `<td class="data_table-actions">${actionsHtml}</td>`;
@@ -100,6 +102,10 @@ export function makeDataTable(containerId, options, rows) {
         container.querySelectorAll('th').forEach((th) => {
             th.addEventListener('click', (e) => {
                 const current = Array.from(th.parentNode.children).indexOf(th);
+                if (current >= options.columns.length) {
+                    return;
+                }
+
                 if (sort_col === current) {
                     sort_dir *= -1;
                 }
@@ -124,13 +130,25 @@ export function makeDataTable(containerId, options, rows) {
                         tableActionEl.dataset.tableActionIndex
                     ];
                 if (action.confirm) {
-                    const { title, message } = action.confirm();
-                    if (!(await options.confirmFn(title, message))) return;
+                    const { title, message, confirmLabel, cancelLabel } =
+                        action.confirm();
+                    if (
+                        !(await confirm(
+                            title,
+                            message,
+                            confirmLabel,
+                            cancelLabel
+                        ))
+                    ) {
+                        return;
+                    }
                 }
                 const response = await fetch(tableActionEl.href, {
                     credentials: 'same-origin',
                 });
-                if (response.ok) action.onSuccess(container);
+                if (response.ok) {
+                    action.onSuccess(container);
+                }
                 return;
             }
 
@@ -142,14 +160,30 @@ export function makeDataTable(containerId, options, rows) {
                 const row = rows.find(
                     (r) => String(r.key) === rowActionEl.dataset.rowKey
                 );
+                if (action.handler) {
+                    action.handler(row);
+                    return;
+                }
                 if (action.confirm) {
-                    const { title, message } = action.confirm(row);
-                    if (!(await options.confirmFn(title, message))) return;
+                    const { title, message, confirmLabel, cancelLabel } =
+                        action.confirm(row);
+                    if (
+                        !(await confirm(
+                            title,
+                            message,
+                            confirmLabel,
+                            cancelLabel
+                        ))
+                    ) {
+                        return;
+                    }
                 }
                 const response = await fetch(rowActionEl.href, {
                     credentials: 'same-origin',
                 });
-                if (response.ok) action.onSuccess(row, container);
+                if (response.ok) {
+                    action.onSuccess(row, container);
+                }
             }
         });
     }
