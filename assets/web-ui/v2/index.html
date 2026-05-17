@@ -47,7 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         <div id="reports"></div>
 
         <script type="module" crossorigin>
-            import {utils, fmt, dataTable, confirmDialog} from './?SPX_UI_URI=/v2/js/spx.js';
+            import {utils, fmt, reportExporter, dataTable} from './?SPX_UI_URI=/v2/js/spx.js';
 
             const {setCookieVar, getCookieVar} = utils;
             const {makeDataTable} = dataTable;
@@ -322,34 +322,46 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                         format: value => fmt.quantity(value),
                                     },
                                 ],
-                                confirmFn: confirmDialog.confirm,
-                                rowActions: [{
-                                    label: '🗑️',
-                                    title: 'Delete this report',
-                                    href: row => `?SPX_UI_URI=/data/reports/delete/${row.key}`,
-                                    confirm: () => ({
-                                        title: 'Do you want to delete this SPX report?',
-                                        message: 'This action cannot be undone.',
-                                    }),
-                                    onSuccess: (row, container) => {
-                                        container.querySelector(`#row-${row.key}`).remove();
-                                        if (container.querySelectorAll('tbody tr').length === 0) {
-                                            container.querySelectorAll('tfoot').forEach(el => { el.innerHTML = ''; });
-                                        }
+                                rowActions: [
+                                    {
+                                        label: '⬇ callgrind',
+                                        title: 'Export as callgrind',
+                                        handler: row => reportExporter.exportCallgrind(row.key),
                                     },
-                                }],
-                                tableActions: [{
-                                    label: '🗑️ Delete all reports',
-                                    href: '?SPX_UI_URI=/data/reports/delete_all',
-                                    confirm: () => ({
-                                        title: 'Do you want to delete all the SPX reports?',
-                                        message: 'This action cannot be undone.',
-                                    }),
-                                    onSuccess: (container) => {
-                                        container.querySelectorAll('tbody').forEach(el => { el.innerHTML = ''; });
-                                        container.querySelectorAll('.data_table-toolbar').forEach(el => { el.innerHTML = ''; });
-                                    },
-                                }],
+                                    {
+                                        label: '🗑️',
+                                        title: 'Delete this report',
+                                        href: row => `?SPX_UI_URI=/data/reports/delete/${row.key}`,
+                                        confirm: () => ({
+                                            title: 'Do you want to delete this SPX report?',
+                                            message: 'This action cannot be undone.',
+                                            confirmLabel: 'Delete',
+                                            cancelLabel: 'No'
+                                        }),
+                                        onSuccess: (row, container) => {
+                                            container.querySelector(`#row-${row.key}`).remove();
+                                            if (container.querySelectorAll('tbody tr').length === 0) {
+                                                container.querySelectorAll('tfoot').forEach(el => { el.innerHTML = ''; });
+                                            }
+                                        },
+                                    }
+                                ],
+                                tableActions: [
+                                    {
+                                        label: '🗑️ Delete all reports',
+                                        href: '?SPX_UI_URI=/data/reports/delete_all',
+                                        confirm: () => ({
+                                            title: 'Do you want to delete all the SPX reports?',
+                                            message: 'This action cannot be undone.',
+                                            confirmLabel: 'Delete',
+                                            cancelLabel: 'No',
+                                        }),
+                                        onSuccess: (container) => {
+                                            container.querySelectorAll('tbody').forEach(el => { el.innerHTML = ''; });
+                                            container.querySelectorAll('.data_table-toolbar').forEach(el => { el.innerHTML = ''; });
+                                        },
+                                    }
+                                ],
                             },
                             data.results
                         );

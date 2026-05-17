@@ -918,16 +918,16 @@ class MetricValuesList {
         const last = this.getMetricValues(range.end);
 
         let previous = first;
-        const cumCost = new CumCostStats(previous.getMetrics());
+        const cumCostStats = new CumCostStats(previous.getMetrics());
         for (let i = firstIdx; i <= lastIdx; i++) {
             const current = new MetricValueSet(this.array.getElement(i));
-            cumCost.mergeMetricValues(current.copy().sub(previous));
+            cumCostStats.mergeMetricValues(current.copy().sub(previous));
             previous = current;
         }
 
-        cumCost.mergeMetricValues(last.copy().sub(previous));
+        cumCostStats.mergeMetricValues(last.copy().sub(previous));
 
-        return cumCost;
+        return cumCostStats;
     }
 
     getMetricValues(time) {
@@ -1753,10 +1753,14 @@ class CallRangeTree {
         progress,
         done
     ) {
-        const tree = new CallRangeTree(range, callList, metricValuesList);
+        const callRangeTree = new CallRangeTree(
+            range,
+            callList,
+            metricValuesList
+        );
 
         const childCount = 4;
-        const childrenParameters = tree.range
+        const childrenParameters = callRangeTree.range
             .subRanges(1 / childCount)
             .map((e) => ({
                 range: e,
@@ -1776,13 +1780,13 @@ class CallRangeTree {
             const callDepth = call.getDepth();
 
             if (DEBUG) {
-                if (!tree.range.contains(callTimeRange)) {
+                if (!callRangeTree.range.contains(callTimeRange)) {
                     throw new Error('Unexpected uncontained call');
                 }
             }
 
-            if (callDepth > tree.maxDepth) {
-                tree.maxDepth = callDepth;
+            if (callDepth > callRangeTree.maxDepth) {
+                callRangeTree.maxDepth = callDepth;
             }
 
             let containedByChild = false;
@@ -1796,7 +1800,7 @@ class CallRangeTree {
             }
 
             if (!containedByChild) {
-                tree.callRefs.push(callRef);
+                callRangeTree.callRefs.push(callRef);
             }
         }
 
@@ -1804,12 +1808,14 @@ class CallRangeTree {
 
         for (const childParameters of childrenParameters) {
             if (childParameters.callRefs.length < minCallsPerNode) {
-                tree.callRefs = tree.callRefs.concat(childParameters.callRefs);
+                callRangeTree.callRefs = callRangeTree.callRefs.concat(
+                    childParameters.callRefs
+                );
                 childParameters.callRefs.length = 0;
             }
         }
 
-        tree.callRefs.sort((a, b) => {
+        callRangeTree.callRefs.sort((a, b) => {
             a = callList.getCallNoCache(a).getIncWt();
             b = callList.getCallNoCache(b).getIncWt();
 
@@ -1823,20 +1829,20 @@ class CallRangeTree {
         });
 
         const treeCalls = [];
-        for (const callRef of tree.callRefs) {
+        for (const callRef of callRangeTree.callRefs) {
             treeCalls.push(callList.getCallNoCache(callRef));
         }
 
-        tree.functionsStats = new FunctionsStats(treeCalls);
-        tree.callTreeStats = new CallTreeStats(
+        callRangeTree.functionsStats = new FunctionsStats(treeCalls);
+        callRangeTree.callTreeStats = new CallTreeStats(
             callList.getMetrics(),
             treeCalls
         );
-        tree.cumCostStats = new CumCostStats(callList.getMetrics());
+        callRangeTree.cumCostStats = new CumCostStats(callList.getMetrics());
 
         const callChain = [
             (next) => {
-                progress(tree.callRefs.length);
+                progress(callRangeTree.callRefs.length);
                 next();
             },
         ];
@@ -1844,7 +1850,7 @@ class CallRangeTree {
         for (const childParameters of childrenParameters) {
             callChain.push((next) => {
                 if (childParameters.callRefs.length === 0) {
-                    tree.cumCostStats.merge(
+                    callRangeTree.cumCostStats.merge(
                         metricValuesList.getCumCostStats(childParameters.range)
                     );
                     next();
@@ -1852,7 +1858,7 @@ class CallRangeTree {
                     return;
                 }
 
-                tree.children.push(
+                callRangeTree.children.push(
                     CallRangeTree.buildAsync(
                         childParameters.range,
                         childParameters.callRefs,
@@ -1860,9 +1866,15 @@ class CallRangeTree {
                         metricValuesList,
                         progress,
                         (child) => {
-                            tree.functionsStats.merge(child.functionsStats);
-                            tree.callTreeStats.merge(child.callTreeStats);
-                            tree.cumCostStats.merge(child.cumCostStats);
+                            callRangeTree.functionsStats.merge(
+                                child.functionsStats
+                            );
+                            callRangeTree.callTreeStats.merge(
+                                child.callTreeStats
+                            );
+                            callRangeTree.cumCostStats.merge(
+                                child.cumCostStats
+                            );
                             next();
                         }
                     )
@@ -1871,12 +1883,12 @@ class CallRangeTree {
         }
 
         callChain.push(() => {
-            done(tree);
+            done(callRangeTree);
         });
 
         utils.processCallChain(callChain, callRefs.length >= 5000, 0);
 
-        return tree;
+        return callRangeTree;
     }
 }
 
