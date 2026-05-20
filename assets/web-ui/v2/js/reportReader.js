@@ -100,7 +100,7 @@ function parseEventLine(line, recentEvents) {
 
     if (start) {
         // call site line lives at parts[0] and tails the event tuple
-        event[event.length - 1] = Number(parts[0]);
+        event[event.length - 1] = parseInt(parts[0], 16);
     }
 
     recentEvents.unshift(event);
