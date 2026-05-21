@@ -329,6 +329,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                         handler: row => reportExporter.exportCallgrind(row.key),
                                     },
                                     {
+                                        label: '⬇ pprof',
+                                        title: 'Export as pprof',
+                                        handler: row => reportExporter.exportPprof(row.key),
+                                    },
+                                    {
                                         label: '🗑️',
                                         title: 'Delete this report',
                                         href: row => `?SPX_UI_URI=/data/reports/delete/${row.key}`,

@@ -251,7 +251,7 @@ table.data_table tr .data_table-action-btn:hover {
 
 
 #confirm-dialog,
-#report-exporter-dialog {
+.report-exporter-dialog {
     background: var(--background-color);
     border: 2px solid var(--border-color);
     padding: 20px;
@@ -260,16 +260,16 @@ table.data_table tr .data_table-action-btn:hover {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
-#report-exporter-path-rewrite {
+.report-exporter-path-rewrite {
     margin-bottom: 20px;
 }
 
-#report-exporter-path-rewrite-label {
+.report-exporter-path-rewrite-label {
     margin-bottom: 8px;
     font-weight: bold;
 }
 
-#report-exporter-path-rewrite-label span {
+.report-exporter-path-rewrite-label span {
     font-weight: normal;
     opacity: 0.7;
 }
@@ -280,14 +280,16 @@ table.data_table tr .data_table-action-btn:hover {
     margin-bottom: 6px;
 }
 
-.report-exporter-path-row label {
+.report-exporter-path-row > span {
     width: 3em;
+    margin-right: 8px;
     opacity: 0.7;
 }
 
 .report-exporter-path-row input {
     flex: 1;
-    min-width: 350px;
+    min-width: 0;
+    width: 350px;
     padding: 3px 6px;
     background: var(--form-element-background);
     border: 1px solid var(--border-color);
@@ -300,40 +302,40 @@ table.data_table tr .data_table-action-btn:hover {
 }
 
 #confirm-dialog::backdrop,
-#report-exporter-dialog::backdrop {
+.report-exporter-dialog::backdrop {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
 #confirm-dialog-title,
-#report-exporter-title {
+.report-exporter-title {
     margin-bottom: 20px;
     font-weight: bold;
     font-size: 1.2rem;
 }
 
 #confirm-dialog-message,
-#report-exporter-status {
+.report-exporter-status {
     margin-bottom: 20px;
     white-space: pre-wrap;
 }
 
-#report-exporter-status {
+.report-exporter-status {
     min-height: 1em;
 }
 
-#report-exporter-status.report-exporter-error {
+.report-exporter-status.report-exporter-error {
     color: var(--delete-color);
 }
 
 
 
 #confirm-dialog-actions,
-#report-exporter-actions {
+.report-exporter-actions {
     text-align: right;
 }
 
 #confirm-dialog-actions button,
-#report-exporter-actions button {
+.report-exporter-actions button {
     margin-left: 10px;
     padding: 5px 15px;
     background-color: var(--form-element-background);
@@ -343,11 +345,11 @@ table.data_table tr .data_table-action-btn:hover {
 }
 
 #confirm-dialog-actions button:hover,
-#report-exporter-actions button:hover {
+.report-exporter-actions button:hover {
     background-color: var(--hover-color);
 }
 
-#report-exporter-actions #report-exporter-export {
+.report-exporter-actions .report-exporter-export {
     font-weight: bold;
 }
 
