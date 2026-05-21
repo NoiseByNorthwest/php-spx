@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,13 @@
 
 #ifdef _WIN32
 #   define PATH_MAX MAXPATHLEN
+#endif
+
+#ifdef SPX_DEBUG
+#   define spx_utils_debug_printf(fmt, ...) \
+        fprintf(stderr, "[%s:%4d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#   define spx_utils_debug_printf(fmt, ...) do {} while(0)
 #endif
 
 #define SPX_UTILS_TOKENIZE_STRING(str, delim, token, size, block) \

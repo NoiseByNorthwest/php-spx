@@ -1,0 +1,101 @@
+--TEST--
+Auto start disabled, builtins traced, trace report & several traced spans, and instrumentation through observer API
+--INI--
+log_errors=on
+spx.use_observer_api=1
+--ENV--
+return <<<END
+SPX_ENABLED=1
+SPX_AUTO_START=0
+SPX_METRICS=zo
+SPX_BUILTINS=1
+SPX_REPORT=trace
+SPX_TRACE_FILE=/dev/stdout
+SPX_TRACE_SAFE=1
+END;
+--FILE--
+<?php
+echo "Normal output\n";
+
+$objects = [];
+
+function foo() {
+    global $objects;
+
+    $objects[] = new stdClass();
+    bar();
+    $objects[] = new stdClass();
+}
+
+function bar() {
+    global $objects;
+
+    $objects[] = new stdClass();
+    time();
+
+    spx_profiler_start();
+
+    $objects[] = new stdClass();
+    time();
+}
+
+for ($i = 0; $i < 3; $i++) {
+    foo();
+    $objects[] = new stdClass();
+    spx_profiler_stop();
+}
+
+?>
+--EXPECTF--
+Normal output
+ ZE object count                |
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_002_observer_api.php
+        0 |        0 |        0 |        2 |       27 |  +foo
+        0 |        0 |        0 |        3 |       10 |   +bar
+        0 |        0 |        0 |        4 |       20 |    +spx_profiler_start
+        0 |        0 |        0 |        4 |        0 |    -spx_profiler_start
+        1 |        0 |        0 |        4 |       23 |    +time
+        1 |        0 |        0 |        4 |        0 |    -time
+        1 |        1 |        1 |        3 |        0 |   -bar
+        2 |        2 |        1 |        2 |        0 |  -foo
+        3 |        0 |        0 |        2 |       29 |  +spx_profiler_stop
+        3 |        0 |        0 |        2 |        0 |  -spx_profiler_stop
+        3 |        3 |        1 |        1 |        0 | -%s/tests/spx_auto_start_002_observer_api.php
+
+SPX trace file: /dev/stdout
+ ZE object count                |
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_002_observer_api.php
+        0 |        0 |        0 |        2 |       27 |  +foo
+        0 |        0 |        0 |        3 |       10 |   +bar
+        0 |        0 |        0 |        4 |       20 |    +spx_profiler_start
+        0 |        0 |        0 |        4 |        0 |    -spx_profiler_start
+        1 |        0 |        0 |        4 |       23 |    +time
+        1 |        0 |        0 |        4 |        0 |    -time
+        1 |        1 |        1 |        3 |        0 |   -bar
+        2 |        2 |        1 |        2 |        0 |  -foo
+        3 |        0 |        0 |        2 |       29 |  +spx_profiler_stop
+        3 |        0 |        0 |        2 |        0 |  -spx_profiler_stop
+        3 |        3 |        1 |        1 |        0 | -%s/tests/spx_auto_start_002_observer_api.php
+
+SPX trace file: /dev/stdout
+ ZE object count                |
+ Cum.     | Inc.     | Exc.     | Depth    | Line     | Function
+----------+----------+----------+----------+----------+----------
+        0 |        0 |        0 |        1 |        0 | +%s/tests/spx_auto_start_002_observer_api.php
+        0 |        0 |        0 |        2 |       27 |  +foo
+        0 |        0 |        0 |        3 |       10 |   +bar
+        0 |        0 |        0 |        4 |       20 |    +spx_profiler_start
+        0 |        0 |        0 |        4 |        0 |    -spx_profiler_start
+        1 |        0 |        0 |        4 |       23 |    +time
+        1 |        0 |        0 |        4 |        0 |    -time
+        1 |        1 |        1 |        3 |        0 |   -bar
+        2 |        2 |        1 |        2 |        0 |  -foo
+        3 |        0 |        0 |        2 |       29 |  +spx_profiler_stop
+        3 |        0 |        0 |        2 |        0 |  -spx_profiler_stop
+        3 |        3 |        1 |        1 |        0 | -%s/tests/spx_auto_start_002_observer_api.php
+
+SPX trace file: /dev/stdout

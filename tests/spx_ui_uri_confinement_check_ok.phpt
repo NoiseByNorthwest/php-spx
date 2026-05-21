@@ -5,7 +5,7 @@ UI: URI confinement
 spx.http_enabled=1
 spx.http_key="dev"
 spx.http_ip_whitelist="127.0.0.1"
-spx.http_ui_assets_dir="{PWD}/../assets/web-ui"
+spx.http_ui_assets_dir="{PWD}/../assets/web-ui/v2"
 log_errors=on
 --ENV--
 return <<<END
@@ -19,7 +19,7 @@ SPX_KEY=dev&SPX_UI_URI=/js/fmt.js
 // noop
 ?>
 --EXPECTF--
-/* SPX - A simple profiler for PHP
+/* SPX - A seamless profiler for PHP
 %a
 export function quantity(n) {
 %a

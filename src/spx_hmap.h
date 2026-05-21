@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@ spx_hmap_t * spx_hmap_create(
 
 void spx_hmap_reset(spx_hmap_t * hmap);
 void spx_hmap_destroy(spx_hmap_t * hmap);
+
+void spx_hmap_print_stats(const spx_hmap_t * hmap);
 
 spx_hmap_entry_t * spx_hmap_ensure_entry(spx_hmap_t * hmap, const void * key, int * new);
 void * spx_hmap_get_value(spx_hmap_t * hmap, const void * key);

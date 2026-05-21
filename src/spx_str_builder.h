@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
 #ifndef SPX_STR_BUILDER_H_DEFINED
 #define SPX_STR_BUILDER_H_DEFINED
 
+#include <stdint.h>
+
 typedef struct spx_str_builder_t spx_str_builder_t;
 
 spx_str_builder_t * spx_str_builder_create(size_t capacity);
@@ -32,6 +34,7 @@ const char * spx_str_builder_str(const spx_str_builder_t * str_builder);
 
 size_t spx_str_builder_append_double(spx_str_builder_t * str_builder, double d, size_t nb_dec);
 size_t spx_str_builder_append_long(spx_str_builder_t * str_builder, long l);
+size_t spx_str_builder_append_uint16_hex(spx_str_builder_t * str_builder, uint16_t n);
 size_t spx_str_builder_append_str(spx_str_builder_t * str_builder, const char * str);
 size_t spx_str_builder_append_char(spx_str_builder_t * str_builder, char c);
 

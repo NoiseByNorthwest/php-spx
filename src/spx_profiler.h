@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +51,8 @@ typedef enum {
 typedef struct {
     spx_profiler_event_type_t type;
 
-    const int * enabled_metrics;
+    const spx_metric_t * enabled_metrics;
+    size_t enabled_metric_count;
 
     size_t called;
     const spx_profiler_metric_values_t * max;
@@ -65,7 +66,7 @@ typedef struct {
 
     size_t depth;
 
-    const spx_profiler_func_table_entry_t * caller;
+    size_t call_site_line;
     const spx_profiler_func_table_entry_t * callee;
     
     const spx_profiler_metric_values_t * inc;
@@ -78,6 +79,10 @@ typedef enum {
 } spx_profiler_reporter_cost_t;
 
 typedef struct spx_profiler_reporter_t {
+    int (*are_full_stats_required) (
+        const struct spx_profiler_reporter_t * reporter
+    );
+
     spx_profiler_reporter_cost_t (*notify) (
         struct spx_profiler_reporter_t * reporter,
         const spx_profiler_event_t * event

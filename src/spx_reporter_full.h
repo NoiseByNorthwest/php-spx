@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,8 +36,18 @@ char * spx_reporter_full_build_metadata_file_name(
 char * spx_reporter_full_build_file_name(
     const char * data_dir,
     const char * key,
+    spx_output_stream_compression_type_t compression_type,
     char * file_name,
     size_t size
+);
+
+int spx_reporter_full_delete_report(
+    const char * data_dir,
+    const char * key
+);
+
+int spx_reporter_full_delete_all_reports(
+    const char * data_dir
 );
 
 spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir);

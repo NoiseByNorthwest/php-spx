@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<!--
+SPX - A seamless profiler for PHP
+Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>SPX Control Panel</title>
+        <script>
+        (() => {
+            let m = window.location.href.match(/SPX_KEY=([^&]+)/);
+            if (!m) {
+                return;
+            }
+
+            document.cookie = 'SPX_KEY=' + m[1] + '; expires=Thu, 31 Dec 2037 23:59:59 UTC; path=/';
+
+            window.location.replace(window.location.href.replace(/\?.*/, '?SPX_UI_URI=/'));
+        })();
+        </script>
+        <link rel="stylesheet" href="?SPX_UI_URI=/v1/css/main.css">
+    </head>
+    <body>
+        <h1>SPX Control Panel</h1>
+
+        <form id="config">
+            <fieldset>
+                <legend>Configuration</legend>
+                <br>
+                <label for="cli-prefix">Command line prefix</label>
+                <textarea id="cli-prefix" rows="2" cols="60" readonly></textarea>
+                <br>
+            </fieldset>
+        </form>
+
+        <div id="reports"></div>
+        <dialog id="spx-dialog">
+            <div id="spx-dialog-title"></div>
+            <div id="spx-dialog-message"></div>
+            <div id="spx-dialog-actions">
+                <button id="spx-dialog-cancel">No</button><!--
+                --><button id="spx-dialog-confirm">Delete</button>
+            </div>
+        </dialog>
+
+        <!-- Required workaround for Firefox to fix a "no credentials" issue -->
+        <script crossorigin src="?SPX_UI_URI=/v1/js/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/dataTable.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/utils.js"></script>
+        <script type="module" crossorigin src="?SPX_UI_URI=/v1/js/fmt.js"></script>
+
+        <script type="module" crossorigin>
+            function getImportUrl(path) {
+                const rootUrl = new URL(import.meta.url);
+                rootUrl.searchParams.set('SPX_UI_URI', path);
+                return rootUrl.toString();
+            }
+
+            const {makeDataTable} = await import(getImportUrl('/v1/js/dataTable.js'));
+            const utils = await import(getImportUrl('/v1/js/utils.js'));
+            const {getCookieVar, setCookieVar, escapeHtml} = utils;
+            const fmt = await import(getImportUrl('/v1/js/fmt.js'));
+
+            async function spxConfirm(title, message = '') {
+                return new Promise((resolve) => {
+                    const $dialog = $('#spx-dialog');
+                    const $title = $dialog.find('#spx-dialog-title');
+                    const $message = $dialog.find('#spx-dialog-message');
+                    const $confirmBtn = $dialog.find('#spx-dialog-confirm');
+                    const $cancelBtn = $dialog.find('#spx-dialog-cancel');
+
+                    $title.text(title);
+                    $message.html(message);
+                    $dialog[0].showModal();
+
+                    const cleanup = (value) => {
+                        $dialog[0].close();
+                        $confirmBtn.off('click');
+                        $cancelBtn.off('click');
+                        $dialog.off('cancel');
+                        resolve(value);
+                    };
+
+                    $confirmBtn.on('click', () => cleanup(true));
+                    $cancelBtn.on('click', () => cleanup(false));
+                    $dialog.on('cancel', (e) => {
+                        e.preventDefault();
+                        cleanup(false);
+                    });
+                });
+            }
+
+            $(() => {
+                const $reports = $('#reports');
+                $reports.on('click', '#delete-all', async (e) => {
+                  e.preventDefault();
+                  if (await spxConfirm('Do you want to delete all the SPX reports?', 'This action cannot be undone.')) {
+                    const response = await fetch(e.currentTarget.href, {credentials: "same-origin"});
+                    if (response.ok) {
+                      $reports.find('tbody,tfoot').html('');
+                    }
+                  }
+                  return false;
+                });
+                $reports.on('click', '.delete-report', async (e) => {
+                  e.preventDefault();
+                  const rowData = JSON.parse(e.currentTarget.dataset.rowData);
+                  const confirmationMessage = [
+                    `<span class="spx-report-metadata">ID</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.key)}</span>`,
+                    `<span class="spx-report-metadata">Request / Command</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.request)}</span>`,
+                    `<span class="spx-report-metadata">Date</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.date)}</span>`,
+                    `<span class="spx-report-metadata">HTTP Host</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.httpHost)}</span>`,
+                    `<span class="spx-report-metadata">Host name</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.hostName)}</span>`,
+                    `<span class="spx-report-metadata">Custom metadata</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.metadata)}</span>`,
+                    `<span class="spx-report-metadata">Wall time</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.wallTime)}</span>`,
+                    `<span class="spx-report-metadata">Memory</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.memory)}</span>`,
+                    `<span class="spx-report-metadata">Metrics</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.metrics)}</span>`,
+                    `<span class="spx-report-metadata">Recorded calls</span>: <span class="spx-report-metadata-value">${escapeHtml(rowData.recordedCalls)}</span>`,
+                  ].join('\n');
+                  if (await spxConfirm('Do you want to delete the SPX report?', confirmationMessage)) {
+                    const response = await fetch(e.currentTarget.href, {credentials: "same-origin"});
+                    if (response.ok) {
+                      $reports.find(`#row-${rowData.key}`).remove();
+                      if ($reports.find('tbody tr').length === 0) {
+                        $reports.find('tfoot').html('');
+                      }
+                    }
+                  }
+                  return false;
+                });
+
+                fetch('?SPX_UI_URI=/data/metrics', {credentials: "same-origin"})
+                    .then(response => response.json())
+                    .then(response => {
+                        const metrics = response.results;
+
+                        const parameters = [
+                            {
+                                key: 'SPX_ENABLED',
+                                label: 'Enabled',
+                                type: 'switch',
+                                defaultValue: '0',
+                                description: 'Whether to enable SPX profiler for your current browser session. No performance impact for other clients.',
+                            },
+                            {
+                                key: 'SPX_AUTO_START',
+                                label: 'Automatic start',
+                                type: 'switch',
+                                defaultValue: '1',
+                                description: 'Whether to enable SPX profiler\'s automatic start. When automatic start is disabled, you have to start & stop profiling on your own at runtime via the `spx_profiler_start()` & `spx_profiler_stop()` functions.',
+                            },
+                            {
+                                key: 'SPX_BUILTINS',
+                                label: 'Profile internal functions',
+                                type: 'switch',
+                                defaultValue: '0',
+                                description: 'Whether to profile internal functions. It is not recommended to profile internal functions if you want to accurately find a time bottleneck.',
+                            },
+                            {
+                                key: 'SPX_SAMPLING_PERIOD',
+                                label: 'Sampling',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: [
+                                        {key: '0',    label: 'Disabled'},
+                                        {key: '5',    label: '5us'},
+                                        {key: '10',   label: '10us'},
+                                        {key: '20',   label: '20us'},
+                                        {key: '50',   label: '50us'},
+                                        {key: '100',  label: '100us'},
+                                        {key: '200',  label: '200us'},
+                                        {key: '500',  label: '500us'},
+                                        {key: '1000', label: '1ms'},
+                                        {key: '2000', label: '2ms'},
+                                        {key: '5000', label: '5ms'},
+                                    ],
+                                },
+                                defaultValue: '0',
+                                description: 'Whether to collect data for the current call stack at regular intervals according to the specified sampling period. The result will usually be less accurate but in some cases it could be far more accurate by not over-evaluating small functions called many times. It is recommended to try sampling (with different periods) if you want to accurately find a time bottleneck. When profiling a long running & CPU intensive script, this option will also allow you to contain report size and thus keeping it small enough to be exploitable through the analysis screen.',
+                            },
+                            {
+                                key: 'SPX_DEPTH',
+                                label: 'Max profiling depth',
+                                type: 'choice',
+                                choice: {
+                                    multi: false,
+                                    values: Array
+                                        .from(Array(10).keys(), e => e != 0 ? e : Number.POSITIVE_INFINITY)
+                                        .sort()
+                                        .reverse()
+                                        .map(e => e == Number.POSITIVE_INFINITY ? 0 : e)
+                                        .map(e => ({
+                                            key: '' + e,
+                                            label: '' + (e == 0 ? 'Unlimited' : e),
+                                        }))
+                                    ,
+                                },
+                                defaultValue: '0',
+                                description: 'The stack depth at which profiling must stop (i.e. aggregate measures of deeper calls).',
+                            },
+                            {
+                                key: 'SPX_METRICS',
+                                label: 'Additional metrics',
+                                type: 'choice',
+                                choice: {
+                                    multi: true,
+                                    values: metrics
+                                        .filter(e => e.key != 'wt' && e.key != 'zm')
+                                        .map(e => ({
+                                            key: e.key,
+                                            label: e.name,
+                                        }))
+                                    ,
+                                },
+                                defaultValue: '',
+                                description: 'List of available metrics to collect in addition to Wall time and Zend Engine memory usage. It is not recommended to collect additional metrics if you want to accurately find a time bottleneck.',
+                            },
+                        ];
+
+                        let $fieldSet = $($('#config > fieldset')[0]);
+                        $.each(parameters, (_, parameter) => {
+                            $fieldSet.append(
+                                '<label for="' + parameter.key + '">'
+                                    + parameter.label + '</label>'
+                            );
+
+                            switch (parameter.type) {
+                                case 'switch':
+                                    $fieldSet.append(
+                                        '<input id="'+ parameter.key + '" type="checkbox">'
+                                    );
+
+                                    break;
+
+                                case 'choice':
+                                    let size = Math.max(5, parseInt(parameter.choice.values.length * 0.7));
+                                    let html =
+                                        '<select id="'+ parameter.key + '" '
+                                            + (
+                                                parameter.choice.multi
+                                                    ? 'multiple size="' + size + '"'
+                                                    : ''
+                                            ) + '>'
+                                    ;
+
+                                    $.each(parameter.choice.values, (_, e) => {
+                                        html += '<option value="' + e.key + '">' + e.label + '</option>';
+                                    });
+
+                                    html += '</select>';
+                                    $fieldSet.append(html);
+
+                                    break;
+                            }
+
+                            $fieldSet.append('<em>' + parameter.description + '</em>');
+
+                            $fieldSet.append('<br>');
+                        });
+
+                        $.each(parameters, (_, parameter) => {
+                            let value = getCookieVar(parameter.key) || parameter.defaultValue;
+                            switch (parameter.type) {
+                                case 'switch':
+                                    $('#' + parameter.key).prop('checked', value != '0');
+
+                                    break;
+
+                                case 'choice':
+                                    $('#' + parameter.key + ' > option').each((_, e) => {
+                                        $(e).prop('selected', false);
+                                    });
+
+                                    $.each(value.split(','), (_, e) => {
+                                        $('#' + parameter.key + ' option[value="' + e + '"]').prop('selected', true);
+                                    });
+
+                                    break;
+                            }
+                        });
+
+                        $('#config').on('click blur change', () => {
+                            let cliParameters = ['SPX_REPORT=full'];
+                            $.each(parameters, (_, parameter) => {
+                                let value = null;
+
+                                switch (parameter.type) {
+                                    case 'switch':
+                                        value = $('#' + parameter.key).is(':checked') ? '1' : '0';
+
+                                        break;
+
+                                    case 'choice':
+                                        value = $('#' + parameter.key).val();
+                                        if (value.constructor === Array) {
+                                            value = value.join(',');
+                                        }
+
+                                        break;
+                                }
+
+                                setCookieVar(parameter.key, value);
+                                if (value != parameter.defaultValue) {
+                                    cliParameters.push(parameter.key + '=' + value);
+                                }
+                            });
+
+                            $('#cli-prefix').val(cliParameters.join(' '));
+                        });
+
+                        $('#config').trigger('blur');
+
+                        return fetch('?SPX_UI_URI=/data/reports/metadata', {credentials: "same-origin"});
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const formatRowDate = value => fmt.date(new Date(value * 1000));
+                        const makeRequest = row => row.cli ? row.cli_command_line
+                          : row.http_method + ' ' + row.http_request_uri;
+                        const formatWallTime = value => fmt.time(value * 1000);
+                        const formatMemoryUsage = value => fmt.memory(value);
+                        const formatMetrics = value => value.join(', ');
+                        const formatRecordedCalls = value => fmt.quantity(value);
+                        makeDataTable(
+                            'reports',
+                            {
+                                makeRowUrl: row => '?SPX_UI_URI=/v1/report.html&key=' + row.key,
+                                columns: [
+                                    {
+                                        label: 'Date',
+                                        value: 'exec_ts',
+                                        format: formatRowDate,
+                                    },
+                                    {
+                                        label: 'HTTP Host',
+                                        cssClass: 'breakable-text',
+                                        value: 'http_host',
+                                    },
+                                    {
+                                        label: 'Request / Command',
+                                        cssClass: 'breakable-text',
+                                        value: makeRequest,
+                                    },
+                                    {
+                                        label: 'Host',
+                                        cssClass: 'breakable-text',
+                                        value: 'host_name',
+                                    },
+                                    {
+                                        label: 'Custom metadata',
+                                        cssClass: 'breakable-text',
+                                        value: 'custom_metadata_str',
+                                    },
+                                    {
+                                        label: 'Wall time',
+                                        value: 'wall_time_ms',
+                                        format: formatWallTime,
+                                    },
+                                    {
+                                        label: 'Memory',
+                                        value: 'peak_memory_usage',
+                                        format: formatMemoryUsage,
+                                    },
+                                    {
+                                        label: 'Metrics',
+                                        value: 'enabled_metrics',
+                                        format: formatMetrics,
+                                    },
+                                    {
+                                        label: 'Recorded calls',
+                                        value: 'recorded_call_count',
+                                        format: formatRecordedCalls,
+                                    },
+                                    {
+                                        label: 'Operations',
+                                        skipUrl: true,
+                                        cssClass: 'delete-column',
+                                        value: row => {
+                                            const rowData = {
+                                                key: row.key,
+                                                request: makeRequest(row),
+                                                date: formatRowDate(row.exec_ts),
+                                                httpHost: row.http_host,
+                                                hostName: row.host_name,
+                                                metadata: row.custom_metadata_str,
+                                                wallTime: formatWallTime(row.wall_time_ms),
+                                                memory: formatMemoryUsage(row.peak_memory_usage),
+                                                metrics: formatMetrics(row.enabled_metrics),
+                                                recordedCalls: formatRecordedCalls(row.recorded_call_count),
+                                            };
+                                            return `<a class="delete-report delete-btn" href="?SPX_UI_URI=/data/reports/delete/${rowData.key}" data-row-data="${escapeHtml(JSON.stringify(rowData))}">Delete</a>`
+                                        }
+                                    },
+                                ],
+                                footer: [
+                                    {
+                                        colspan: 8,
+                                        value: '',
+                                    },
+                                    {
+                                        colspan: 2,
+                                        value: '<a id="delete-all" class="delete-btn" href="?SPX_UI_URI=/data/reports/delete_all">Delete all</a>',
+                                    },
+                                ],
+                            },
+                            data.results
+                        );
+                    })
+                ;
+            });
+        </script>
+    </body>
+</html>

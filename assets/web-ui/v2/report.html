@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<!--
+SPX - A seamless profiler for PHP
+Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>SPX Report</title>
+    <link rel="stylesheet" href="?SPX_UI_URI=/v2/css/main.css">
+</head>
+<body>
+    <div id="init-report">
+        <div>
+            <h2>Initializing...</h2>
+            <p></p>
+        </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; height: 100%">
+        <div style="flex: 0 0 24px; display: flex; flex-direction: row;">
+            <div id="metric-selector" class="widget" style="flex: 0 0 120px;">
+                <select></select>
+            </div>
+            <div id="color-scheme-selector" class="widget" style="flex: 0 0 300px;"></div>
+            <div id="search-box" class="widget" style="flex: 0 0 300px;"></div>
+        </div>
+        <div id="overview" class="widget visualization" style="flex: 0 0 80px"></div>
+        <div style="flex:1; min-height: 0; display: flex; flex-direction: column;">
+            <div id="timeline" class="widget visualization" style="flex: 0 0 auto; height: 500px"></div>
+            <div
+                class="layout-splitter"
+                data-layout-splitter-target="timeline"
+                data-layout-splitter-axis="y"
+                data-layout-splitter-dir="-1"
+                data-layout-splitter-min="30"
+            ></div>
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: row;">
+                <div id="flat-profile" class="widget" style="flex: 0 0 auto; width: 900px"></div>
+                <div
+                    class="layout-splitter"
+                    data-layout-splitter-target="flat-profile"
+                    data-layout-splitter-axis="x"
+                    data-layout-splitter-dir="-1"
+                    data-layout-splitter-min="500"
+                ></div>
+                <div id="flamegraph" class="widget visualization" style="flex: 1 1 auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" crossorigin>
+        import {fmt, progressBar as progressBarModule, reportReader, profileDataAnalyzer, widget, layoutSplitter} from './?SPX_UI_URI=/v2/js/spx.js';
+
+        const {ProfileDataAnalyzerBuilder} = profileDataAnalyzer;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const m = window.location.href.match(/\bkey=([^&]+)/);
+            if (!m) {
+                return;
+            }
+
+            const key = m[1];
+            let profileDataAnalyzerBuilder = null;
+
+            const progressBar = new progressBarModule.ProgressBar();
+            const initReportTitle = document.querySelector('#init-report p');
+            initReportTitle.after(progressBar.element, progressBar.infoElement);
+
+            const initDialog = {
+                container: document.getElementById('init-report'),
+                title: initReportTitle,
+            };
+
+            function setProgress(title, current, total) {
+                initDialog.title.innerHTML = title;
+                progressBar.update(current, total, title);
+            }
+
+            reportReader
+                .readReport(key, {
+                    metrics: (metrics) => {
+                        profileDataAnalyzerBuilder = new ProfileDataAnalyzerBuilder(metrics);
+                    },
+                    metadata: (metadata) => {
+                        profileDataAnalyzerBuilder.setMetadata(metadata);
+
+                        console.time('Call list building');
+                    },
+                    event: (event) => {
+                        profileDataAnalyzerBuilder.addEvent(event);
+                    },
+                    function: (functionIdx, functionName) => {
+                        profileDataAnalyzerBuilder.setFunctionName(functionIdx, functionName);
+                    },
+                    progress: () => {
+                        setProgress(
+                            'Building call list... (1/2)<br>'
+                                + `${fmt.quantity(profileDataAnalyzerBuilder.getTotalCallCount())} function calls`
+                            ,
+                            profileDataAnalyzerBuilder.getCurrentCallCount(),
+                            profileDataAnalyzerBuilder.getTotalCallCount()
+                        );
+                    },
+                })
+                .then(() => {
+                    console.timeEnd('Call list building');
+                    return profileDataAnalyzerBuilder.buildCallRangeTree(
+                        (current, total) => setProgress(
+                            `Building call range tree... (2/2)<br>${fmt.quantity(total)} function calls`,
+                            current,
+                            total
+                        )
+                    );
+                })
+                .then(() => {
+                    initDialog.title.innerText = 'Initializing widgets...';
+
+                    return new Promise(resolve => resolve(profileDataAnalyzerBuilder.getProfileDataAnalyzer()));
+                })
+                .then(profileDataAnalyzer => {
+                    const metricSelector = document.querySelector('#metric-selector select');
+
+                    for (const metric of profileDataAnalyzer.getMetadata().enabled_metrics) {
+                        const option = document.createElement('option');
+                        option.value = metric;
+                        option.textContent = profileDataAnalyzer.getMetricInfo(metric).name;
+                        metricSelector.appendChild(option);
+                    }
+
+                    const widgets = [
+                        new widget.ColorSchemeSelector(document.getElementById('color-scheme-selector'), profileDataAnalyzer),
+                        new widget.SearchBox(document.getElementById('search-box'), profileDataAnalyzer),
+                        new widget.OverView(document.getElementById('overview'), profileDataAnalyzer),
+                        new widget.TimeLine(document.getElementById('timeline'), profileDataAnalyzer),
+                        new widget.FlatProfile(document.getElementById('flat-profile'), profileDataAnalyzer),
+                        new widget.FlameGraph(document.getElementById('flamegraph'), profileDataAnalyzer),
+                    ];
+
+                    widgets.forEach(widget => widget.render());
+
+                    metricSelector.addEventListener('change', () => {
+                        const value = metricSelector.value;
+                        widgets.forEach(widget => widget.setCurrentMetric(value));
+                        widgets.forEach(widget => widget.repaint());
+                    });
+
+                    layoutSplitter.init();
+
+                    layoutSplitter.change(() => {
+                        widgets.forEach(widget => {
+                            if (!["timeline", "flat-profile", "flamegraph"].includes(widget.container.id)) {
+                                return;
+                            }
+
+                            widget.handleResize();
+                        });
+                    });
+
+                    return Promise.resolve();
+                })
+                .then(() => {
+                    initDialog.container.style.transition = 'opacity 500ms ease';
+                    initDialog.container.style.opacity = '0';
+
+                    setTimeout(() => {
+                        initDialog.container.style.display = 'none';
+                    }, 500);
+                })
+                .catch(e => {
+                    initDialog.progressInfo.innerText = e;
+                    console.error(e)
+                })
+            ;
+        });
+    </script>
+</body>
+</html>

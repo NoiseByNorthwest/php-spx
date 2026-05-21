@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,8 @@ typedef struct {
     size_t sampling_period;
     int builtins;
     size_t max_depth;
-    int enabled_metrics[SPX_METRIC_COUNT];
+    int metric_settings[SPX_METRIC_COUNT];
+    spx_metric_t enabled_metrics[SPX_METRIC_COUNT];
 
     spx_config_report_t report;
 

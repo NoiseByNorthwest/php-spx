@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,10 @@
 
 spx_profiler_t * spx_profiler_tracer_create(
     size_t max_depth,
-    const int * enabled_metrics,
+    spx_metric_collector_t * metric_collector,
     spx_profiler_reporter_t * reporter
 );
+
+void spx_profiler_tracer_freeze_metrics(spx_profiler_t * profiler, int freeze_metrics);
 
 #endif /* SPX_PROFILER_TRACER_H_DEFINED */

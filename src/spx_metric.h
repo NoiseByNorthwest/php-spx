@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,15 @@ do {                                             \
     for (it = 0; it < SPX_METRIC_COUNT; it++) {  \
         block                                    \
     }                                            \
+} while (0)
+
+
+#define SPX_METRIC_FOREACH_L(it, limit, block)  \
+do {                                            \
+    size_t it;                                  \
+    for (it = 0; it < (limit); it++) {          \
+        block                                   \
+    }                                           \
 } while (0)
 
 typedef enum {
@@ -66,6 +75,7 @@ typedef struct {
     const char * name;
     spx_fmt_value_type_t type;
     int releasable;
+    int derived;
     size_t (*handler)(void);
 } spx_metric_info_t;
 
@@ -75,8 +85,12 @@ spx_metric_t spx_metric_get_by_key(const char * key);
 
 typedef struct spx_metric_collector_t spx_metric_collector_t;
 
-spx_metric_collector_t * spx_metric_collector_create(const int * enabled_metrics);
+spx_metric_collector_t * spx_metric_collector_create(const spx_metric_t * enabled_metrics);
 void spx_metric_collector_destroy(spx_metric_collector_t * collector);
+
+const spx_metric_t * spx_metric_collector_enabled_metrics(const spx_metric_collector_t * collector);
+size_t spx_metric_collector_enabled_metric_count(const spx_metric_collector_t * collector);
+size_t spx_metric_collector_enabled_metric_idx(const spx_metric_collector_t * collector, spx_metric_t metric);
 
 void spx_metric_collector_collect(spx_metric_collector_t * collector, double * values);
 void spx_metric_collector_noise_barrier(spx_metric_collector_t * collector);

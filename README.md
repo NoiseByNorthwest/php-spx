@@ -1,7 +1,7 @@
-# SPX - A simple profiler for PHP
+# SPX - A seamless profiler for PHP
 
 [![Build Status][:badge-ci:]][:link-ci:]
-![Supported PHP versions: 5.4 .. 8.x][:badge-php-versions:]
+![Supported PHP versions: 7.0 .. 8.x][:badge-php-versions:]
 ![Supported platforms: GNU/Linux, macOS & FreeBSD][:badge-supported-platforms:]
 ![Supported architectures: x86-64 or ARM64][:badge-supported-arch:]
 [![License][:badge-license:]][:link-license:]
@@ -16,7 +16,7 @@
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/43e3ffe185a1dcec70e7c8ced36acfdf316bae65/php-spx/doc/fp1.gif)
 
-SPX, which stands for _Simple Profiling eXtension_, is just another profiling extension for PHP.
+SPX, which stands for _Seamless Profiling eXperience_, is just another profiling extension for PHP.
 It differentiates itself from other similar extensions as being:
 * totally free and confined to your infrastructure (i.e. no data leaks to a SaaS).
 * very simple to use: just set an environment variable (command line) or switch on a radio button (web request) to profile your script. Thus, you are free of:
@@ -24,6 +24,7 @@ It differentiates itself from other similar extensions as being:
   * using a dedicated browser extension or command line launcher.
 * [multi metrics](#available-metrics) capable: 22 are currently supported (various time & memory metrics, included files, objects in use, I/O...).
 * able to collect data without losing context. For example Xhprof (and potentially its forks) aggregates data per caller / callee pairs, which implies the loss of the full call stack and forbids timeline or Flamegraph based analysis.
+* low-overhead: roughly half the overhead of [XHProf](https://www.php.net/manual/en/book.xhprof.php) in tracing mode, close to [Excimer](https://www.mediawiki.org/wiki/Excimer) in sampling mode.
 * shipped with its [web UI](#web-ui) which allows to:
   * enable / configure profiling for the current browser session
   * list profiled script reports
@@ -39,8 +40,9 @@ Current requirements are:
 
 * x86-64 or ARM64
 * **GNU/Linux**, **macOS** or **FreeBSD**
-* zlib dev package (e.g. zlib1g-dev on Debian based distros)
-* PHP 5.4 to 8.5
+* zlib dev package (e.g. zlib1g-dev on Debian-based distros)
+* Optionally: Zstandard dev package (e.g. libzstd-dev on Debian-based distros). Zstandard is optional but recommended in order to minimize SPX's overhead.
+* PHP 7.0 to 8.5. PHP 5.x (starting from 5.4) is supported by SPX 0.4.x and earlier versions.
 
 ## Installation
 
@@ -105,17 +107,48 @@ Contributions are welcome but be aware of the experimental status of this projec
 
 ## Basic usage
 
-### web request
+### Serving and accessing to the web UI
 
 Assuming a development environment with the configuration [described here](#private-environment) and your application is accessible via `http://localhost`.
 
-Just open with your browser the following URL: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access to the web UI [control panel](#control-panel).
+Just open the following URL in your browser: `http://localhost/?SPX_KEY=dev&SPX_UI_URI=/` to access the web UI [control panel](#control-panel).
 
-_N.B.: `http://localhost/` must be served by a PHP script through standard web server feature like directory index or URL rewriting. The PHP script will however not be executed, SPX will intercept and disable its execution to serve its content in place._
+#### Regular PHP server (FPM, mod_php)
 
-_If you see only a blank page then make sure to set `zlib.output_compression = 0` in your PHP configuration file_
+You have nothing special to do, it will work out of the box.
 
-You will then see the following form:
+However, `http://localhost/` must be served by a PHP script through standard web server features like directory index or URL rewriting. The PHP script will not be executed, SPX will intercept and disable its execution to serve its content in its place.
+
+If you see only a blank page, then make sure to set `zlib.output_compression = 0` in your PHP configuration file.
+
+#### Worker-based PHP servers
+
+If you are running PHP in worker mode, such as with FrankenPHP, it is also possible to serve the SPX Web UI directly from the worker process. This requires that the worker implementation correctly exposes PHP superglobals for each HTTP request, as FrankenPHP does.
+
+To do this you can use the following function:
+
+```php
+spx_ui_handle_request(): bool
+```
+
+This function will attempt to serve the SPX Web UI. If it handles the request, it returns `true`, and you should skip further application logic.
+
+Example usage with a custom FrankenPHP handler:
+
+```php
+$handler = static function () use ($myApp) {
+    if (spx_ui_handle_request()) {
+        // A SPX UI request has been served
+        return;
+    }
+
+    echo $myApp->handle($_GET, $_POST, $_COOKIE, $_FILES, $_SERVER);
+};
+```
+
+### Web request profiling
+
+Once in the dev panel, you will see the following form:
 
 ![Showcase](https://github.com/NoiseByNorthwest/NoiseByNorthwest.github.io/blob/93baabbcba04223586d06756dbcecfbd6ec1293d/php-spx/doc/cp-form.png)
 
@@ -133,7 +166,7 @@ Then refresh the web request you want to profile and refresh the control panel t
 
 Then click on the report in the list and enjoy the [analysis screen](#analysis-screen).
 
-### Command line script
+### Command line script profiling
 
 #### Instant flat profile
 
@@ -475,21 +508,26 @@ SPX provides two-factor authentication with these 2 mandatory locks:
 
 Thus a client can profile your application via a web request only if **its IP address is white listed and its provided key is valid**.
 
-## Notes on accuracy
+## Notes on Accuracy
 
-In tracing mode (default), SPX is subject to accuracy issues for time related metrics when the measured function execution time is:
-- close or lower than the timer precision
-- close or lower than SPX's own per function overhead
+In tracing mode (the default), SPX may suffer from accuracy issues for time-related metrics when the measured function execution time is:
+- close to or lower than the timer’s precision,
+- close to or lower than SPX’s own per-function overhead.
 
-The first issue is mitigated by using the highest resolution timer provided by the platform. On Linux, FreeBSD & recent macOS versions the timer resolution is 1ns; on macOS before 10.12/Sierra, the timer resolution is only 1us.
+The first issue is mitigated by using the highest-resolution timer available on the platform.
+On Linux, FreeBSD, and recent macOS versions, the timer resolution is 1 ns.
+On macOS versions prior to 10.12 (Sierra), the timer resolution is only 1 us.
 
-The second issue is mitigated by taking into account SPX's time (wall / cpu) overhead by subtracting it to measured function execution time. This is done by evaluating SPX constant per function overhead before starting profiling the script.
+The second issue is mitigated by accounting for SPX's own (wall/cpu) per-function overhead.
+SPX subtracts this overhead from the measured execution time after evaluating its constant cost per function call before profiling begins.
 
-However, whatever the platform, if you want to maximize accuracy to find a time bottleneck, you should also:
-- avoid profiling internal functions.
-- avoid collecting additional metrics.
-- try sampling mode with different sampling periods.
-- try to play with maximum depth parameter to stop profiling at a given depth.
+Beyond these mitigations, if you want to further improve accuracy, you should:
+- prefer the **full** report (the default for HTTP request profiling) over the other report types,
+- build SPX with **Zstandard** support; you can verify this with `php -i`, which should display: `SPX Zstandard available => yes`,
+- avoid collecting additional metrics (everything is optimized for the default metric set `wt,zm`),
+- avoid profiling internal functions,
+- try sampling mode with different sampling periods,
+- experiment with the maximum depth parameter to stop profiling beyond a given call depth.
 
 ## Stubs
 
@@ -513,7 +551,7 @@ See the [LICENSE][:link-license:] file for more information.
 [:badge-ci:]:           https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml/badge.svg
 [:link-ci:]:            https://github.com/NoiseByNorthwest/php-spx/actions/workflows/main.yml
 
-[:badge-php-versions:]: https://img.shields.io/badge/php-5.4--8.5-blue.svg
+[:badge-php-versions:]: https://img.shields.io/badge/php-7.0--8.5-blue.svg
 [:badge-supported-platforms:]: https://img.shields.io/badge/platform-GNU/Linux%20|%20macOS%20|%20FreeBSD%20-yellow
 [:badge-supported-arch:]: https://img.shields.io/badge/architecture-x86--64%20|%20ARM64%20-silver
 

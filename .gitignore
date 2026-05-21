@@ -34,3 +34,5 @@ tmp-php.ini
 *.swp
 *.loT
 *.dep
+.claude
+.idea

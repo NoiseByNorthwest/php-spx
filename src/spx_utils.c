@@ -1,5 +1,5 @@
-/* SPX - A simple profiler for PHP
- * Copyright (C) 2017-2025 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@
 #include <arpa/inet.h>
 
 #include "spx_utils.h"
-#include "spx_php.h"
 
 int spx_utils_ip_match(const char * ip_address_str, const char * target)
 {
@@ -72,7 +71,7 @@ int spx_utils_ip_match(const char * ip_address_str, const char * target)
         return 0;
     }
 
-    const in_addr_t target_mask = (~0) << (32 - target_mask_bits);
+    const in_addr_t target_mask = (~0u) << (32 - target_mask_bits);
 
     const in_addr_t ip_address = inet_addr(ip_address_str);
     if (ip_address == INADDR_NONE) {

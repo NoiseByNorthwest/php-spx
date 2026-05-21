@@ -1,0 +1,541 @@
+/* SPX - A seamless profiler for PHP
+ * Copyright (C) 2017-2026 Sylvain Lassaut <NoiseByNorthwest@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+:root {
+    --background-color: #1d222b;
+    --text-color: #e2e3e4;
+    --form-element-background: #212631;
+    --table-sort-field-background: #212631;
+    --progress-bar-color: #0d0;
+    --hover-color: #43526d;
+    --border-color: #272c37;
+    --delete-color: #e74c3c;
+    --confirm-dialog-confirm-btn-background: var(--form-element-background);
+    --confirm-dialog-confirm-btn-color: var(--delete-color);
+    --confirm-dialog-confirm-btn-border-color: var(--border-color);
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --background-color: #f3f4f7;
+        --text-color: #303640;
+        --form-element-background: #ffffff;
+        --table-sort-field-background: #ffffff;
+        --progress-bar-color: #151;
+        --hover-color: #cfd4e1;
+        --border-color: #f8f8f9;
+        --confirm-dialog-confirm-btn-background: var(--delete-color);
+        --confirm-dialog-confirm-btn-color: var(--background-color);
+        --confirm-dialog-confirm-btn-border-color: var(--delete-color);
+    }
+}
+
+html {
+    height: 99%;
+}
+
+body {
+    font-family: monospace;
+    margin: 2px;
+    padding: 0;
+    height: 100%;
+}
+
+* {
+    color: var(--text-color);
+}
+
+details {
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+}
+
+summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    background: var(--table-sort-field-background);
+    border-radius: 4px;
+}
+
+details[open] summary {
+    margin-bottom: 10px;
+}
+
+body, #color-scheme-panel {
+    background-color: var(--background-color);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+fieldset {
+    border: none;
+    display: grid;
+    grid-template-columns: 200px auto 1fr; /* label / input / description */
+    grid-column-gap: 10px;
+    align-items: start;
+}
+
+.form-row {
+    display: contents;
+}
+
+.form-row label {
+    justify-self: end;
+}
+
+.form-row input:not(.switch),
+.form-row select,
+.form-row textarea {
+    justify-self: start;
+    width: 100%;
+}
+
+.form-row em {
+    font-style: normal;
+    max-width: 600px;
+    color: var(--text-color);
+}
+
+label {
+    display: inline-block;
+    width: 300px;
+    margin-right: 20px;
+    margin-bottom: 30px;
+    text-align: right;
+    vertical-align: top;
+}
+
+em {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: 10px;
+    margin-bottom: 20px;
+}
+
+.switch {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 40px;
+    height: 20px;
+    background: var(--form-element-background);
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background 0.2s;
+}
+
+.switch::before {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 1px;
+    left: 2px;
+    background: var(--text-color);
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.switch:checked {
+    background: var(--hover-color);
+}
+
+.switch:checked::before {
+    transform: translateX(20px);
+}
+
+input,
+textarea {
+    vertical-align: top;
+    border: 1px solid var(--border-color);
+    background-color: var(--form-element-background);
+}
+
+select {
+    border: 1px solid var(--border-color);
+    margin-bottom: 10px;
+    background-color: var(--form-element-background);
+    width: 280px;
+}
+
+select option:checked {
+    background: var(--hover-color);
+}
+
+table.data_table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: auto;
+    margin-top: 5px;
+}
+
+table.data_table th,
+table.data_table td {
+   border: 1px solid var(--border-color);
+   margin: 0;
+   padding: 3px;
+}
+
+table.data_table thead tr {
+    cursor: pointer;
+}
+
+table.data_table th.data_table-sort,
+table.data_table th:hover {
+    background-color: var(--hover-color);
+}
+
+table.data_table td.breakable-text {
+    word-break: break-all;
+}
+
+table.data_table tbody > tr:hover {
+    background-color: var(--hover-color);
+}
+
+table.data_table td > a {
+    display: block;
+    text-decoration: none;
+}
+
+table.data_table tr .data_table-action-btn {
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    padding: 2px 8px;
+    background-color: var(--form-element-background);
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+table.data_table tr .data_table-action-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.data_table-toolbar {
+    margin-bottom: 8px;
+}
+
+.data_table-toolbar a {
+    display: inline-block;
+    padding: 5px 12px;
+    background-color: var(--form-element-background);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-family: monospace;
+    text-decoration: none;
+    color: var(--delete-color);
+    font-weight: bold;
+}
+
+.data_table-toolbar a:hover {
+    background-color: var(--hover-color);
+}
+
+
+#confirm-dialog,
+.report-exporter-dialog {
+    background: var(--background-color);
+    border: 2px solid var(--border-color);
+    padding: 20px;
+    min-width: 300px;
+    max-width: 80%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.report-exporter-path-rewrite {
+    margin-bottom: 20px;
+}
+
+.report-exporter-path-rewrite-label {
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.report-exporter-path-rewrite-label span {
+    font-weight: normal;
+    opacity: 0.7;
+}
+
+.report-exporter-path-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.report-exporter-path-row > span {
+    width: 3em;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+
+.report-exporter-path-row input {
+    flex: 1;
+    min-width: 0;
+    width: 350px;
+    padding: 3px 6px;
+    background: var(--form-element-background);
+    border: 1px solid var(--border-color);
+    color: inherit;
+    font-family: monospace;
+}
+
+.report-exporter-path-row input:disabled {
+    opacity: 0.5;
+}
+
+#confirm-dialog::backdrop,
+.report-exporter-dialog::backdrop {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+#confirm-dialog-title,
+.report-exporter-title {
+    margin-bottom: 20px;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+#confirm-dialog-message,
+.report-exporter-status {
+    margin-bottom: 20px;
+    white-space: pre-wrap;
+}
+
+.report-exporter-status {
+    min-height: 1em;
+}
+
+.report-exporter-status.report-exporter-error {
+    color: var(--delete-color);
+}
+
+
+
+#confirm-dialog-actions,
+.report-exporter-actions {
+    text-align: right;
+}
+
+#confirm-dialog-actions button,
+.report-exporter-actions button {
+    margin-left: 10px;
+    padding: 5px 15px;
+    background-color: var(--form-element-background);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-family: monospace;
+}
+
+#confirm-dialog-actions button:hover,
+.report-exporter-actions button:hover {
+    background-color: var(--hover-color);
+}
+
+.report-exporter-actions .report-exporter-export {
+    font-weight: bold;
+}
+
+#confirm-dialog-actions #confirm-dialog-confirm {
+    font-weight: bold;
+    background-color: var(--confirm-dialog-confirm-btn-background);
+    color: var(--confirm-dialog-confirm-btn-color);
+    border-color: var(--confirm-dialog-confirm-btn-border-color);
+}
+
+#confirm-dialog-actions #confirm-dialog-confirm:hover {
+    background-color: var(--hover-color);
+}
+
+
+#init-report {
+    position: absolute;
+    left: 50%;
+}
+
+#init-report > div {
+    position: relative;
+    left: -50%;
+    top: 200px;
+    border: solid 1px var(--border-color);
+    background-color: var(--background-color);
+    width: 400px;
+    height: 200px;
+    padding: 10px;
+    vertical-align: center;
+    text-align: center;
+}
+
+.progress {
+    width: 100%;
+    height: 20px;
+    border: solid 1px var(--border-color);
+    padding: 1px;
+}
+
+.progress > div {
+    height: 100%;
+    background-color: var(--progress-bar-color);
+}
+
+.progress-info {
+    margin-top: 5px;
+    margin-bottom: 20px;
+    min-height: 1em;
+}
+
+.layout-splitter {
+    flex: 0 0 3px;
+    width: 100%;
+    background-color: var(--border-color);
+}
+
+.layout-splitter[data-layout-splitter-axis="x"] {
+    cursor: col-resize;
+}
+
+.layout-splitter[data-layout-splitter-axis="y"] {
+    cursor: row-resize;
+}
+
+#overview,
+#timeline {
+    cursor: -webkit-grab;
+    cursor:-moz-grab;
+}
+
+#overview:active,
+#timeline:active {
+    cursor: -webkit-grabbing;
+    cursor:-moz-grabbing;
+}
+
+.widget {
+    border: solid 1px #022;
+}
+
+.widget:hover {
+    border: solid 1px var(--hover-color);
+}
+
+.visualization {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#metric-selector select {
+    background-color: var(--form-element-background);
+}
+
+#color-scheme-panel {
+    display: none;
+    position: absolute;
+    top: 24px;
+    width: 350px;
+    padding: 6px;
+}
+
+#color-scheme-panel ol {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#color-scheme-panel li {
+    margin: 10px 0 0;
+}
+
+#color-scheme-panel hr {
+    border-color: #089;
+}
+
+#color-scheme-panel button, #color-scheme-panel input, #color-scheme-panel textarea, #search-box input {
+    font-family: monospace;
+    font-size: 12px;
+    background-color: var(--form-element-background);
+    border: 1px solid #0898;
+}
+
+#color-scheme-panel input[name="label"] {
+    width: 181px;
+}
+
+#color-scheme-panel textarea[name="patterns"] {
+    width: calc(100% - 6px);
+}
+
+#search-box {
+    border: none;
+    text-align: left;
+    height: 26px;
+    z-index: 100;
+    position: relative;
+}
+#search-box input {
+    border: 1px solid var(--border-color);
+    width: calc(100% - 5px);
+    height: 100%;
+}
+#search-box button {
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    width: 30px;
+    margin: 0;
+    background: var(--form-element-background);
+    color: var(--text-color);
+    font-weight: bold;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+#search-box > * {
+    min-height: 20px;
+}
+#flatprofile table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 0;
+}
+
+#flatprofile table th,
+#flatprofile table td {
+   border: 1px solid var(--border-color);
+   margin: 0;
+   padding-left: 2px;
+   padding-right: 2px;
+}
+
+#flatprofile table th.sortable {
+    cursor: pointer;
+}
+
+#flatprofile table th.sort,
+#flatprofile table th.sortable:hover {
+    background-color: var(--table-sort-field-background);
+}
+
+#flatprofile table td {
+    text-align: right;
+}

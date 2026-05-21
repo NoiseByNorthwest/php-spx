@@ -25,6 +25,7 @@ Normal output
 --CLEAN--
 <?php
 
-exec("rm -rf /tmp/spx");
+$data_dir = ini_get('spx.data_dir');
+exec(sprintf('rm -rf %s', escapeshellarg($data_dir)));
 
 ?>

@@ -1,5 +1,5 @@
 --TEST--
-Userland stats (PHP 7.0+)
+Userland stats (PHP 8.0+) and instrumentation through ZE hooks
 --SKIPIF--
 <?php
 if (
@@ -8,6 +8,8 @@ if (
     die('skip this test is for PHP 8.0+ only');
 }
 ?>
+--INI--
+spx.use_observer_api=0
 --ENV--
 return <<<END
 SPX_ENABLED=1
