@@ -150,7 +150,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add web UI ([#14](https://github.com/NoiseByNorthwest/php-spx/pull/14))
 - Add cookie based settings ([#3](https://github.com/NoiseByNorthwest/php-spx/issues/3))
 - Improve Linux timer precision (1us -> 1ns)
-- Improve accuracy by evaluating and then substracting probes overhead
+- Improve accuracy by evaluating and then subtracting probes overhead
 
 ## Changed
 - Remove Google Trace Event report type ([#10](https://github.com/NoiseByNorthwest/php-spx/issues/10))
