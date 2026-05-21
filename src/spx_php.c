@@ -1042,7 +1042,15 @@ static void execute_data_function(
             }
         }
 
-        function->line = func->op_array.line_start;
+        if (func->common.type != ZEND_INTERNAL_FUNCTION) {
+            /*
+             *  op_array.line_start is only meaningful for userland functions.
+             *  For internal functions, this field overlaps with zend_internal_function
+             *  members (pointers) due to the zend_function union, yielding garbage
+             *  values (e.g. low 32 bits of a heap pointer).
+             */
+            function->line = func->op_array.line_start;
+        }
 
         switch (func->type) {
             case ZEND_USER_FUNCTION:
