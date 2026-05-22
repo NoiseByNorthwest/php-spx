@@ -173,7 +173,7 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
 
         /*
             We cannot check the function & class name as the previous call stack related pointers
-            may be invalid. This is however not a big issue, aliased functions will only slighlty
+            may be invalid. This is however not a big issue, aliased functions will only slightly
             reduce the correctness of the report.
          */
 

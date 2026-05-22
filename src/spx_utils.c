@@ -202,7 +202,7 @@ char * spx_utils_json_escape(char * dst, const char * src, size_t limit)
 limit_reached:
     spx_utils_die("The provided buffer is too small to contain the escaped JSON string");
 
-    /* unreacheable */
+    /* unreachable */
     return NULL;
 }
 

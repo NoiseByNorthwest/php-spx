@@ -783,9 +783,9 @@ static void profiling_handler_ex_hook_before(void)
         name in the context.profiling_handler.stack array even for
         non-profiled functions.
         But I've no other choice since I currently don't know how to safely
-        & accuratly resolve the current stack (accordingly to SPX_BUILTINS)
+        & accurately resolve the current stack (accordingly to SPX_BUILTINS)
         via the Zend Engine.
-        The induced overhead will, however, not be noticable in most cases.
+        The induced overhead will, however, not be noticeable in most cases.
     */
 
     if (context.profiling_handler.depth == STACK_CAPACITY) {

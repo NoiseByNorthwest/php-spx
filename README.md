@@ -80,7 +80,7 @@ You may also want to override [default SPX configuration](#configuration) to be 
 ### ZTS PHP (multi-thread)
 
 ZTS PHP is supported, with these extra limitations:
-- a little overhead (theorically unnoticeable in most cases) is added when SPX is loaded, even if it is not enabled.
+- a little overhead (theoretically unnoticeable in most cases) is added when SPX is loaded, even if it is not enabled.
 - Ctrl-C a CLI script will not make the possible profiling session to be properly finished.
 - segfaults are more likely than for NTS PHP. In this regard, avoid more than ever mixing SPX with other instrumenting extensions (debuggers, profilers...).
 
@@ -226,7 +226,7 @@ This is especially true for the long-living process use case which otherwise wou
 
 To do that SPX exposes the `spx_profiler_full_report_set_custom_metadata_str(string $customMetadataStr): void` function.
 
-As you may have notificed, this function accepts a string as custom metadata, for the sake of flexibility and simplicity on SPX side. It is up to you to encode any structured data to a string, for instance using JSON format.
+As you may have noticed, this function accepts a string as custom metadata, for the sake of flexibility and simplicity on SPX side. It is up to you to encode any structured data to a string, for instance using JSON format.
 
 The metadata string is limited to 4KB, which is large enough for most use cases. If you pass a string exceeding this limit it will be discarded and a notice log will be emitted.
 
