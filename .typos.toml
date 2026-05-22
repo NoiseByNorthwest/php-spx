@@ -1,0 +1,16 @@
+[files]
+extend-exclude = [
+    "assets/web-ui/v1/",
+    "assets/web-ui/v2/js/spx.js",
+    "tests/data_dir/",
+]
+
+[default.extend-words]
+# metric key: Process's own RSS (like wt, io, ior, iow)
+mor = "mor"
+# Level of Details abbreviation used throughout the JS codebase
+lod = "lod"
+Lod = "Lod"
+# Latin Lorem Ipsum embedded in test fixture expectations (.phpt)
+varius = "varius"
+Nam = "Nam"

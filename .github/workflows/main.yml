@@ -134,6 +134,16 @@ jobs:
             exit 1
           fi
 
+  typos:
+    name: Check typos
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run typos
+        uses: crate-ci/typos@master
+
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
 

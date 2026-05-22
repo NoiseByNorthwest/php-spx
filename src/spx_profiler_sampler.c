@@ -197,7 +197,7 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
 
         /*
             We cannot check the function & class name as the previous call stack related pointers
-            may be invalid. This is however not a big issue, aliased functions will only slighlty
+            may be invalid. This is however not a big issue, aliased functions will only slightly
             reduce the correctness of the report.
          */
 
@@ -208,7 +208,7 @@ static void sampling_profiler_handle_sample(sampling_profiler_t * profiler, int 
 
     if (call_end) {
         /*
-            In case of call end, we consider that the ended call has consummed most resources since the last sample.
+            In case of call end, we consider that the ended call has consumed most resources since the last sample.
             So we freeze metrics until the start trace of the ended call.
         */
         spx_profiler_tracer_freeze_metrics(profiler->sampled_profiler, 1);
