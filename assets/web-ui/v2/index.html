@@ -334,6 +334,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                         handler: row => reportExporter.exportPprof(row.key),
                                     },
                                     {
+                                        label: '⬇ Trace Event Format',
+                                        title: 'Export as Trace Event Format (Chrome DevTools / Perfetto)',
+                                        handler: row => reportExporter.exportTraceEventFormat(row.key),
+                                    },
+                                    {
                                         label: '🗑️',
                                         title: 'Delete this report',
                                         href: row => `?SPX_UI_URI=/data/reports/delete/${row.key}`,
