@@ -18,6 +18,39 @@
 import { readReport } from './reportReader.js';
 import { ProgressBar } from './progressBar.js';
 
+function rewritePath(path, prefixFrom, prefixTo) {
+    if (prefixFrom && path.startsWith(prefixFrom)) {
+        return prefixTo + path.slice(prefixFrom.length);
+    }
+    return path;
+}
+
+async function gzipBytes(bytes) {
+    const cs = new CompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+
+    const chunks = [];
+    const reader = cs.readable.getReader();
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) {
+            break;
+        }
+        chunks.push(value);
+    }
+
+    const total = chunks.reduce((s, c) => s + c.length, 0);
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+        out.set(chunk, offset);
+        offset += chunk.length;
+    }
+    return out;
+}
+
 class CallgrindBuilder {
     constructor() {
         this.pathPrefixFrom = null;
@@ -188,7 +221,7 @@ class CallgrindBuilder {
         const fnIds = new Map();
 
         const makeRef = (prefix, map) => (value) => {
-            value = this._rewritePath(value);
+            value = rewritePath(value, this.pathPrefixFrom, this.pathPrefixTo);
             if (map.has(value)) {
                 return prefix + '=(' + map.get(value) + ')';
             }
@@ -229,14 +262,6 @@ class CallgrindBuilder {
 
             lines.push('');
         }
-    }
-
-    _rewritePath(path) {
-        if (this.pathPrefixFrom && path.startsWith(this.pathPrefixFrom)) {
-            return this.pathPrefixTo + path.slice(this.pathPrefixFrom.length);
-        }
-
-        return path;
     }
 
     _metricLabel(key) {
@@ -449,7 +474,7 @@ class CallgrindExporterDialog extends ExporterDialogBase {
     }
 
     _filename(reportKey) {
-        return 'callgrind.out.spx-' + reportKey;
+        return 'callgrind.out.' + reportKey;
     }
 }
 
@@ -782,7 +807,7 @@ class PprofBuilder {
         );
         profile.f_int(10, durationNanos);
 
-        return this._gzip(profile.done());
+        return gzipBytes(profile.done());
     }
 
     // Intern a string and return its index in the string table
@@ -803,46 +828,18 @@ class PprofBuilder {
             fn = {
                 pprofId: this._nextFnId++,
                 nameIdx: this._str(info.name),
-                filenameIdx: this._str(this._rewritePath(info.file)),
+                filenameIdx: this._str(
+                    rewritePath(
+                        info.file,
+                        this.pathPrefixFrom,
+                        this.pathPrefixTo
+                    )
+                ),
                 startLine: info.line,
             };
             this._functions.set(spxIdx, fn);
         }
         return fn;
-    }
-
-    _rewritePath(path) {
-        if (this.pathPrefixFrom && path.startsWith(this.pathPrefixFrom)) {
-            return this.pathPrefixTo + path.slice(this.pathPrefixFrom.length);
-        }
-
-        return path;
-    }
-
-    async _gzip(bytes) {
-        const cs = new CompressionStream('gzip');
-        const writer = cs.writable.getWriter();
-        writer.write(bytes);
-        writer.close();
-
-        const chunks = [];
-        const reader = cs.readable.getReader();
-        for (;;) {
-            const { done, value } = await reader.read();
-            if (done) {
-                break;
-            }
-            chunks.push(value);
-        }
-
-        const total = chunks.reduce((s, c) => s + c.length, 0);
-        const out = new Uint8Array(total);
-        let offset = 0;
-        for (const chunk of chunks) {
-            out.set(chunk, offset);
-            offset += chunk.length;
-        }
-        return out;
     }
 }
 
@@ -856,7 +853,7 @@ class PprofExporterDialog extends ExporterDialogBase {
     }
 
     _filename(reportKey) {
-        return 'profile-spx-' + reportKey + '.pb.gz';
+        return reportKey + '.pprof.pb.gz';
     }
 }
 
@@ -867,4 +864,167 @@ export function exportPprof(reportKey) {
         pprofExporterDialog = new PprofExporterDialog();
     }
     pprofExporterDialog.open(reportKey);
+}
+
+// --- TraceEventFormatBuilder ---
+// Produces a Trace Event Format JSON file (Chrome DevTools / Perfetto compatible).
+//
+// Memory note: output is O(events) — every call boundary becomes a B/E object.
+// Callgrind and pprof both aggregate, TEF cannot. Validate on large reports
+// (~10M+ events) before release.
+
+class TraceEventFormatBuilder {
+    constructor() {
+        this.pathPrefixFrom = null;
+        this.pathPrefixTo = null;
+        // [functions] comes after [events] in the report stream, so raw events
+        // store fnIdx references and are resolved in getContent().
+        this._rawEvents = [];
+        this._tsMetricIndex = -1;
+    }
+
+    setMetricsInfo(/* metricsInfo */) {
+        // unused: TEF has a single time axis
+    }
+
+    setMetadata(metadata) {
+        this.metadata = metadata;
+        this.enabledMetrics = metadata.enabled_metrics;
+        this.functionInfos = Array(metadata.called_function_count);
+        for (let i = 0; i < this.functionInfos.length; i++) {
+            this.functionInfos[i] = { name: 'n/a', file: 'unknown', line: 0 };
+        }
+        // Prefer wall time for timestamps, then CPU time, then idle time.
+        // No fallback to enabledMetrics[0]: a non-time metric (e.g. memory)
+        // would produce non-monotonic timestamps. getContent() throws instead.
+        for (const key of ['wt', 'ct', 'it']) {
+            const idx = this.enabledMetrics.indexOf(key);
+            if (idx >= 0) {
+                this._tsMetricIndex = idx;
+                break;
+            }
+        }
+    }
+
+    setPathPrefixRewrite(from, to) {
+        this.pathPrefixFrom = from;
+        this.pathPrefixTo = to;
+    }
+
+    setFunctionInfo(idx, name, file, lineNumber) {
+        this.functionInfos[idx] = {
+            name,
+            file: file || 'unknown',
+            line: lineNumber || 0,
+        };
+    }
+
+    addEvent(event) {
+        if (this._tsMetricIndex < 0) {
+            return;
+        }
+        // SPX metric values are in nanoseconds; TEF ts is in microseconds.
+        this._rawEvents.push([
+            event[0],
+            event[1],
+            event[2 + this._tsMetricIndex] / 1000,
+        ]);
+    }
+
+    async getContent() {
+        if (!this.metadata) {
+            throw new Error('getContent() called before setMetadata()');
+        }
+        if (this._tsMetricIndex < 0) {
+            throw new Error(
+                'Trace Event Format export requires one of wt, ct or it ' +
+                    'in enabled metrics'
+            );
+        }
+
+        const pid = this.metadata.process_pid || 1;
+
+        const cmd =
+            (this.metadata.cli
+                ? this.metadata.cli_command_line
+                : (
+                      this.metadata.http_method +
+                      ' ' +
+                      this.metadata.http_request_uri
+                  ).trim()) || '';
+
+        const labels = [
+            this.metadata.cli ? 'cli' : 'http',
+            this.metadata.host_name,
+        ]
+            .filter(Boolean)
+            .join(',');
+
+        const traceEvents = [
+            { name: 'process_name', ph: 'M', pid, args: { name: cmd } },
+            { name: 'process_labels', ph: 'M', pid, args: { labels } },
+            {
+                name: 'thread_name',
+                ph: 'M',
+                pid,
+                tid: 1,
+                args: { name: 'Main PHP thread' },
+            },
+            ...this._rawEvents.map(([fnIdx, isStart, ts]) => {
+                const info = this.functionInfos[fnIdx];
+                if (isStart) {
+                    return {
+                        name: info.name,
+                        cat: 'php',
+                        ph: 'B',
+                        ts,
+                        pid,
+                        tid: 1,
+                        args: {
+                            file: rewritePath(
+                                info.file,
+                                this.pathPrefixFrom,
+                                this.pathPrefixTo
+                            ),
+                            line: info.line,
+                        },
+                    };
+                }
+                return {
+                    name: info.name,
+                    cat: 'php',
+                    ph: 'E',
+                    ts,
+                    pid,
+                    tid: 1,
+                };
+            }),
+        ];
+
+        const te = new TextEncoder();
+        return gzipBytes(te.encode(JSON.stringify({ traceEvents })));
+    }
+}
+
+class TraceEventFormatExporterDialog extends ExporterDialogBase {
+    get _title() {
+        return 'Trace Event Format';
+    }
+
+    _makeBuilder() {
+        return new TraceEventFormatBuilder();
+    }
+
+    _filename(reportKey) {
+        return reportKey + '.tef.json.gz';
+    }
+}
+
+let traceEventFormatExporterDialog = null;
+
+export function exportTraceEventFormat(reportKey) {
+    if (!traceEventFormatExporterDialog) {
+        traceEventFormatExporterDialog = new TraceEventFormatExporterDialog();
+    }
+    traceEventFormatExporterDialog.open(reportKey);
 }
