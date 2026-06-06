@@ -215,6 +215,21 @@ table.data_table td > a {
     text-decoration: none;
 }
 
+table.data_table td:not(.data_table-actions):has(> a) {
+    padding: 0;
+    position: relative;
+}
+
+table.data_table td:not(.data_table-actions) > a {
+    padding: 3px;
+}
+
+table.data_table td:not(.data_table-actions) > a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+}
+
 table.data_table tr .data_table-action-btn {
     font-weight: bold;
     text-decoration: none;
