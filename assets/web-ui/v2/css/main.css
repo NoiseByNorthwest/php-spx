@@ -230,6 +230,14 @@ table.data_table td:not(.data_table-actions) > a::after {
     inset: 0;
 }
 
+table.data_table td.data_table-actions {
+    white-space: nowrap;
+}
+
+table.data_table td.data_table-actions > a {
+    display: inline-block;
+}
+
 table.data_table tr .data_table-action-btn {
     font-weight: bold;
     text-decoration: none;
@@ -242,6 +250,41 @@ table.data_table tr .data_table-action-btn {
 
 table.data_table tr .data_table-action-btn:hover {
     background-color: var(--hover-color);
+}
+
+table.data_table .data_table-action-group {
+    display: inline-flex;
+    position: relative;
+    vertical-align: top;
+    margin: 0;
+    border: none;
+}
+
+table.data_table .data_table-action-group > summary {
+    list-style: none;
+    margin: 0;
+    border-radius: 0;
+}
+
+table.data_table .data_table-action-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+table.data_table .data_table-action-menu {
+    position: absolute;
+    z-index: 10;
+    top: 100%;
+    right: 0;
+    margin-top: -1px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+table.data_table .data_table-action-menu .data_table-action-btn {
+    border: none;
+    text-align: left;
 }
 
 .data_table-toolbar {

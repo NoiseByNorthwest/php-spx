@@ -197,7 +197,7 @@ class CallgrindBuilder {
         const totals = Array(metricCount).fill(0);
         for (const selfCost of this.selfCosts.values()) {
             for (let i = 0; i < metricCount; i++) {
-                // Callgrind event values must be non-negative integers; some
+                // Callgrind event values must be non-negative integers. Some
                 // metrics (e.g. memory) can decrease, so clamp at zero.
                 totals[i] += Math.max(0, Math.round(selfCost[i]));
             }
@@ -563,7 +563,7 @@ class ByteBuffer {
         this.bytes(src);
     }
 
-    // packed repeated varints — packed is the default for repeated scalar
+    // packed repeated varints. Packed is the default for repeated scalar
     // fields in proto3, and is also accepted by proto2 readers ([packed=true]).
     f_packed(field, values) {
         if (!values.length) {
@@ -576,7 +576,7 @@ class ByteBuffer {
         this.f_len(field, tmp.done());
     }
 
-    // Returns a view backed by the internal buffer — callers MUST stop writing
+    // Returns a view backed by the internal buffer. Callers MUST stop writing
     // to this ByteBuffer (or read the view) before any further mutation, since
     // a subsequent _grow() would reallocate and leave the view pointing at the
     // old (still-valid but stale) buffer.
@@ -735,7 +735,7 @@ class PprofBuilder {
         }
 
         // Intern metric type/unit strings first so they land early in the table
-        // Reversed so wt (wall time, always first in SPX) ends up last — speedscope
+        // Reversed so wt (wall time, always first in SPX) ends up last. Speedscope
         // defaults to the last sample_type, making it the default view.
         const sampleTypeData = [...this.enabledMetrics].reverse().map((key) => {
             const info =
@@ -869,7 +869,7 @@ export function exportPprof(reportKey) {
 // --- TraceEventFormatBuilder ---
 // Produces a Trace Event Format JSON file (Chrome DevTools / Perfetto compatible).
 //
-// Memory note: output is O(events) — every call boundary becomes a B/E object.
+// Memory note: output is O(events), every call boundary becomes a B/E object.
 // Callgrind and pprof both aggregate, TEF cannot. Validate on large reports
 // (~10M+ events) before release.
 
@@ -923,7 +923,7 @@ class TraceEventFormatBuilder {
         if (this._tsMetricIndex < 0) {
             return;
         }
-        // SPX metric values are in nanoseconds; TEF ts is in microseconds.
+        // SPX metric values are in nanoseconds, TEF ts is in microseconds.
         this._rawEvents.push([
             event[0],
             event[1],

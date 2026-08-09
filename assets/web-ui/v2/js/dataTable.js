@@ -33,8 +33,50 @@ export function makeDataTable(containerId, options, rows) {
         return row[accessor];
     }
 
+    function renderRowActionBtn(action, i, row) {
+        return `<a class="data_table-action-btn${action.cssClass ? ` ${action.cssClass}` : ''}" href="${action.href ? action.href(row) : '#'}" data-action-index="${i}" data-row-key="${row.key}"${action.title ? ` title="${action.title}"` : ''}>${action.label}</a>`;
+    }
+
+    function renderRowActions(row) {
+        let html = '';
+        for (let i = 0; i < options.rowActions.length; ) {
+            const group = options.rowActions[i].group;
+            if (!group) {
+                html += renderRowActionBtn(options.rowActions[i], i, row);
+                i++;
+                continue;
+            }
+
+            let itemsHtml = '';
+            for (
+                ;
+                i < options.rowActions.length &&
+                options.rowActions[i].group === group;
+                i++
+            ) {
+                itemsHtml += renderRowActionBtn(options.rowActions[i], i, row);
+            }
+
+            html += `<details class="data_table-action-group"><summary class="data_table-action-btn">${group}</summary><div class="data_table-action-menu">${itemsHtml}</div></details>`;
+        }
+
+        return html;
+    }
+
+    let openActionGroup = null;
+    let actionGroupCloseTimeout = null;
+
+    function closeOpenActionGroup() {
+        clearTimeout(actionGroupCloseTimeout);
+        actionGroupCloseTimeout = null;
+        openActionGroup?.removeAttribute('open');
+        openActionGroup = null;
+    }
+
     const container = document.getElementById(containerId);
     let render = () => {
+        closeOpenActionGroup();
+
         let html = '';
 
         if (rows.length && hasTableActions) {
@@ -84,13 +126,7 @@ export function makeDataTable(containerId, options, rows) {
             }
 
             if (hasRowActions) {
-                const actionsHtml = options.rowActions
-                    .map(
-                        (action, i) =>
-                            `<a class="data_table-action-btn${action.cssClass ? ` ${action.cssClass}` : ''}" href="${action.href ? action.href(row) : '#'}" data-action-index="${i}" data-row-key="${row.key}"${action.title ? ` title="${action.title}"` : ''}>${action.label}</a>`
-                    )
-                    .join(' ');
-                html += `<td class="data_table-actions">${actionsHtml}</td>`;
+                html += `<td class="data_table-actions">${renderRowActions(row)}</td>`;
             }
 
             html += '</tr>';
@@ -122,6 +158,18 @@ export function makeDataTable(containerId, options, rows) {
 
     if (hasRowActions || hasTableActions) {
         container.addEventListener('click', async (e) => {
+            const actionGroup = e.target.closest(
+                'details.data_table-action-group'
+            );
+            if (actionGroup !== openActionGroup) {
+                closeOpenActionGroup();
+            }
+
+            if (actionGroup && e.target.closest('summary')) {
+                // The native toggle runs after this handler.
+                openActionGroup = actionGroup.open ? null : actionGroup;
+            }
+
             const tableActionEl = e.target.closest('[data-table-action-index]');
             if (tableActionEl) {
                 e.preventDefault();
@@ -155,6 +203,7 @@ export function makeDataTable(containerId, options, rows) {
             const rowActionEl = e.target.closest('[data-action-index]');
             if (rowActionEl) {
                 e.preventDefault();
+                closeOpenActionGroup();
                 const action =
                     options.rowActions[rowActionEl.dataset.actionIndex];
                 const row = rows.find(
@@ -185,6 +234,39 @@ export function makeDataTable(containerId, options, rows) {
                     action.onSuccess(row, container);
                 }
             }
+        });
+    }
+
+    if (hasRowActions) {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('details.data_table-action-group')) {
+                closeOpenActionGroup();
+            }
+        });
+
+        container.addEventListener('pointerover', (e) => {
+            const actionGroup = e.target.closest(
+                'details.data_table-action-group'
+            );
+            if (actionGroup && actionGroup === openActionGroup) {
+                clearTimeout(actionGroupCloseTimeout);
+                actionGroupCloseTimeout = null;
+            }
+        });
+
+        container.addEventListener('pointerout', (e) => {
+            const actionGroup = e.target.closest(
+                'details.data_table-action-group'
+            );
+            if (
+                !actionGroup ||
+                actionGroup !== openActionGroup ||
+                actionGroup.contains(e.relatedTarget)
+            ) {
+                return;
+            }
+
+            actionGroupCloseTimeout = setTimeout(closeOpenActionGroup, 400);
         });
     }
 }
