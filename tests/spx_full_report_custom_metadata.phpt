@@ -2,6 +2,7 @@
 "full" report custom metadata
 --INI--
 log_errors=on
+spx.data_dir="{PWD}/tmp_data_dir_full_report_custom_metadata"
 --ENV--
 return <<<END
 SPX_ENABLED=1
@@ -160,3 +161,9 @@ Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $cust
     ,"zm"
   ]
 }
+--CLEAN--
+<?php
+
+exec(sprintf('rm -rf %s', escapeshellarg(__DIR__ . '/tmp_data_dir_full_report_custom_metadata')));
+
+?>
