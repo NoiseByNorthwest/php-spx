@@ -35,4 +35,5 @@ tmp-php.ini
 *.loT
 *.dep
 .claude
+*.local.md
 .idea

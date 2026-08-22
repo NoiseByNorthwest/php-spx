@@ -261,13 +261,23 @@ static PHP_MINIT_FUNCTION(spx)
 
 #ifdef ZTS
     /*
-        Overriding the zend_execute_ex hook disables the PHP JIT.
-        For this reason, it is avoided here when the alternative instrumentation
-        infrastructure (Zend Observer API) is enabled.
+        Global hooks cannot be set per request under ZTS, since the hooked
+        pointers are shared by all threads, so they are set once here for the
+        whole process. They are kept inert until a request actually enables
+        them, see spx_php_global_hooks_disable().
 
-        The main limitation of this approach is that SPX can no longer intercept
-        HTTP request handling (for web server SAPIs such as FPM, mod_php, or CGI)
-        to serve its own web UI instead.
+        Overriding the zend_execute_ex hook disables the PHP JIT. For this
+        reason, spx_php_global_hooks_set() overrides it only when the
+        alternative instrumentation infrastructure (Zend Observer API) is not
+        used, either because it has been explicitly disabled or because it is
+        not available on the current PHP version.
+
+        The zend_execute_ex hook has a second role: it is also what stops the
+        requested script from running, so that the web UI can take its place.
+        This is why http_ui_handler_init() forces it on NTS. Under ZTS it cannot
+        be set per request, so with the Zend Observer API SPX can no longer serve
+        its web UI in place of the requested script, for web server SAPIs such as
+        FPM, mod_php or CGI.
 
         However, this limitation is relatively minor, since PHP is typically not
         built with ZTS in those contexts (except on Windows).
@@ -276,9 +286,7 @@ static PHP_MINIT_FUNCTION(spx)
         runtime environments (e.g. FrankenPHP), where the web UI can be served
         via spx_ui_handle_request() instead.
     */
-    if (! SPX_G(use_observer_api)) {
-        spx_php_global_hooks_set(0);
-    }
+    spx_php_global_hooks_set(SPX_G(use_observer_api));
 #endif
 
     return SUCCESS;
@@ -685,7 +693,7 @@ static int check_access(const char * request_key)
         return 0;
     }
 
-    /* no matching ip in white list -> not granted */
+    /* whitelisted ip and valid key -> granted */
     return 1;
 }
 
