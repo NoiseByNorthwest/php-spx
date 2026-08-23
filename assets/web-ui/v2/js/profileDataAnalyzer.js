@@ -2090,6 +2090,10 @@ class ProfileDataAnalyzer {
         return this.metadata;
     }
 
+    isSampled() {
+        return isSampledReport(this.metadata);
+    }
+
     getStats() {
         return this.stats;
     }
@@ -2113,6 +2117,10 @@ class ProfileDataAnalyzer {
     getMetricValues(time) {
         return this.metricValuesList.getMetricValues(time);
     }
+}
+
+export function isSampledReport(metadata) {
+    return metadata.sampling_period_us > 0;
 }
 
 export class ProfileDataAnalyzerBuilder {

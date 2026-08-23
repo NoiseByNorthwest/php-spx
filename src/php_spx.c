@@ -744,7 +744,10 @@ static void profiling_handler_start(void)
     switch (context.config.report) {
         default:
         case SPX_CONFIG_REPORT_FULL:
-            context.profiling_handler.reporter = spx_reporter_full_create(SPX_G(data_dir));
+            context.profiling_handler.reporter = spx_reporter_full_create(
+                SPX_G(data_dir),
+                context.config.sampling_period
+            );
             if (context.profiling_handler.reporter) {
                 snprintf(
                     context.profiling_handler.full_report_key,

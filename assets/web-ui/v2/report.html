@@ -65,7 +65,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     <script type="module" crossorigin>
         import {fmt, progressBar as progressBarModule, reportReader, profileDataAnalyzer, widget, layoutSplitter} from './?SPX_UI_URI=/v2/js/spx.js';
 
-        const {ProfileDataAnalyzerBuilder} = profileDataAnalyzer;
+        const {ProfileDataAnalyzerBuilder, isSampledReport} = profileDataAnalyzer;
 
         document.addEventListener('DOMContentLoaded', () => {
             const m = window.location.href.match(/\bkey=([^&]+)/);
@@ -75,6 +75,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
             const key = m[1];
             let profileDataAnalyzerBuilder = null;
+            let recordName = 'call';
 
             const progressBar = new progressBarModule.ProgressBar();
             const initReportTitle = document.querySelector('#init-report p');
@@ -96,6 +97,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                         profileDataAnalyzerBuilder = new ProfileDataAnalyzerBuilder(metrics);
                     },
                     metadata: (metadata) => {
+                        recordName = isSampledReport(metadata) ? 'sample' : 'call';
                         profileDataAnalyzerBuilder.setMetadata(metadata);
 
                         console.time('Call list building');
@@ -108,8 +110,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                     },
                     progress: () => {
                         setProgress(
-                            'Building call list... (1/2)<br>'
-                                + `${fmt.quantity(profileDataAnalyzerBuilder.getTotalCallCount())} function calls`
+                            `Building ${recordName} list... (1/2)<br>`
+                                + `${fmt.quantity(profileDataAnalyzerBuilder.getTotalCallCount())} ${recordName}s`
                             ,
                             profileDataAnalyzerBuilder.getCurrentCallCount(),
                             profileDataAnalyzerBuilder.getTotalCallCount()
@@ -120,7 +122,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                     console.timeEnd('Call list building');
                     return profileDataAnalyzerBuilder.buildCallRangeTree(
                         (current, total) => setProgress(
-                            `Building call range tree... (2/2)<br>${fmt.quantity(total)} function calls`,
+                            `Building ${recordName} range tree... (2/2)<br>${fmt.quantity(total)} ${recordName}s`,
                             current,
                             total
                         )

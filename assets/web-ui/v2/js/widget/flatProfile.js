@@ -39,18 +39,21 @@ export class FlatProfile extends Widget {
 <thead>
     <tr>
         <th rowspan="3" class="sortable" data-sort="name">Function</th>
-        <th rowspan="3" width="80px" class="sortable" data-sort="called">Called</th>
-        <th colspan="4">${this.profileDataAnalyzer.getMetricInfo(this.currentMetric).name}</th>
+        <th rowspan="3" width="80px" class="sortable" data-sort="called">${this.profileDataAnalyzer.isSampled() ? 'Samples' : 'Called'}</th>
+        <th colspan="6">${this.profileDataAnalyzer.getMetricInfo(this.currentMetric).name}</th>
     </tr>
     <tr>
         <th colspan="2">Percentage</th>
         <th colspan="2">Value</th>
+        <th colspan="2">Value per ${this.profileDataAnalyzer.isSampled() ? 'sample' : 'call'}</th>
     </tr>
     <tr>
         <th width="80px" class="sortable" data-sort="inc_rel">Inc.</th>
         <th width="80px" class="sortable" data-sort="exc_rel">Exc.</th>
         <th width="80px" class="sortable" data-sort="inc">Inc.</th>
         <th width="80px" class="sortable" data-sort="exc">Exc.</th>
+        <th width="80px" class="sortable" data-sort="inc_per_call">Inc.</th>
+        <th width="80px" class="sortable" data-sort="exc_per_call">Exc.</th>
     </tr>
 </thead>
 </table>
@@ -90,6 +93,16 @@ export class FlatProfile extends Widget {
                 case 'inc':
                     a = a.inc.getValue(this.currentMetric);
                     b = b.inc.getValue(this.currentMetric);
+                    break;
+
+                case 'inc_per_call':
+                    a = a.inc.getValue(this.currentMetric) / a.called;
+                    b = b.inc.getValue(this.currentMetric) / b.called;
+                    break;
+
+                case 'exc_per_call':
+                    a = a.exc.getValue(this.currentMetric) / a.called;
+                    b = b.exc.getValue(this.currentMetric) / b.called;
                     break;
 
                 case 'exc_rel':
@@ -168,13 +181,15 @@ export class FlatProfile extends Widget {
             stats.inc.getValue(this.currentMetric)
         )}"
     >
-        ${utils.truncateFunctionName(functionLabel, (this.container.offsetWidth - 5 * 90) / 8)}
+        ${utils.truncateFunctionName(functionLabel, (this.container.offsetWidth - 7 * 90) / 8)}
     </td>
     <td width="80px">${fmt.quantity(stats.called)}</td>
     <td width="80px">${fmt.pct(incRel)}${renderRelativeCostBar(incRel)}</td>
     <td width="80px">${fmt.pct(excRel)}${renderRelativeCostBar(excRel)}</td>
     <td width="80px">${formatter(inc)}</td>
     <td width="80px">${formatter(exc)}</td>
+    <td width="80px">${formatter(inc / stats.called)}</td>
+    <td width="80px">${formatter(exc / stats.called)}</td>
 </tr>
             `;
         }

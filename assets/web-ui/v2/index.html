@@ -47,9 +47,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
         <div id="reports"></div>
 
         <script type="module" crossorigin>
-            import {utils, fmt, reportExporter, dataTable} from './?SPX_UI_URI=/v2/js/spx.js';
+            import {utils, fmt, reportExporter, profileDataAnalyzer, dataTable} from './?SPX_UI_URI=/v2/js/spx.js';
 
             const {setCookieVar, getCookieVar} = utils;
+            const {isSampledReport} = profileDataAnalyzer;
             const {makeDataTable} = dataTable;
 
             document.addEventListener("DOMContentLoaded", () => {
@@ -317,9 +318,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                         format: value => value.join(', '),
                                     },
                                     {
-                                        label: 'Recorded calls',
+                                        label: 'Recorded',
                                         value: 'recorded_call_count',
-                                        format: value => fmt.quantity(value),
+                                        format: (value, row) => fmt.quantity(value)
+                                            + (isSampledReport(row) ? ' samples' : ' calls'),
                                     },
                                 ],
                                 rowActions: [

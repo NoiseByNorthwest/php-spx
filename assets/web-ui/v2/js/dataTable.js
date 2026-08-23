@@ -115,7 +115,7 @@ export function makeDataTable(containerId, options, rows) {
             for (let column of options.columns) {
                 let value = getColumnValue(column.value, row);
                 if (column.format) {
-                    value = column.format(value);
+                    value = column.format(value, row);
                 }
 
                 if (url) {

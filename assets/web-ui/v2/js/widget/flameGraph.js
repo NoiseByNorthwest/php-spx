@@ -83,6 +83,9 @@ export class FlameGraph extends SVGWidget {
             const formatter = this.profileDataAnalyzer.getMetricFormatter(
                 this.currentMetric
             );
+            const callCountLabel = this.profileDataAnalyzer.isSampled()
+                ? 'Samples'
+                : 'Called';
 
             renderSVGMultiLineText(
                 this.infoViewPort.createSubViewPort(
@@ -94,7 +97,7 @@ export class FlameGraph extends SVGWidget {
                 [
                     'Function: ' + cgNode.getFunctionName(),
                     'Depth: ' + cgNode.getDepth(),
-                    'Called: ' + cgNode.getCalled(),
+                    callCountLabel + ': ' + cgNode.getCalled(),
                     currentMetricName +
                         ' inc.: ' +
                         formatter(cgNode.getInc().getValue(this.currentMetric)),
