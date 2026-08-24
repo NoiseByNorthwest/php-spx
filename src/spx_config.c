@@ -153,12 +153,15 @@ static void init_config(spx_config_t * config, int cli)
 
 static void finalize_config(spx_config_t * config, int cli)
 {
-    /* Force SPX disabling for tests "skip" scripts */
+    /* Force SPX disabling for tests "skip" & "clean" scripts */
     const char * script_file_name = spx_php_global_array_get("_SERVER", "SCRIPT_FILENAME");
     if (
         script_file_name
             && strstr(script_file_name, "/tests/spx_")
-            && spx_utils_str_ends_with(script_file_name, ".skip.php")
+            && (
+                spx_utils_str_ends_with(script_file_name, ".skip.php")
+                    || spx_utils_str_ends_with(script_file_name, ".clean.php")
+            )
     ) {
         config->enabled = 0;
     }
