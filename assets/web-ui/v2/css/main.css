@@ -91,6 +91,35 @@ fieldset {
     align-items: start;
 }
 
+#config-main {
+    margin-bottom: 12px;
+}
+
+#config > details > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    list-style: none;
+}
+
+#config > details > summary::-webkit-details-marker {
+    display: none;
+}
+
+#config > details > summary::before {
+    content: '\2699';
+    font-size: 1.5em;
+    line-height: 1;
+}
+
+#config > details > summary::after {
+    content: '\25B8';
+}
+
+#config > details[open] > summary::after {
+    content: '\25BE';
+}
+
 .form-row {
     display: contents;
 }
