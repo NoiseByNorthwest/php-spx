@@ -25,6 +25,7 @@ import {
 } from './widget.js';
 import { ColorSchemeManager } from './../colorSchemeManager.js';
 import { SVGWidget } from './svgWidget.js';
+import { ThemeManager } from './../themeManager.js';
 
 export class TimeLine extends SVGWidget {
     constructor(container, profileDataAnalyzer) {
@@ -191,7 +192,10 @@ export class TimeLine extends SVGWidget {
                 return;
             }
 
-            pointedElement.setAttribute('stroke', '#0ff');
+            pointedElement.setAttribute(
+                'stroke',
+                ThemeManager.getSelectionStrokeColor()
+            );
 
             this._renderCallInfo(callIdx);
         });
@@ -245,6 +249,7 @@ export class TimeLine extends SVGWidget {
                 y: 0,
                 width: this.viewPort.width,
                 height: this.viewPort.height,
+                fill: ThemeManager.getScrimColor(),
                 'fill-opacity': '0.1',
             })
         );
@@ -270,7 +275,9 @@ export class TimeLine extends SVGWidget {
                     timeRange.length(),
                 height: 13 * (subRangeInfo.maxDepth + 1),
                 stroke: 'none',
-                fill: `rgba(19, 49, 69, ${0.6 * this.timeRangeAnalyzer.getLevelOfDetails()})`,
+                fill: ThemeManager.getTimelineDepthBandColor(),
+                'fill-opacity':
+                    0.6 * this.timeRangeAnalyzer.getLevelOfDetails(),
             });
 
             rect.removeAttribute('data-call-idx');
@@ -313,8 +320,12 @@ export class TimeLine extends SVGWidget {
                 y: y,
                 width: w,
                 height: h,
-                stroke: call.getIdx() == this.selectedCallIdx ? '#0ff' : 'none',
+                stroke:
+                    call.getIdx() == this.selectedCallIdx
+                        ? ThemeManager.getSelectionStrokeColor()
+                        : 'none',
                 'stroke-width': 2,
+                'fill-opacity': '1',
                 fill: ColorSchemeManager.resolveFunctionColor(
                     call.getFunctionName(),
                     this.profileDataAnalyzer
@@ -362,6 +373,7 @@ export class TimeLine extends SVGWidget {
                 y: 0,
                 width: overlayViewPort.width,
                 height: overlayViewPort.height,
+                fill: ThemeManager.getScrimColor(),
                 'fill-opacity': '0.5',
             })
         );

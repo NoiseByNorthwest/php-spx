@@ -19,6 +19,7 @@ import * as fmt from './../fmt.js';
 import * as math from './../math.js';
 import * as svg from './../svg.js';
 import { ColorSchemeManager } from './../colorSchemeManager.js';
+import { ThemeManager } from './../themeManager.js';
 
 export function renderSVGTimeGrid(viewPort, timeRange, detailed) {
     const delta = timeRange.length();
@@ -42,7 +43,7 @@ export function renderSVGTimeGrid(viewPort, timeRange, detailed) {
                 y1: 0,
                 x2: x,
                 y2: viewPort.height,
-                stroke: '#777',
+                stroke: ThemeManager.getGridLineColor(),
                 'stroke-width': majorTick ? 0.5 : 0.2,
             })
         );
@@ -79,7 +80,9 @@ export function renderSVGTimeGrid(viewPort, timeRange, detailed) {
                                 height: 15,
                                 'font-size': 12,
                                 fill:
-                                    i < timeParts.length - 1 ? '#777' : '#ccc',
+                                    i < timeParts.length - 1
+                                        ? ThemeManager.getAxisLabelMinorColor()
+                                        : ThemeManager.getAxisLabelMajorColor(),
                             },
                             (node) => {
                                 node.textContent = timePart;
@@ -97,7 +100,7 @@ export function renderSVGTimeGrid(viewPort, timeRange, detailed) {
                             width: 100,
                             height: 15,
                             'font-size': 12,
-                            fill: '#aaa',
+                            fill: ThemeManager.getAxisLabelColor(),
                         },
                         (node) => (node.textContent = fmt.time(tickTime))
                     )
@@ -119,7 +122,7 @@ export function renderSVGMultiLineText(viewPort, lines) {
         x: 0,
         y: y,
         'font-size': 12,
-        fill: '#fff',
+        fill: ThemeManager.getOverlayTextColor(),
     });
 
     viewPort.appendChild(text);
@@ -188,7 +191,7 @@ export function renderSVGMetricValuesPlot(
     viewPort.appendChildToFragment(
         svg.createNode('polyline', {
             points: points.join(' '),
-            stroke: '#0af',
+            stroke: ThemeManager.getMetricPlotColor(),
             'stroke-width': 2,
             fill: 'none',
         })
@@ -207,7 +210,7 @@ export function renderSVGMetricValuesPlot(
                 y1: y,
                 x2: viewPort.width,
                 y2: y,
-                stroke: '#777',
+                stroke: ThemeManager.getGridLineColor(),
                 'stroke-width': 0.5,
             })
         );
@@ -221,7 +224,7 @@ export function renderSVGMetricValuesPlot(
                     width: 100,
                     height: 15,
                     'font-size': 12,
-                    fill: '#aaa',
+                    fill: ThemeManager.getAxisLabelColor(),
                 },
                 (node) => {
                     const formatter = timeComponentMetric
@@ -441,6 +444,10 @@ export class Widget {
         window.addEventListener('spx-search-query-update', (e) => {
             this.onSearchQueryUpdate();
         });
+
+        window.addEventListener('spx-theme-update', () => {
+            this.onThemeUpdate();
+        });
     }
 
     onTimeRangeUpdate() {}
@@ -460,6 +467,10 @@ export class Widget {
     }
 
     onSearchQueryUpdate() {
+        this.repaint();
+    }
+
+    onThemeUpdate() {
         this.repaint();
     }
 
@@ -548,7 +559,7 @@ export class Widget {
             this.repaintTimeout = null;
 
             const id = this.container.id;
-            if (id === 'flatprofile') {
+            if (id === 'flat-profile') {
                 initialScrollPos =
                     this.container.querySelector('div').scrollTop;
             }
@@ -556,7 +567,7 @@ export class Widget {
             this.clear();
             this.render();
             console.timeEnd('repaint ' + id);
-            if (id === 'flatprofile') {
+            if (id === 'flat-profile') {
                 this.container.querySelector('div').scrollTop =
                     initialScrollPos;
             }

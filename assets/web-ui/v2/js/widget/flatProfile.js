@@ -20,6 +20,7 @@ import * as fmt from './../fmt.js';
 import { ColorSchemeManager } from './../colorSchemeManager.js';
 import { SearchManager } from './../searchManager.js';
 import { Widget } from './widget.js';
+import { ThemeManager } from './../themeManager.js';
 
 export class FlatProfile extends Widget {
     constructor(container, profileDataAnalyzer) {
@@ -132,15 +133,15 @@ export class FlatProfile extends Widget {
                     <div style="display: flex; width: 100%; height: 2px">
                         <div style="width: ${value > 0 ? 50 : Math.round(50 * (1 + value))}%;"></div>
                         <div style="width: 50%; height: 100%">
-                            <div style="width: ${Math.round(100 * Math.abs(value))}%; height: 100%; background-color: ${value > 0 ? 'red' : 'blue'}"></div>
+                            <div style="width: ${Math.round(100 * Math.abs(value))}%; height: 100%; background-color: ${value > 0 ? ThemeManager.getCostBarPositiveColor() : ThemeManager.getCostBarNegativeColor()}"></div>
                         </div>
                     </div>
                 `;
             }
 
             return `
-                <div style="width=100%; height: 2px">
-                    <div style="width: ${Math.round(100 * value)}%; height: 100%; background-color: red"></div>
+                <div style="width: 100%; height: 2px">
+                    <div style="width: ${Math.round(100 * value)}%; height: 100%; background-color: ${ThemeManager.getCostBarPositiveColor()}"></div>
                 </div>
             `;
         };
