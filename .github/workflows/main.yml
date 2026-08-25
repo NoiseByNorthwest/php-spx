@@ -130,6 +130,18 @@ jobs:
             exit 1
           fi
 
+  check-license-headers:
+    name: Check license headers
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run license header check
+        run: php .github/check-license-headers.php
+
   typos:
     name: Check typos
     runs-on: ubuntu-24.04
