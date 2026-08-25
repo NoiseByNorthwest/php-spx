@@ -93,7 +93,12 @@ export function makeDataTable(containerId, options, rows) {
 
         for (let i = 0; i < options.columns.length; i++) {
             let column = options.columns[i];
-            html += `<th ${i == sort_col ? 'class="data_table-sort"' : ''}>${column.label}</th>`;
+            const headerClasses = [
+                column.cssClass,
+                i == sort_col ? 'data_table-sort' : null,
+            ].filter((e) => e);
+
+            html += `<th${headerClasses.length ? ` class="${headerClasses.join(' ')}"` : ''}>${column.label}</th>`;
         }
 
         if (hasRowActions) {
@@ -116,6 +121,10 @@ export function makeDataTable(containerId, options, rows) {
                 let value = getColumnValue(column.value, row);
                 if (column.format) {
                     value = column.format(value, row);
+                }
+
+                if (value === null || value === undefined) {
+                    value = '';
                 }
 
                 if (url) {

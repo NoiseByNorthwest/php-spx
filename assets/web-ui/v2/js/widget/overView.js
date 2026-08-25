@@ -24,6 +24,7 @@ import {
     renderSVGMetricValuesPlot,
 } from './widget.js';
 import { SVGWidget } from './svgWidget.js';
+import { ThemeManager } from './../themeManager.js';
 
 export class OverView extends SVGWidget {
     constructor(container, profileDataAnalyzer) {
@@ -134,6 +135,7 @@ export class OverView extends SVGWidget {
                 y: 0,
                 width: this.viewPort.width,
                 height: this.viewPort.height,
+                fill: ThemeManager.getScrimColor(),
                 'fill-opacity': '0.3',
             })
         );

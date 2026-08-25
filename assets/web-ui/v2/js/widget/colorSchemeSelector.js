@@ -17,6 +17,7 @@
 
 import { ColorSchemeManager } from './../colorSchemeManager.js';
 import { Widget } from './widget.js';
+import { ThemeManager } from './../themeManager.js';
 
 export class ColorSchemeSelector extends Widget {
     constructor(container, profileDataAnalyzer) {
@@ -33,7 +34,7 @@ export class ColorSchemeSelector extends Widget {
 
     render() {
         let html = `
-            <span>Color scheme: </span><a href="#" id="color-scheme-toggle">${ColorSchemeManager.getSelectedColorMode()}</a>
+            <span>Color scheme: </span><span id="color-scheme-toggle">${ColorSchemeManager.getSelectedColorMode()}</span>
             <div id="color-scheme-panel">
         `;
 
@@ -64,8 +65,10 @@ export class ColorSchemeSelector extends Widget {
         const toggle = this.container.querySelector('#color-scheme-toggle');
         const panel = this.container.querySelector('#color-scheme-panel');
 
-        toggle.addEventListener('click', (e) => {
-            e.preventDefault();
+        this.container.addEventListener('click', (e) => {
+            if (panel.contains(e.target)) {
+                return;
+            }
 
             panel.style.display =
                 panel.style.display === 'block' ? 'none' : 'block';
@@ -234,7 +237,7 @@ export class ColorSchemeSelector extends Widget {
                 e.preventDefault();
 
                 const newCategory = {
-                    color: '#5a5a5a',
+                    color: ThemeManager.getCategoryDefaultColor(),
                     label: 'untitled',
                     patterns: [],
                 };
