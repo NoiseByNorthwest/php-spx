@@ -14,10 +14,6 @@ const HEADER_TEMPLATE_FILE = '.github/license-header.txt';
 const YEAR_PLACEHOLDER = '%YEAR%';
 const YEAR_SENTINEL = '0000';
 
-const EXCLUDED_FILE_PATTERNS = [
-    '#\.min\.js$#',
-];
-
 function render_header(array $lines, $style)
 {
     if ($style === 'html') {
@@ -66,12 +62,6 @@ $failures = [];
 $fixedFiles = [];
 
 foreach ($files as $file) {
-    foreach (EXCLUDED_FILE_PATTERNS as $pattern) {
-        if (preg_match($pattern, $file)) {
-            continue 2;
-        }
-    }
-
     $checkedFileCount++;
 
     $style = get_style($file);

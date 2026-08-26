@@ -20,7 +20,7 @@ npx esbuild main.js --bundle --format=esm \
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */' \
-    --define:DEBUG=false --external:*.min.js --external:node_modules --outfile=spx.js.tmp
+    --define:DEBUG=false --external:node_modules --outfile=spx.js.tmp
 
 npx terser spx.js.tmp \
     --compress passes=3,drop_console=false,keep_classnames=true,keep_fnames=true --mangle \
