@@ -1,6 +1,5 @@
 [files]
 extend-exclude = [
-    "assets/web-ui/v1/",
     "assets/web-ui/v2/js/spx.js",
     "tests/data_dir/",
 ]
