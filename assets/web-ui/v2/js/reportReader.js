@@ -32,14 +32,14 @@ const FALLBACK_CHUNK_SIZE = 256 * 1024;
  * Two on-wire formats coexist:
  *
  *   1. Legacy (space-separated): "<fnIdx> <start> <m1> <m2> ... [callSiteLine]"
- *      detected by the presence of a space — values map 1:1 to the event tuple.
+ *      detected by the presence of a space. Values map 1:1 to the event tuple.
  *
  *   2. Compressed (pipe-separated): "[callSiteLine|]<fnIdx>|<m1>|<m2>|..."
  *      with several layered tricks to shrink the payload:
  *
- *        - "-" prefix on the first character marks a call END; otherwise START.
+ *        - "-" prefix on the first character marks a call END, otherwise START.
  *        - For START events, parts[0] holds the call site line (only meaningful
- *          at call start, so it's omitted for END events — saves one field per
+ *          at call start, so it's omitted for END events, saving one field per
  *          end event).
  *        - "rN" on the fnIdx field is a back-reference: reuse the fnIdx of the
  *          N-th most recent event. Useful for tight loops calling the same fn.
@@ -62,7 +62,7 @@ function parseEventLine(line, recentEvents) {
 
     // +1: slot for event[1] (start/end flag), absent from wire format.
     // For START events, parts[0] (callSiteLine) is not a direct field but gets
-    // appended at the tail of the tuple — the extra head field and extra tail
+    // appended at the tail of the tuple. The extra head field and extra tail
     // slot cancel out, so parts.length + 1 gives the correct size in both cases.
     const event = Array(parts.length + 1);
     event[1] = start ? 1 : 0;
@@ -135,17 +135,17 @@ function parseFunctionLine(line) {
  * Streams a stored SPX report and dispatches its content piece by piece.
  *
  * Handlers (all optional):
- *   metrics(metricsInfo)         — array of {key, name, ...} for every
+ *   metrics(metricsInfo)         : array of {key, name, ...} for every
  *                                  metric known to the backend (catalog from
  *                                  /data/metrics), called once.
- *   metadata(metadata)           — report-level metadata, called once.
+ *   metadata(metadata)           : report-level metadata, called once.
  *                                  Notable fields: enabled_metrics (array of
  *                                  metric keys recorded for this report),
  *                                  called_function_count, process_pid,
  *                                  cli / cli_command_line / http_*.
  *   function(idx, name, file, lineNumber)
- *                                — one call per recorded function.
- *   event(event)                 — one call per recorded call boundary.
+ *                                : one call per recorded function.
+ *   event(event)                 : one call per recorded call boundary.
  *                                  Tuple layout, positional:
  *                                    event[0]                = fnIdx
  *                                    event[1]                = 1 if call
@@ -156,7 +156,7 @@ function parseFunctionLine(line) {
  *                                    event[2+M]              = call site line
  *                                                              (start events
  *                                                              only)
- *   progress(current, total)     — streaming progress in events.
+ *   progress(current, total)     : streaming progress in events.
  */
 export function readReport(key, handlers = {}, signal = null) {
     handlers = {

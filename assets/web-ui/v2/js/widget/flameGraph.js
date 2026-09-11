@@ -21,6 +21,7 @@ import * as svg from './../svg.js';
 import { ColorSchemeManager } from './../colorSchemeManager.js';
 import { renderSVGMultiLineText } from './widget.js';
 import { SVGWidget } from './svgWidget.js';
+import { ThemeManager } from './../themeManager.js';
 
 export class FlameGraph extends SVGWidget {
     constructor(container, profileDataAnalyzer) {
@@ -64,7 +65,10 @@ export class FlameGraph extends SVGWidget {
                 return;
             }
 
-            this.pointedElement.setAttribute('stroke', '#0ff');
+            this.pointedElement.setAttribute(
+                'stroke',
+                ThemeManager.getSelectionStrokeColor()
+            );
 
             this.infoViewPort.appendChild(
                 svg.createNode('rect', {
@@ -72,6 +76,7 @@ export class FlameGraph extends SVGWidget {
                     y: 0,
                     width: this.infoViewPort.width,
                     height: this.infoViewPort.height,
+                    fill: ThemeManager.getScrimColor(),
                     'fill-opacity': '0.5',
                 })
             );
@@ -83,6 +88,9 @@ export class FlameGraph extends SVGWidget {
             const formatter = this.profileDataAnalyzer.getMetricFormatter(
                 this.currentMetric
             );
+            const callCountLabel = this.profileDataAnalyzer.isSampled()
+                ? 'Samples'
+                : 'Called';
 
             renderSVGMultiLineText(
                 this.infoViewPort.createSubViewPort(
@@ -94,7 +102,7 @@ export class FlameGraph extends SVGWidget {
                 [
                     'Function: ' + cgNode.getFunctionName(),
                     'Depth: ' + cgNode.getDepth(),
-                    'Called: ' + cgNode.getCalled(),
+                    callCountLabel + ': ' + cgNode.getCalled(),
                     currentMetricName +
                         ' inc.: ' +
                         formatter(cgNode.getInc().getValue(this.currentMetric)),
@@ -133,6 +141,7 @@ export class FlameGraph extends SVGWidget {
                 y: 0,
                 width: this.viewPort.width,
                 height: this.viewPort.height,
+                fill: ThemeManager.getScrimColor(),
                 'fill-opacity': '0.1',
             })
         );
@@ -146,7 +155,7 @@ export class FlameGraph extends SVGWidget {
                         y: this.viewPort.height / 2,
                         height: 20,
                         'font-size': 14,
-                        fill: '#089',
+                        fill: ThemeManager.getFlameGraphSeparatorColor(),
                     },
                     (node) => {
                         node.textContent =

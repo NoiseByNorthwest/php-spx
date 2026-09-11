@@ -50,7 +50,10 @@ int spx_reporter_full_delete_all_reports(
     const char * data_dir
 );
 
-spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir);
+spx_profiler_reporter_t * spx_reporter_full_create(
+    const char * data_dir,
+    size_t sampling_period_us
+);
 
 void spx_reporter_full_set_custom_metadata_str(
     const spx_profiler_reporter_t * base_reporter,

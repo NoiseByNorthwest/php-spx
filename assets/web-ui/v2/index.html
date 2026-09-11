@@ -37,19 +37,22 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
     <body>
         <h1>SPX Control Panel</h1>
 
-        <details>
-            <summary>Configuration</summary>
-            <form id="config">
-                <fieldset></fieldset>
-            </form>
-        </details>
+        <form id="config">
+            <fieldset id="config-main"></fieldset>
+            <fieldset id="config-cli-prefix"></fieldset>
+            <details>
+                <summary>Advanced configuration</summary>
+                <fieldset id="config-advanced"></fieldset>
+            </details>
+        </form>
 
         <div id="reports"></div>
 
         <script type="module" crossorigin>
-            import {utils, fmt, reportExporter, dataTable} from './?SPX_UI_URI=/v2/js/spx.js';
+            import {utils, fmt, reportExporter, profileDataAnalyzer, dataTable} from './?SPX_UI_URI=/v2/js/spx.js';
 
             const {setCookieVar, getCookieVar} = utils;
+            const {isSampledReport} = profileDataAnalyzer;
             const {makeDataTable} = dataTable;
 
             document.addEventListener("DOMContentLoaded", () => {
@@ -68,6 +71,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                             },
                             {
                                 key: 'SPX_AUTO_START',
+                                advanced: true,
                                 label: 'Automatic start',
                                 type: 'switch',
                                 defaultValue: '1',
@@ -75,6 +79,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                             },
                             {
                                 key: 'SPX_BUILTINS',
+                                advanced: true,
                                 label: 'Profile internal functions',
                                 type: 'switch',
                                 defaultValue: '0',
@@ -82,6 +87,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                             },
                             {
                                 key: 'SPX_SAMPLING_PERIOD',
+                                advanced: true,
                                 label: 'Sampling',
                                 type: 'choice',
                                 choice: {
@@ -105,6 +111,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                             },
                             {
                                 key: 'SPX_DEPTH',
+                                advanced: true,
                                 label: 'Max profiling depth',
                                 type: 'choice',
                                 choice: {
@@ -125,6 +132,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                             },
                             {
                                 key: 'SPX_METRICS',
+                                advanced: true,
                                 label: 'Additional metrics',
                                 type: 'choice',
                                 choice: {
@@ -142,7 +150,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                             },
                         ];
 
-                        let fieldSet = document.querySelector('#config > fieldset');
+                        const mainFieldSet = document.getElementById('config-main');
+                        const advancedFieldSet = document.getElementById('config-advanced');
                         parameters.forEach(parameter => {
                             let parameterHtml = `
                                 <div class="form-row">
@@ -179,13 +188,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
                             parameterHtml += `<em>${parameter.description}</em></div>`;
 
-                            fieldSet.insertAdjacentHTML(
+                            (parameter.advanced ? advancedFieldSet : mainFieldSet).insertAdjacentHTML(
                                 'beforeend',
                                 parameterHtml
                             );
                         });
 
-                        fieldSet.insertAdjacentHTML(
+                        document.getElementById('config-cli-prefix').insertAdjacentHTML(
                             'beforeend',
                             `
                             <div class="form-row">
@@ -303,11 +312,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                     },
                                     {
                                         label: 'Wall time',
+                                        cssClass: 'numeric',
                                         value: 'wall_time_ms',
                                         format: value => fmt.time(value * 1000),
                                     },
                                     {
                                         label: 'Memory',
+                                        cssClass: 'numeric',
                                         value: 'peak_memory_usage',
                                         format: value => fmt.memory(value),
                                     },
@@ -317,23 +328,28 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                         format: value => value.join(', '),
                                     },
                                     {
-                                        label: 'Recorded calls',
+                                        label: 'Recorded',
+                                        cssClass: 'numeric',
                                         value: 'recorded_call_count',
-                                        format: value => fmt.quantity(value),
+                                        format: (value, row) => fmt.quantity(value)
+                                            + (isSampledReport(row) ? ' samples' : ' calls'),
                                     },
                                 ],
                                 rowActions: [
                                     {
+                                        group: 'Export ▾',
                                         label: '⬇ callgrind',
                                         title: 'Export as callgrind',
                                         handler: row => reportExporter.exportCallgrind(row.key),
                                     },
                                     {
+                                        group: 'Export ▾',
                                         label: '⬇ pprof',
                                         title: 'Export as pprof',
                                         handler: row => reportExporter.exportPprof(row.key),
                                     },
                                     {
+                                        group: 'Export ▾',
                                         label: '⬇ Trace Event Format',
                                         title: 'Export as Trace Event Format (Chrome DevTools / Perfetto)',
                                         handler: row => reportExporter.exportTraceEventFormat(row.key),

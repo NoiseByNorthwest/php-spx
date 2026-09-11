@@ -5,8 +5,7 @@ module.exports = [
   {
     files: ["**/*.js"],
     ignores: [
-      "node_modules",
-      "*.min.js"
+      "node_modules"
     ],
     languageOptions: {
       ecmaVersion: "latest",

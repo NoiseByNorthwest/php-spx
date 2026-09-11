@@ -1,6 +1,9 @@
 # Contributing to SPX
 
-SPX is still at an early development stage, so please follow these rules:
+Bug fixes, compatibility patches and new features are all welcome. Every
+contribution must start with a discussion, not with code.
 
-- Never start by creating a pull request, always open an issue to explain what you want to do before starting developing something.
-- Only compatibility patches or bug fixes will be merged.
+- Always open an issue first to explain what you want to do, and wait for feedback
+  before you start developing.
+- Never open a pull request directly. A PR without a prior issue discussion will not
+  be considered.

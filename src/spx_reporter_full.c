@@ -62,6 +62,7 @@ typedef struct {
     size_t called_function_count;
     size_t call_count;
     size_t recorded_call_count;
+    size_t sampling_period_us;
     spx_metric_t enabled_metrics[SPX_METRIC_COUNT];
 } metadata_t;
 
@@ -89,7 +90,7 @@ static void full_destroy(spx_profiler_reporter_t * reporter);
 static void flush_buffer(full_reporter_t * reporter, size_t enabled_metric_count);
 static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * event);
 
-static metadata_t * metadata_create(void);
+static metadata_t * metadata_create(size_t sampling_period_us);
 static void metadata_destroy(metadata_t * metadata);
 static int metadata_save(const metadata_t * metadata, const char * file_name);
 
@@ -248,8 +249,10 @@ int spx_reporter_full_delete_all_reports(
     return 0;
 }
 
-spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
-{
+spx_profiler_reporter_t * spx_reporter_full_create(
+    const char * data_dir,
+    size_t sampling_period_us
+) {
     full_reporter_t * reporter = malloc(sizeof(*reporter));
     if (!reporter) {
         return NULL;
@@ -263,7 +266,7 @@ spx_profiler_reporter_t * spx_reporter_full_create(const char * data_dir)
     reporter->output = NULL;
     reporter->str_builder = NULL;
 
-    reporter->metadata = metadata_create();
+    reporter->metadata = metadata_create(sampling_period_us);
     if (!reporter->metadata) {
         goto error;
     }
@@ -503,7 +506,7 @@ static void finalize(full_reporter_t * reporter, const spx_profiler_event_t * ev
     metadata_save(reporter->metadata, reporter->metadata_file_name);
 }
 
-static metadata_t * metadata_create(void)
+static metadata_t * metadata_create(size_t sampling_period_us)
 {
     metadata_t * metadata = malloc(sizeof(*metadata));
     if (!metadata) {
@@ -604,6 +607,7 @@ static metadata_t * metadata_create(void)
 
     metadata->call_count = 0;
     metadata->recorded_call_count = 0;
+    metadata->sampling_period_us = sampling_period_us;
 
     return metadata;
 
@@ -764,6 +768,13 @@ static int metadata_save(const metadata_t * metadata, const char * file_name)
         "  \"%s\": %zu,\n",
         "recorded_call_count",
         metadata->recorded_call_count
+    );
+
+    fprintf(
+        fp,
+        "  \"%s\": %zu,\n",
+        "sampling_period_us",
+        metadata->sampling_period_us
     );
 
     fprintf(fp, "  \"enabled_metrics\": [\n");

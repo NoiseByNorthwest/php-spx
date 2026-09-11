@@ -55,6 +55,7 @@ foreach ($metadataStrings as $metadataString) {
   "called_function_count": 2,
   "call_count": 2,
   "recorded_call_count": 2,
+  "sampling_period_us": 0,
   "enabled_metrics": [
     "wt"
     ,"zm"
@@ -78,6 +79,7 @@ foreach ($metadataStrings as $metadataString) {
   "called_function_count": 2,
   "call_count": 2,
   "recorded_call_count": 2,
+  "sampling_period_us": 0,
   "enabled_metrics": [
     "wt"
     ,"zm"
@@ -101,6 +103,7 @@ foreach ($metadataStrings as $metadataString) {
   "called_function_count": 2,
   "call_count": 2,
   "recorded_call_count": 2,
+  "sampling_period_us": 0,
   "enabled_metrics": [
     "wt"
     ,"zm"
@@ -127,6 +130,7 @@ Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $cust
   "called_function_count": 2,
   "call_count": 2,
   "recorded_call_count": 2,
+  "sampling_period_us": 0,
   "enabled_metrics": [
     "wt"
     ,"zm"
@@ -150,6 +154,7 @@ Notice: SPX: spx_profiler_full_report_set_custom_metadata_str(): too large $cust
   "called_function_count": 2,
   "call_count": 2,
   "recorded_call_count": 2,
+  "sampling_period_us": 0,
   "enabled_metrics": [
     "wt"
     ,"zm"

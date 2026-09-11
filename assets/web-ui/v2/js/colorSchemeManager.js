@@ -18,6 +18,7 @@
 import * as math from './math.js';
 import * as utils from './utils.js';
 import { SearchManager } from './searchManager.js';
+import { ThemeManager } from './themeManager.js';
 
 export class ColorSchemeManager {
     static get COLOR_MODE_METRIC_COST() {
@@ -135,13 +136,18 @@ export class ColorSchemeManager {
         }
 
         if (ColorSchemeManager.#highlightedFunctionName !== null) {
-            color = math.Vec3.createFromHtmlColor(color)
-                .mult(
-                    functionName == ColorSchemeManager.#highlightedFunctionName
-                        ? 1.5
-                        : 0.33
-                )
-                .toHTMLColor();
+            color =
+                functionName == ColorSchemeManager.#highlightedFunctionName
+                    ? math.Vec3.createFromHtmlColor(color)
+                          .mult(ThemeManager.getHighlightedBrightnessFactor())
+                          .toHTMLColor()
+                    : math.Vec3.lerp(
+                          math.Vec3.createFromHtmlColor(
+                              ThemeManager.getDimmedTargetColor()
+                          ),
+                          math.Vec3.createFromHtmlColor(color),
+                          0.33
+                      ).toHTMLColor();
         }
 
         if (SearchManager.isFunctionMatchingQuery(functionName)) {
