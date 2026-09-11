@@ -1,7 +1,7 @@
-FROM debian:11.5-slim AS builder
+FROM debian:12-slim AS builder
 
 LABEL Description="Base image with custom PHP version based on Debian"
-LABEL name="spx-profiler-debian11"
+LABEL name="spx-profiler-debian12"
 
 ENV DEBIAN_FRONTEND="noninteractive"
 ARG PHP_VERSION
