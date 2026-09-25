@@ -3,6 +3,7 @@ INI profiling parameters: not overridden by query string (bad auth)s
 --CGI--
 --INI--
 spx.debug=1
+spx.data_dir="{PWD}/tmp_data_dir_ini_params_not_overridden"
 spx.http_profiling_enabled=1
 spx.http_enabled=1
 spx.http_key="dev"
@@ -25,7 +26,6 @@ Normal output
 --CLEAN--
 <?php
 
-$data_dir = ini_get('spx.data_dir');
-exec(sprintf('rm -rf %s', escapeshellarg($data_dir)));
+exec(sprintf('rm -rf %s', escapeshellarg(__DIR__ . '/tmp_data_dir_ini_params_not_overridden')));
 
 ?>
