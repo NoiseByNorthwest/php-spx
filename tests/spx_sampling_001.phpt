@@ -42,17 +42,17 @@ Wall time                      |
 ----------+----------+----------+----------+----------+----------
       0ns |      0ns |      0ns |        1 |        0 | +%s/tests/spx_sampling_001.php
 %w%f%cs |      0ns |      0ns |        2 |       15 |  +f2
-%w%fus |      0ns |      0ns |        3 |       11 |   +f1
-  10%fms |  10%fms |  10%fms |        3 |        0 |   -f1
-  10%fms |      0ns |      0ns |        3 |       11 |   +f1
-  20%fms |  10%fms |  10%fms |        3 |        0 |   -f1
-  20%fms |      0ns |      0ns |        3 |       11 |   +f1
-  30%fms |  10%fms |  10%fms |        3 |        0 |   -f1
-  30%fms |      0ns |      0ns |        3 |       11 |   +f1
-  40%fms |  10%fms |  10%fms |        3 |        0 |   -f1
-  40%fms |      0ns |      0ns |        3 |       11 |   +f1
-  50%fms |  10%fms |  10%fms |        3 |        0 |   -f1
-  50%fms |  50%fms | %w%f%cs |        2 |        0 |  -f2
-  50%fms |  50%fms | %w%fus |        1 |        0 | -%s/tests/spx_sampling_001.php
+%w%f%cs |      0ns |      0ns |        3 |       11 |   +f1
+  1%fms |  1%fms |  1%fms |        3 |        0 |   -f1
+  1%fms |      0ns |      0ns |        3 |       11 |   +f1
+  2%fms |  1%fms |  1%fms |        3 |        0 |   -f1
+  2%fms |      0ns |      0ns |        3 |       11 |   +f1
+  3%fms |  1%fms |  1%fms |        3 |        0 |   -f1
+  3%fms |      0ns |      0ns |        3 |       11 |   +f1
+  4%fms |  1%fms |  1%fms |        3 |        0 |   -f1
+  4%fms |      0ns |      0ns |        3 |       11 |   +f1
+  5%fms |  1%fms |  1%fms |        3 |        0 |   -f1
+  5%fms |  5%fms | %w%f%cs |        2 |        0 |  -f2
+  5%fms |  5%fms | %w%f%cs |        1 |        0 | -%s/tests/spx_sampling_001.php
 
 SPX trace file: /dev/stdout
