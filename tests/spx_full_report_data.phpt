@@ -1,5 +1,7 @@
 --TEST--
 "full" report data
+--INI--
+spx.data_dir="{PWD}/tmp_data_dir_full_report_data"
 --ENV--
 return <<<END
 SPX_ENABLED=1
@@ -78,3 +80,9 @@ b|2|%S|
 %s/tests/spx_full_report_data.php:9:foo
 %s/spx_full_report_data.php:5:bar
 %s/spx_full_report_data.php:2:baz
+--CLEAN--
+<?php
+
+exec(sprintf('rm -rf %s', escapeshellarg(__DIR__ . '/tmp_data_dir_full_report_data')));
+
+?>

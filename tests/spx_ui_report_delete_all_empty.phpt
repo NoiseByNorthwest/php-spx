@@ -4,7 +4,7 @@ UI: delete all reports (empty directory)
 spx.http_enabled=1
 spx.http_key="dev"
 spx.http_ip_whitelist="127.0.0.1"
-spx.data_dir="{PWD}/tmp_data_dir"
+spx.data_dir="{PWD}/tmp_data_dir_delete_all_empty"
 log_errors=on
 --FILE--
 <?php
