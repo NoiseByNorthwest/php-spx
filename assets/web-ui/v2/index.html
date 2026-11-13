@@ -314,7 +314,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
                                         label: 'Wall time',
                                         cssClass: 'numeric',
                                         value: 'wall_time_ms',
-                                        format: value => fmt.time(value * 1000),
+                                        format: value => fmt.time(value * 1000 * 1000),
                                     },
                                     {
                                         label: 'Memory',
