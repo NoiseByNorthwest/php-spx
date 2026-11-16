@@ -255,9 +255,24 @@ ZEND_GET_MODULE(spx)
 
 static PHP_MINIT_FUNCTION(spx)
 {
-    spx_php_global_hooks_init();
-
     REGISTER_INI_ENTRIES();
+
+    if (spx_php_is_cli_sapi()) {
+        /*
+            In CLI, the configuration only comes from the environment. It is
+            already set at this point and cannot change for the single request
+            of the process. When profiling is not enabled, nothing has to be
+            hooked, and an observer slows down every function call even when it
+            does nothing.
+        */
+        spx_config_t config;
+        spx_config_get(&config, 1, SPX_CONFIG_SOURCE_ENV, -1);
+        if (!config.enabled) {
+            return SUCCESS;
+        }
+    }
+
+    spx_php_global_hooks_init(SPX_G(use_observer_api));
 
 #ifdef ZTS
     /*
@@ -726,7 +741,6 @@ static void profiling_handler_shutdown(void)
     profiling_handler_stop();
     profiling_handler_ex_unset_context();
 }
-
 
 static void profiling_handler_start(void)
 {

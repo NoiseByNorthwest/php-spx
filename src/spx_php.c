@@ -758,10 +758,12 @@ size_t spx_php_zend_error_count(void)
     return context.error_count;
 }
 
-void spx_php_global_hooks_init(void)
+void spx_php_global_hooks_init(int use_observer_api)
 {
 #ifdef HAVE_PHP_OBSERVER_API
-    zend_observer_fcall_register(observer_api_init);
+    if (use_observer_api) {
+        zend_observer_fcall_register(observer_api_init);
+    }
 #endif
 }
 
@@ -1363,17 +1365,18 @@ static void global_hook_execute_internal(
 
 static zend_observer_fcall_handlers observer_api_init(zend_execute_data * execute_data)
 {
-    zend_observer_fcall_handlers handlers;
+    zend_observer_fcall_handlers handlers = { NULL, NULL };
 
     /*
-        Returning {null,null} handlers in cases where there is nothing to instrument
-        counter-intuitively degrades performance.
-        This why such cases are directly handled in observer_api_begin() & observer_api_end()
-        via early returns.
+        The engine calls this function on the first call of each function in
+        each request, since the result is stored in the per-request runtime
+        cache. When the current request is not instrumented, returning no
+        handlers lets the engine skip the observer path for this function.
     */
-
-    handlers.begin = observer_api_begin;
-    handlers.end = observer_api_end;
+    if (context.use_observer_api && context.global_hooks_enabled) {
+        handlers.begin = observer_api_begin;
+        handlers.end = observer_api_end;
+    }
 
     return handlers;
 }
@@ -1724,6 +1727,11 @@ static void update_userland_stats(void)
 
 static HashTable * get_global_array(const char * name)
 {
+    /* Global arrays do not exist before the end of module startup. */
+    if (!php_get_module_initialized()) {
+        return NULL;
+    }
+
     zend_string * name_zs = zend_string_init(name, strlen(name), 0);
 
     zend_is_auto_global(name_zs);

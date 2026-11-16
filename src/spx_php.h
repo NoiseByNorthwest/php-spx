@@ -70,7 +70,7 @@ size_t spx_php_zend_opcode_count(void);
 size_t spx_php_zend_object_count(void);
 size_t spx_php_zend_error_count(void);
 
-void spx_php_global_hooks_init(void);
+void spx_php_global_hooks_init(int use_observer_api);
 void spx_php_global_hooks_set(int use_observer_api);
 void spx_php_global_hooks_unset(void);
 void spx_php_global_hooks_disable(void);
