@@ -1,9 +1,12 @@
 name: CI
 
 on:
+  # Other branches are covered by their pull request, or can be built on demand
+  # with a manual run, so that a pushed commit does not run the matrix twice.
   push:
     branches:
-      - '**'
+      - master
+      - 'v[0-9]*'
     tags:
       - '*'
     paths-ignore:
@@ -13,11 +16,19 @@ on:
     branches:
       - master
       - 'v[0-9]*'
+  workflow_dispatch:
+
+# A new commit cancels the run of the previous one on the same branch or pull request.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: build / php-${{ matrix.php }}-${{ matrix.ts }}-${{ matrix.name }}-${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
+    # A build takes less than 2 minutes, a stuck step must not hold a runner for hours.
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -91,6 +102,7 @@ jobs:
   check-js:
     name: Check JS is formatted and build file is up to date
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -99,6 +111,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: assets/web-ui/v2/js/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -133,6 +147,7 @@ jobs:
   check-license-headers:
     name: Check license headers
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -145,6 +160,7 @@ jobs:
   typos:
     name: Check typos
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -158,6 +174,7 @@ jobs:
     needs: [ build ]
     name: Create Release
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
 
     steps:
       - name: Checkout Code

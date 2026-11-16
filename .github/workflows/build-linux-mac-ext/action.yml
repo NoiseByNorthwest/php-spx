@@ -8,11 +8,17 @@ runs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php }}
+        # Make sure Xdebug or PCOV is not loaded, it would slow down the tests.
+        coverage: none
 
     - name: Install dependencies
       shell: bash
       if: runner.os == 'macOS'
       run: brew install zlib
+      env:
+        # The auto update fetches the whole Homebrew repository before installing.
+        HOMEBREW_NO_AUTO_UPDATE: 1
+        HOMEBREW_NO_INSTALL_CLEANUP: 1
 
     - name: phpize
       shell: bash
