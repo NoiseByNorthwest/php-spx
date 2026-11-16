@@ -50,7 +50,7 @@ typedef struct {
     const spx_profiler_func_table_entry_t ** top_entries;
 } fp_reporter_t;
 
-static const SPX_THREAD_TLS fp_reporter_t * entry_cmp_reporter;
+static SPX_THREAD_TLS const fp_reporter_t * entry_cmp_reporter;
 
 static int fp_are_full_stats_required(const spx_profiler_reporter_t * reporter);
 static spx_profiler_reporter_cost_t fp_notify(spx_profiler_reporter_t * reporter, const spx_profiler_event_t * event);
