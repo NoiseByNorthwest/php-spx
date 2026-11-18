@@ -81,6 +81,7 @@ Whichever installation method you choose, the extension is built from source. In
 - Zstandard development package (optional but recommended, as it minimizes SPX's overhead):
   - For Debian-based distros: `sudo apt-get install libzstd-dev`.
   - For Fedora-based distros: `sudo dnf install libzstd-devel`.
+  - It is used automatically when found. Use `./configure --with-spx-zstd=<DIR>` to specify its install prefix, or `./configure --without-spx-zstd` to build without it, e.g. if your report consumers cannot read Zstandard-compressed (`.txt.zst`) reports. In that case, reports are gzip-compressed (`.txt.gz`).
 
 ### Install the extension
 

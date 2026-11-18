@@ -9,6 +9,9 @@ PHP_ARG_WITH(zlib-dir, for ZLIB,
 [  --with-zlib-dir[=DIR]   Set the path to ZLIB install prefix.], no)
 fi
 
+PHP_ARG_WITH(spx-zstd, for Zstandard support,
+[  --with-spx-zstd[=DIR]   Set the path to Zstandard install prefix, or disable it with --without-spx-zstd.], yes, no)
+
 PHP_ARG_WITH(spx-assets-dir, for assets path,
 [  --with-spx-assets-dir[=DIR]   Set the installation path of assets.], $prefix/share/misc/php-spx/assets)
 
@@ -95,7 +98,15 @@ if test "$PHP_SPX" = "yes"; then
 
     AC_MSG_CHECKING([for Zstandard include directory])
     zstd_found=no
-    for i in /usr/local /usr /opt/local /opt/homebrew; do
+    if test "$PHP_SPX_ZSTD" = "no"; then
+        zstd_search_dirs=""
+    elif test "$PHP_SPX_ZSTD" = "yes"; then
+        zstd_search_dirs="/usr/local /usr /opt/local /opt/homebrew"
+    else
+        zstd_search_dirs="$PHP_SPX_ZSTD"
+    fi
+
+    for i in $zstd_search_dirs; do
         if test -f "$i/include/zstd.h"; then
             PHP_ZSTD_INCDIR="$i/include"
 
@@ -120,6 +131,10 @@ if test "$PHP_SPX" = "yes"; then
         fi
 
         CPPFLAGS="$CPPFLAGS -DHAVE_ZSTD=1"
+    elif test "$PHP_SPX_ZSTD" = "no"; then
+        AC_MSG_RESULT([disabled])
+    elif test "$PHP_SPX_ZSTD" != "yes"; then
+        AC_MSG_ERROR([Can't find Zstandard headers under "$PHP_SPX_ZSTD"])
     else
         AC_MSG_WARN([Zstandard not found — continuing without it])
     fi
