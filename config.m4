@@ -1,35 +1,34 @@
-PHP_ARG_ENABLE(SPX, whether to enable SPX extension,
+PHP_ARG_ENABLE(spx, whether to enable SPX extension,
 [ --enable-spx   Enable SPX extension])
 
-PHP_ARG_ENABLE(SPX-DEV, whether to enable SPX developer build flags,
+PHP_ARG_ENABLE(spx-dev, whether to enable SPX developer build flags,
 [  --enable-spx-dev   Compile SPX with debugging symbols],, no)
 
 if test -z "$PHP_ZLIB_DIR"; then
 PHP_ARG_WITH(zlib-dir, for ZLIB,
-[  --with-zlib-dir[=DIR]   Set the path to ZLIB install prefix.], no)
+[  --with-zlib-dir[=DIR]   Set the path to ZLIB install prefix.], no, no)
 fi
 
 PHP_ARG_WITH(spx-zstd, for Zstandard support,
 [  --with-spx-zstd[=DIR]   Set the path to Zstandard install prefix, or disable it with --without-spx-zstd.], yes, no)
 
 PHP_ARG_WITH(spx-assets-dir, for assets path,
-[  --with-spx-assets-dir[=DIR]   Set the installation path of assets.], $prefix/share/misc/php-spx/assets)
+[  --with-spx-assets-dir[=DIR]   Set the installation path of assets.], $prefix/share/misc/php-spx/assets, no)
 
 PHP_ARG_ENABLE(spx-symlink-assets-dir, whether to symlink the SPX assets directory,
 [  --enable-spx-symlink-assets-dir   Symlink SPX assets directory to the source folder during installation], no, no)
 
 if test "$PHP_SPX" = "yes"; then
     AC_DEFINE(HAVE_SPX, 1, [spx])
+
+    if test "$PHP_SPX_ASSETS_DIR" = "yes" || test "$PHP_SPX_ASSETS_DIR" = "no"; then
+        AC_MSG_ERROR([--with-spx-assets-dir requires a directory (--with-spx-assets-dir=DIR)])
+    fi
+
     AC_MSG_CHECKING([for assets directory])
     AC_MSG_RESULT([$PHP_SPX_ASSETS_DIR])
     AC_DEFINE_UNQUOTED([SPX_HTTP_UI_ASSETS_DIR], ["$PHP_SPX_ASSETS_DIR/web-ui"], [path of web-ui assets directory])
     PHP_SUBST([PHP_SPX_ASSETS_DIR])
-
-    if test "$PHP_SYMLINK_SPX_ASSETS_DIR" = "yes"; then
-        PHP_SPX_SYMLINK_ASSETS_DIR="yes"
-    else
-        PHP_SPX_SYMLINK_ASSETS_DIR="no"
-    fi
     PHP_SUBST([PHP_SPX_SYMLINK_ASSETS_DIR])
 
     CFLAGS="$CFLAGS -Werror -Wall -Wno-unused-parameter -Wno-sign-compare -Wno-attributes -O3 -pthread"
@@ -87,6 +86,12 @@ if test "$PHP_SPX" = "yes"; then
         done
     fi
 
+    if test -n "$PHP_ZLIB_INCDIR"; then
+        AC_MSG_RESULT([$PHP_ZLIB_INCDIR])
+    else
+        AC_MSG_RESULT([not found])
+    fi
+
     AC_MSG_CHECKING([for zlib binary])
     if test "$PHP_ZLIB_DIR" != "no" && test "$PHP_ZLIB_DIR" != "yes"; then
         AC_MSG_RESULT([$PHP_ZLIB_DIR])
@@ -109,12 +114,7 @@ if test "$PHP_SPX" = "yes"; then
     for i in $zstd_search_dirs; do
         if test -f "$i/include/zstd.h"; then
             PHP_ZSTD_INCDIR="$i/include"
-
-            PHP_ZSTD_LIBDIR="$i/lib"
-            if ! test -f "$PHP_ZSTD_LIBDIR/libzstd.a"; then
-                PHP_ZSTD_LIBDIR=""
-            fi
-
+            PHP_ZSTD_LIBDIR="$i/$PHP_LIBDIR"
             zstd_found=yes
             break
         fi
@@ -123,12 +123,7 @@ if test "$PHP_SPX" = "yes"; then
     if test "$zstd_found" = "yes"; then
         AC_MSG_RESULT([$PHP_ZSTD_INCDIR])
         PHP_ADD_INCLUDE([$PHP_ZSTD_INCDIR])
-        if test "$PHP_ZSTD_LIBDIR" != ""; then
-            PHP_ADD_LIBRARY_WITH_PATH(zstd, [$PHP_ZSTD_LIBDIR], SPX_SHARED_LIBADD)
-        else
-            AC_MSG_NOTICE([Using static linking for Zstandard])
-            LDFLAGS="$LDFLAGS -lzstd"
-        fi
+        PHP_ADD_LIBRARY_WITH_PATH(zstd, [$PHP_ZSTD_LIBDIR], SPX_SHARED_LIBADD)
 
         CPPFLAGS="$CPPFLAGS -DHAVE_ZSTD=1"
     elif test "$PHP_SPX_ZSTD" = "no"; then
@@ -136,8 +131,11 @@ if test "$PHP_SPX" = "yes"; then
     elif test "$PHP_SPX_ZSTD" != "yes"; then
         AC_MSG_ERROR([Can't find Zstandard headers under "$PHP_SPX_ZSTD"])
     else
-        AC_MSG_WARN([Zstandard not found — continuing without it])
+        AC_MSG_RESULT([not found])
+        AC_MSG_WARN([Zstandard not found, continuing without it])
     fi
+
+    PHP_SUBST([SPX_SHARED_LIBADD])
 
     PHP_NEW_EXTENSION(spx,
         src/php_spx.c               \
