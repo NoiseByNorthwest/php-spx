@@ -37,3 +37,4 @@ tmp-php.ini
 .claude
 *.local.md
 .idea
+.tmp

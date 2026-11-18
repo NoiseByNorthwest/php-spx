@@ -6,6 +6,7 @@ install-spx-ui-assets:
 		if [ -d "$(INSTALL_ROOT)$(PHP_SPX_ASSETS_DIR)/web-ui" ] && ! [ -L "$(INSTALL_ROOT)$(PHP_SPX_ASSETS_DIR)/web-ui" ]; then \
 			rm -rf "$(INSTALL_ROOT)$(PHP_SPX_ASSETS_DIR)/web-ui"; \
 		fi; \
+		mkdir -p "$(INSTALL_ROOT)$(PHP_SPX_ASSETS_DIR)"; \
 		ln -sfn "$(top_srcdir)/assets/web-ui" "$(INSTALL_ROOT)$(PHP_SPX_ASSETS_DIR)/web-ui"; \
 	else \
 		echo "Installing SPX web UI to: $(INSTALL_ROOT)$(PHP_SPX_ASSETS_DIR)/web-ui"; \
