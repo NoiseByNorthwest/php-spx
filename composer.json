@@ -36,6 +36,15 @@
                 "name": "with-zlib-dir",
                 "description": "Set the path to ZLIB install prefix",
                 "needs-value": true
+            },
+            {
+                "name": "with-spx-zstd",
+                "description": "Set the path to Zstandard install prefix",
+                "needs-value": true
+            },
+            {
+                "name": "without-spx-zstd",
+                "description": "Build without Zstandard support"
             }
         ]
     }
