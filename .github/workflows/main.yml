@@ -29,6 +29,7 @@ jobs:
 
         include:
           # Linux
+          - { name: linux,  php: '8.6', ts: 'nts', compiler: 'gcc', os: ubuntu-22.04 }
           - { name: linux,  ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }
           # Debian (docker)
           - { name: debian, ts: 'nts', compiler: 'gcc',   os: ubuntu-22.04 }

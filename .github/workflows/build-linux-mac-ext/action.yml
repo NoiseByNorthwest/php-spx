@@ -45,4 +45,5 @@ runs:
       env:
         NO_INTERACTION: 1
         REPORT_EXIT_STATUS: 1
-        TEST_PHP_ARGS: "--show-diff"
+        # PHP 8.6 runs PHPTs in parallel by default, but these tests share /tmp/spx.
+        TEST_PHP_ARGS: ${{ matrix.php == '8.6' && '--show-diff -j1' || '--show-diff' }}
